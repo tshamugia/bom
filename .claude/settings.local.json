@@ -7,7 +7,11 @@
       "Bash(git commit *)",
       "Bash(npm --version)",
       "Bash(npx --yes create-next-app@latest . --typescript --eslint --tailwind --app --src-dir --turbopack --import-alias \"@/*\" --use-npm --skip-install --yes)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(npx --yes shadcn@latest init -d)",
+      "Bash(npx --yes shadcn@latest add button card input label badge separator avatar tabs table dialog dropdown-menu select checkbox switch sonner form)",
+      "Bash(npx --yes shadcn@latest add form)",
+      "Bash(npx *)"
     ]
   }
 }
