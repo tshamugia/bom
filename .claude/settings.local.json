@@ -11,7 +11,13 @@
       "Bash(npx --yes shadcn@latest init -d)",
       "Bash(npx --yes shadcn@latest add button card input label badge separator avatar tabs table dialog dropdown-menu select checkbox switch sonner form)",
       "Bash(npx --yes shadcn@latest add form)",
-      "Bash(npx *)"
+      "Bash(npx *)",
+      "Bash(git rm *)",
+      "Bash(docker --version)",
+      "Bash(docker compose *)",
+      "Bash(node -e \"console.log\\(require\\('crypto'\\).randomBytes\\(32\\).toString\\('base64'\\)\\)\")",
+      "Bash(docker info *)",
+      "Bash(docker pull *)"
     ]
   }
 }
