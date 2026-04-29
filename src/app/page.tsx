@@ -1,9 +1,5 @@
-import { Button } from "@/components/ui/button";
+import { redirect } from "next/navigation";
 
-export default function Home() {
-  return (
-    <main className="grid min-h-screen place-items-center">
-      <Button>shadcn ready</Button>
-    </main>
-  );
+export default function Root() {
+  redirect("/dashboard");
 }
