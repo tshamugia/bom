@@ -3,7 +3,11 @@
     "allow": [
       "Bash(git init *)",
       "Bash(git add *)",
-      "Bash(git -c core.autocrlf=false add -A)"
+      "Bash(git -c core.autocrlf=false add -A)",
+      "Bash(git commit *)",
+      "Bash(npm --version)",
+      "Bash(npx --yes create-next-app@latest . --typescript --eslint --tailwind --app --src-dir --turbopack --import-alias \"@/*\" --use-npm --skip-install --yes)",
+      "Bash(npm run *)"
     ]
   }
 }
