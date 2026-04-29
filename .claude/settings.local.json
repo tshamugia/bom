@@ -19,7 +19,8 @@
       "Bash(docker info *)",
       "Bash(docker pull *)",
       "Bash(node --env-file=.env.local --experimental-strip-types -e \"import\\('./src/lib/env.ts'\\).then\\(m => console.log\\('env OK', m.env.DATABASE_URL\\)\\)\")",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(npm test *)"
     ]
   }
 }
