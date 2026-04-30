@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { Sidebar } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
+import { Toaster } from "@/components/ui/sonner";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -15,6 +16,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <Topbar />
         <div className="min-w-0 flex-1 p-6">{children}</div>
       </div>
+      <Toaster />
     </div>
   );
 }
