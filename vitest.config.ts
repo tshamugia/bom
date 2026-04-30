@@ -1,6 +1,9 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
+import { config as loadEnv } from "dotenv";
 import path from "node:path";
+
+loadEnv({ path: ".env.local" });
 
 export default defineConfig({
   plugins: [react()],
@@ -11,6 +14,9 @@ export default defineConfig({
     include: ["tests/unit/**/*.test.{ts,tsx}", "src/**/*.test.{ts,tsx}"],
   },
   resolve: {
-    alias: { "@": path.resolve(__dirname, "src") },
+    alias: {
+      "@": path.resolve(__dirname, "src"),
+      "server-only": path.resolve(__dirname, "tests/test-helpers/server-only-shim.ts"),
+    },
   },
 });
