@@ -17,13 +17,12 @@ async function ensureRevisionInOrg(revisionId: string) {
     .limit(1);
   if (!row) throw new Error("REVISION_NOT_FOUND");
   if (row.status === "locked") throw new Error("REVISION_LOCKED");
-  return row;
+  return { ...row, orgId };
 }
 
 export async function addLine(input: { revisionId: string; itemId: string; qty?: number }) {
   const { revisionId, itemId } = z.object({ revisionId: z.string(), itemId: z.string(), qty: z.number().int().positive().optional() }).parse(input);
-  const rev = await ensureRevisionInOrg(revisionId);
-  const orgId = await getCurrentOrgId();
+  const { orgId, ...rev } = await ensureRevisionInOrg(revisionId);
 
   const [item] = await db.select().from(items).where(and(eq(items.id, itemId), eq(items.organizationId, orgId))).limit(1);
   if (!item) throw new Error("ITEM_NOT_FOUND");
@@ -78,8 +77,7 @@ export async function removeLine(input: { id: string }) {
 
 const CsvRow = z.object({ sku: z.string().min(1), qty: z.coerce.number().int().positive() });
 export async function importCsv(input: { revisionId: string; rows: Array<{ sku: string; qty: number | string }> }) {
-  const rev = await ensureRevisionInOrg(input.revisionId);
-  const orgId = await getCurrentOrgId();
+  const { orgId, ...rev } = await ensureRevisionInOrg(input.revisionId);
   const parsed = input.rows.map(r => CsvRow.parse(r));
 
   const skuToItem = new Map(
