@@ -49,3 +49,7 @@ coverage/
 # windows debug
 *.stackdump
 
+# local agent/tooling
+/.claude/
+/doc/superpowers/
+
