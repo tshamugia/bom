@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ItemInput, createItem } from "@/server/actions/items";
+import { ItemInput } from "@/lib/schemas/item";
+import { createItem } from "@/server/actions/items";
 
 export function ItemDialog({
   vendors, categories, trigger,

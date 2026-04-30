@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { VendorInput, createVendor, updateVendor } from "@/server/actions/vendors";
+import { VendorInput } from "@/lib/schemas/vendor";
+import { createVendor, updateVendor } from "@/server/actions/vendors";
 
 type Vendor = {
   id: string; name: string; code: string; country: string;
@@ -39,31 +40,31 @@ export function VendorDialog({ existing, trigger }: { existing?: Vendor; trigger
         <DialogHeader><DialogTitle>{existing ? "Edit vendor" : "Add vendor"}</DialogTitle></DialogHeader>
         <form className="space-y-3" onSubmit={form.handleSubmit(onSubmit)}>
           <div className="space-y-1.5">
-            <Label>Name</Label>
-            <Input {...form.register("name")} />
+            <Label htmlFor="vendor-name">Name</Label>
+            <Input id="vendor-name" {...form.register("name")} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Code</Label>
-              <Input {...form.register("code")} maxLength={8} />
+              <Label htmlFor="vendor-code">Code</Label>
+              <Input id="vendor-code" {...form.register("code")} maxLength={8} />
             </div>
             <div className="space-y-1.5">
-              <Label>Country (ISO)</Label>
-              <Input {...form.register("country")} maxLength={2} />
+              <Label htmlFor="vendor-country">Country (ISO)</Label>
+              <Input id="vendor-country" {...form.register("country")} maxLength={2} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Lead time</Label>
-              <Input {...form.register("leadTime")} placeholder="3-5d" />
+              <Label htmlFor="vendor-lead-time">Lead time</Label>
+              <Input id="vendor-lead-time" {...form.register("leadTime")} placeholder="3-5d" />
             </div>
             <div className="space-y-1.5">
-              <Label>Rating</Label>
-              <Input type="number" step="0.1" min={0} max={5} {...form.register("rating", { valueAsNumber: true })} />
+              <Label htmlFor="vendor-rating">Rating</Label>
+              <Input id="vendor-rating" type="number" step="0.1" min={0} max={5} {...form.register("rating", { valueAsNumber: true })} />
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label>Status</Label>
+            <Label htmlFor="vendor-status">Status</Label>
             <Select value={form.watch("status")} onValueChange={v => form.setValue("status", v as any)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
