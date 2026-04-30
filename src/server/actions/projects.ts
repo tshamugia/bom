@@ -10,8 +10,11 @@ import { getCurrentOrgId } from "../org";
 export async function createProject(input: ProjectInputType) {
   const data = ProjectInput.parse(input);
   const orgId = await getCurrentOrgId();
-  const [project] = await db.insert(projects).values({ ...data, organizationId: orgId, status: "draft" }).returning();
-  await db.insert(bomRevisions).values({ projectId: project.id, letter: "A", status: "draft" });
+  const project = await db.transaction(async tx => {
+    const [created] = await tx.insert(projects).values({ ...data, organizationId: orgId, status: "draft" }).returning();
+    await tx.insert(bomRevisions).values({ projectId: created.id, letter: "A", status: "draft" });
+    return created;
+  });
   revalidatePath("/builder");
   revalidatePath("/dashboard");
   return project;
