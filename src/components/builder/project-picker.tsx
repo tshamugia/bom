@@ -23,9 +23,9 @@ export function ProjectCreateButton() {
       <DialogContent>
         <DialogHeader><DialogTitle>New project</DialogTitle></DialogHeader>
         <div className="space-y-3">
-          <div className="space-y-1.5"><Label>Code</Label><Input value={code} onChange={e => setCode(e.target.value)} placeholder="NB-2412" /></div>
-          <div className="space-y-1.5"><Label>Name</Label><Input value={name} onChange={e => setName(e.target.value)} placeholder="Northstar Beacon v3.2" /></div>
-          <div className="space-y-1.5"><Label>Build quantity</Label><Input type="number" value={qty} min={1} onChange={e => setQty(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label htmlFor="project-code">Code</Label><Input id="project-code" value={code} onChange={e => setCode(e.target.value)} placeholder="NB-2412" /></div>
+          <div className="space-y-1.5"><Label htmlFor="project-name">Name</Label><Input id="project-name" value={name} onChange={e => setName(e.target.value)} placeholder="Northstar Beacon v3.2" /></div>
+          <div className="space-y-1.5"><Label htmlFor="project-quantity">Build quantity</Label><Input id="project-quantity" type="number" value={qty} min={1} onChange={e => setQty(Number(e.target.value))} /></div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>

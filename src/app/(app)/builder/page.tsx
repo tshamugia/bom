@@ -28,29 +28,38 @@ export default async function BuilderIndex() {
             </tr>
           </thead>
           <tbody>
-            {list.map(p => (
-              <tr key={p.id} className="border-b border-[var(--color-line-soft)] last:border-0 hover:bg-[var(--color-surface-2)]">
-                <td className="px-4 py-2.5">
-                  <Link href={`/builder/${p.id}`} className="block">
-                    <div className="font-medium">{p.name}</div>
-                    <div className="font-mono text-[11px] text-[var(--color-text-3)]">{p.code}</div>
-                  </Link>
-                </td>
-                <td className="px-4 py-2.5 text-right tabular-nums">{p.lineCount}</td>
-                <td className="px-4 py-2.5 text-right tabular-nums">${p.total.toFixed(2)}</td>
-                <td className="px-4 py-2.5">
-                  <Badge tone={p.status === "approved" ? "success" : p.status === "review" ? "warning" : p.status === "in-progress" ? "info" : "gray"}>
-                    {p.status}
-                  </Badge>
-                </td>
-                <td className="px-4 py-2.5 text-[var(--color-text-3)]">{p.targetDate ?? "—"}</td>
-                <td className="px-4 py-2.5 text-right">
-                  <Link href={`/builder/${p.id}`}>
-                    <Button variant="ghost" size="sm"><Icon.Chevron size={14} /></Button>
-                  </Link>
+            {list.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-4 py-12 text-center text-[12.5px] text-[var(--color-text-3)]">
+                  <div className="text-[13.5px]">No projects yet</div>
+                  <div className="mt-1">Click &quot;New BOM&quot; to create your first project.</div>
                 </td>
               </tr>
-            ))}
+            ) : (
+              list.map(p => (
+                <tr key={p.id} className="border-b border-[var(--color-line-soft)] last:border-0 hover:bg-[var(--color-surface-2)]">
+                  <td className="px-4 py-2.5">
+                    <Link href={`/builder/${p.id}`} className="block">
+                      <div className="font-medium">{p.name}</div>
+                      <div className="font-mono text-[11px] text-[var(--color-text-3)]">{p.code}</div>
+                    </Link>
+                  </td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">{p.lineCount}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">${p.total.toFixed(2)}</td>
+                  <td className="px-4 py-2.5">
+                    <Badge tone={p.status === "approved" ? "success" : p.status === "review" ? "warning" : p.status === "in-progress" ? "info" : "gray"}>
+                      {p.status}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-2.5 text-[var(--color-text-3)]">{p.targetDate ?? "—"}</td>
+                  <td className="px-4 py-2.5 text-right">
+                    <Link href={`/builder/${p.id}`}>
+                      <Button variant="ghost" size="sm"><Icon.Chevron size={14} /></Button>
+                    </Link>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
