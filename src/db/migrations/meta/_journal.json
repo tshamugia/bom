@@ -15,6 +15,13 @@
       "when": 1777556100647,
       "tag": "0001_adorable_wong",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777586655162,
+      "tag": "0002_slow_squadron_supreme",
+      "breakpoints": true
     }
   ]
 }
