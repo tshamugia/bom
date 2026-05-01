@@ -16,7 +16,7 @@ test("buildBomWorkbook produces a workbook with header, rows, and totals", async
   });
 
   const wb = new ExcelJS.Workbook();
-  await wb.xlsx.load(buf);
+  await wb.xlsx.load(buf as never);
   const sheet = wb.getWorksheet("BOM");
   expect(sheet).toBeDefined();
   expect(sheet!.getCell("A1").value).toBe("Bill of Materials");
@@ -36,7 +36,7 @@ test("groupByVendor=true creates per-vendor sheets", async () => {
     options: { includeVendorPricing: true, includeStockAvailability: false, groupByVendor: true, includeCoverPage: false },
   });
   const wb = new ExcelJS.Workbook();
-  await wb.xlsx.load(buf);
+  await wb.xlsx.load(buf as never);
   expect(wb.getWorksheet("Mouser")).toBeDefined();
   expect(wb.getWorksheet("DigiSource")).toBeDefined();
 });
