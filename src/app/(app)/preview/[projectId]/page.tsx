@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getProject, getActiveRevision, getLines } from "@/server/queries/projects";
+import { getForProject } from "@/server/queries/approvals";
 import { db } from "@/db/client";
 import { user } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -13,6 +14,7 @@ export default async function PreviewPage({ params }: { params: Promise<{ projec
   const rev = await getActiveRevision(projectId);
   if (!rev) notFound();
   const lines = await getLines(rev.id);
+  const workflow = await getForProject(project.id);
 
   let ownerName = "—";
   if (project.ownerId) {
@@ -31,6 +33,7 @@ export default async function PreviewPage({ params }: { params: Promise<{ projec
       revisionId={rev.id}
       revisionLetter={rev.letter}
       lines={lines as any}
+      steps={workflow ? workflow.steps.map(s => ({ position: s.position, role: s.role, status: s.status, assigneeName: s.assigneeName })) : null}
     />
   );
 }

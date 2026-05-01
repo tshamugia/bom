@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
@@ -10,6 +10,8 @@ import { ExportOptionsCard, type ExportOpts } from "./export-options-card";
 import { ApproversCard } from "./approvers-card";
 import { GenerateDialog } from "./generate-dialog";
 import type { Line } from "@/components/builder/bom-line-table";
+import { requestApproval } from "@/server/actions/approvals";
+import { toast } from "sonner";
 
 type Props = {
   projectId: string;
@@ -21,6 +23,7 @@ type Props = {
   revisionId: string;
   revisionLetter: string;
   lines: Line[];
+  steps: Array<{ position: number; role: string; status: "pending" | "active" | "approved" | "rejected" | "skipped"; assigneeName: string | null }> | null;
 };
 
 export function PreviewShell(p: Props) {
@@ -32,6 +35,14 @@ export function PreviewShell(p: Props) {
     includeCoverPage: false,
     format: "xlsx",
   });
+  const [pending, startReview] = useTransition();
+
+  function sendForReview() {
+    startReview(async () => {
+      await requestApproval({ revisionId: p.revisionId });
+      toast.success("Sent for review");
+    });
+  }
 
   const subtotal = p.lines.reduce((s, l) => s + l.qty * Number(l.unitPriceSnapshot), 0);
   const tax = subtotal * 0.08;
@@ -52,6 +63,9 @@ export function PreviewShell(p: Props) {
           </Button>
           <Button variant="outline" onClick={() => window.print()}>
             <Icon.Print size={14} className="mr-1.5" /> Print
+          </Button>
+          <Button variant="outline" disabled={pending} onClick={sendForReview}>
+            <Icon.Send size={14} className="mr-1.5" /> Send for review
           </Button>
           <GenerateDialog
             revisionId={p.revisionId}
@@ -77,7 +91,7 @@ export function PreviewShell(p: Props) {
         <div className="sticky top-[68px] flex flex-col gap-3">
           <SummaryCard lines={p.lines.length} totalUnits={totalUnits} vendors={vendorCount} subtotal={subtotal} tax={tax} grand={grand} />
           <ExportOptionsCard opts={opts} onChange={setOpts} />
-          <ApproversCard />
+          <ApproversCard steps={p.steps} />
         </div>
       </div>
     </>
