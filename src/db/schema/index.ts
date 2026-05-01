@@ -5,3 +5,6 @@ export * from "./vendors";
 export * from "./categories";
 export * from "./items";
 export * from "./enums";
+export * from "./projects";
+export * from "./bom-revisions";
+export * from "./bom-lines";

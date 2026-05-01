@@ -19,3 +19,11 @@ export const projectStatusEnum = pgEnum("project_status", [
   "review",
   "approved",
 ]);
+
+export const revisionStatusEnum = pgEnum("revision_status", [
+  "draft",
+  "in-progress",
+  "review",
+  "approved",
+  "locked",
+]);

@@ -1,5 +1,5 @@
 import { db } from "./client";
-import { organizations, vendors, categories, subcategories, items } from "./schema";
+import { organizations, vendors, categories, subcategories, items, projects, bomRevisions, bomLines } from "./schema";
 import { sql } from "drizzle-orm";
 
 const VENDORS = [
@@ -60,7 +60,7 @@ const ITEMS = [
 ] as const;
 
 async function main() {
-  await db.execute(sql`TRUNCATE "item", "subcategory", "category", "vendor", "membership", "organization" RESTART IDENTITY CASCADE`);
+  await db.execute(sql`TRUNCATE "bom_line", "bom_revision", "project", "item", "subcategory", "category", "vendor", "membership", "organization" RESTART IDENTITY CASCADE`);
 
   const [org] = await db.insert(organizations).values({ name: "Halcyon Robotics", slug: "halcyon" }).returning();
 
@@ -98,7 +98,35 @@ async function main() {
     })),
   );
 
+  // Projects (subset of the design's PROJECTS for demo data)
+  const inserted = await db.insert(projects).values([
+    { organizationId: org.id, code: "NB-2412",  name: "Northstar Beacon v3.2",      status: "in-progress", quantity: 50, targetDate: "2026-05-14" },
+    { organizationId: org.id, code: "GW-2411",  name: "Gateway Hub Rev B",          status: "review",      quantity: 25, targetDate: "2026-05-22" },
+    { organizationId: org.id, code: "SN-2410",  name: "Sensor Node — Industrial",   status: "approved",    quantity: 100, targetDate: "2026-04-30" },
+    { organizationId: org.id, code: "PWR-2410", name: "Power Module 24V/5A",        status: "in-progress", quantity: 40, targetDate: "2026-06-02" },
+    { organizationId: org.id, code: "DBG-2409", name: "Debug Probe Rev 1.4",        status: "approved",    quantity: 20, targetDate: "2026-04-12" },
+    { organizationId: org.id, code: "RIO-2409", name: "Remote I/O Card",            status: "draft",       quantity: 10, targetDate: "2026-07-18" },
+  ]).returning();
+
+  const beacon = inserted.find(p => p.code === "NB-2412")!;
+  const [revA] = await db.insert(bomRevisions).values({ projectId: beacon.id, letter: "A", status: "in-progress" }).returning();
+
+  const initial: Array<[string, number]> = [
+    ["MCU-STM32G0", 1], ["REG-AMS1117-5V", 2], ["CAP-0603-100N", 18], ["CAP-0805-10U", 6],
+    ["RES-0603-4K7-1", 12], ["RES-0805-10K-1", 8], ["CON-USBC-16P", 1], ["SW-TACT-6X6", 4],
+    ["DIO-1N4148", 6], ["IND-1210-10U", 2],
+  ];
+
+  const itemBySku = new Map((await db.select().from(items)).map(i => [i.sku, i]));
+  await db.insert(bomLines).values(
+    initial.map(([sku, qty], idx) => {
+      const it = itemBySku.get(sku)!;
+      return { revisionId: revA.id, itemId: it.id, qty, unitPriceSnapshot: it.unitPrice, position: idx };
+    }),
+  );
+
   console.log(`Seeded org=${org.id} with ${VENDORS.length} vendors, ${CATEGORIES.length} categories, ${ITEMS.length} items.`);
+  console.log(`Seeded ${inserted.length} projects and 1 active revision with ${initial.length} lines.`);
   process.exit(0);
 }
 

@@ -4,7 +4,7 @@ import { organizations } from "@/db/schema";
 import { createId } from "@paralleldrive/cuid2";
 
 export async function resetDb() {
-  await db.execute(sql`TRUNCATE "item", "subcategory", "category", "vendor", "membership", "organization", "session", "account", "verification", "user" RESTART IDENTITY CASCADE`);
+  await db.execute(sql`TRUNCATE "bom_line", "bom_revision", "project", "item", "subcategory", "category", "vendor", "membership", "organization", "session", "account", "verification", "user" RESTART IDENTITY CASCADE`);
 }
 
 export async function ensureOrg(name = "Test Org") {
