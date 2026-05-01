@@ -6,12 +6,13 @@ import { getCurrentOrgId } from "../org";
 
 export async function listProjects() {
   const orgId = await getCurrentOrgId();
-  // Pull each project's active (non-locked) revision's totals.
   return db.execute(sql/* sql */`
     SELECT
       p.id, p.code, p.name, p.status, p.updated_at AS "updatedAt", p.target_date AS "targetDate",
       COALESCE(stats.line_count, 0)::int AS "lineCount",
-      COALESCE(stats.total, 0)::float    AS "total"
+      COALESCE(stats.total, 0)::float    AS "total",
+      wf.status AS "workflowStatus",
+      wf.active_role AS "workflowActiveRole"
     FROM "project" p
     LEFT JOIN LATERAL (
       SELECT r.id, COUNT(l.*) AS line_count, COALESCE(SUM(l.qty * l.unit_price_snapshot), 0) AS total
@@ -19,14 +20,24 @@ export async function listProjects() {
       LEFT JOIN "bom_line" l ON l.revision_id = r.id
       WHERE r.project_id = p.id AND r.status <> 'locked'
       GROUP BY r.id
-      ORDER BY r.created_at DESC
-      LIMIT 1
+      ORDER BY r.created_at DESC LIMIT 1
     ) stats ON TRUE
+    LEFT JOIN LATERAL (
+      SELECT w.status,
+        (SELECT s.role FROM "approval_step" s WHERE s.workflow_id = w.id AND s.position = w.current_step_index LIMIT 1) AS active_role
+      FROM "approval_workflow" w
+      INNER JOIN "bom_revision" r2 ON r2.id = w.revision_id
+      WHERE r2.project_id = p.id AND w.status <> 'cancelled'
+      ORDER BY w.requested_at DESC LIMIT 1
+    ) wf ON TRUE
     WHERE p.organization_id = ${orgId}
     ORDER BY p.updated_at DESC
   `).then(r => r as unknown as Array<{
     id: string; code: string; name: string; status: string;
-    updatedAt: Date; targetDate: string | null; lineCount: number; total: number;
+    updatedAt: Date; targetDate: string | null;
+    lineCount: number; total: number;
+    workflowStatus: "pending" | "approved" | "rejected" | null;
+    workflowActiveRole: string | null;
   }>);
 }
 
