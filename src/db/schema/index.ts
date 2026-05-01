@@ -9,3 +9,4 @@ export * from "./projects";
 export * from "./bom-revisions";
 export * from "./bom-lines";
 export * from "./bom-exports";
+export * from "./approvals";
