@@ -23,6 +23,7 @@ type Props = {
   revisionId: string;
   revisionLetter: string;
   lines: Line[];
+  steps: Array<{ position: number; role: string; status: "pending" | "active" | "approved" | "rejected" | "skipped"; assigneeName: string | null }> | null;
 };
 
 export function PreviewShell(p: Props) {
@@ -90,7 +91,7 @@ export function PreviewShell(p: Props) {
         <div className="sticky top-[68px] flex flex-col gap-3">
           <SummaryCard lines={p.lines.length} totalUnits={totalUnits} vendors={vendorCount} subtotal={subtotal} tax={tax} grand={grand} />
           <ExportOptionsCard opts={opts} onChange={setOpts} />
-          <ApproversCard />
+          <ApproversCard steps={p.steps} />
         </div>
       </div>
     </>
