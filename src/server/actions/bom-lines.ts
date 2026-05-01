@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { bomLines, bomRevisions, items, projects } from "@/db/schema";
 import { getCurrentOrgId } from "../org";
+import { audit } from "../audit";
 
 async function ensureRevisionInOrg(revisionId: string) {
   const orgId = await getCurrentOrgId();
@@ -41,6 +42,7 @@ export async function addLine(input: { revisionId: string; itemId: string; qty?:
     revisionId, itemId, qty: input.qty ?? 1, unitPriceSnapshot: item.unitPrice, position: next,
   }).returning();
   revalidatePath(`/builder/${rev.projectId}`);
+  await audit({ kind: "bom.line.added", refType: "project", refId: rev.projectId, summary: `Added ${item.sku} to a BOM` });
   return inserted;
 }
 

@@ -6,6 +6,7 @@ import { db } from "@/db/client";
 import { projects, bomRevisions } from "@/db/schema";
 import { ProjectInput, ProjectPatch, type ProjectInput as ProjectInputType, type ProjectPatch as ProjectPatchType } from "@/lib/schemas/project";
 import { getCurrentOrgId } from "../org";
+import { audit } from "../audit";
 
 export async function createProject(input: ProjectInputType) {
   const data = ProjectInput.parse(input);
@@ -17,6 +18,7 @@ export async function createProject(input: ProjectInputType) {
   });
   revalidatePath("/builder");
   revalidatePath("/dashboard");
+  await audit({ kind: "bom.created", refType: "project", refId: project.id, summary: `${project.code} — ${project.name} created` });
   return project;
 }
 
