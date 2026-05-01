@@ -7,6 +7,7 @@ import {
   approvalWorkflows, approvalSteps, bomRevisions, projects,
 } from "@/db/schema";
 import { getCurrentOrgId, requireSession } from "../org";
+import { audit } from "../audit";
 
 const DEFAULT_STAGES: Array<{ role: string }> = [
   { role: "Engineering" },
@@ -53,6 +54,7 @@ export async function requestApproval(input: { revisionId: string }) {
   revalidatePath("/approvals");
   revalidatePath("/dashboard");
   revalidatePath(`/preview/${rev.projectId}`);
+  await audit({ kind: "approval.requested", refType: "workflow", refId: workflow.id, summary: `${rev.projectId} sent for review` });
   return workflow;
 }
 
@@ -100,6 +102,11 @@ export async function approveStep(input: { workflowId: string; note?: string }) 
   revalidatePath("/approvals");
   revalidatePath("/dashboard");
   revalidatePath(`/preview/${w.projectId}`);
+  await audit({
+    kind: "approval.approved",
+    refType: "workflow", refId: w.id,
+    summary: `${active.role} approved${isLast ? " — workflow complete" : ""}`,
+  });
 }
 
 export async function rejectStep(input: { workflowId: string; note?: string }) {
@@ -132,6 +139,7 @@ export async function rejectStep(input: { workflowId: string; note?: string }) {
   revalidatePath("/approvals");
   revalidatePath("/dashboard");
   revalidatePath(`/preview/${w.projectId}`);
+  await audit({ kind: "approval.rejected", refType: "workflow", refId: w.id, summary: `${active.role} rejected${input.note ? `: ${input.note}` : ""}` });
 }
 
 export async function cancelWorkflow(input: { workflowId: string }) {

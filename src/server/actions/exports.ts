@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { bomExports, bomLines, bomRevisions, items, projects, vendors, user } from "@/db/schema";
 import { getCurrentOrgId, requireSession } from "../org";
+import { audit } from "../audit";
 import { buildBomWorkbook, type BomRow } from "@/lib/excel";
 import { putObject } from "@/lib/s3";
 
@@ -87,5 +88,11 @@ export async function generateExport(input: { revisionId: string; options: z.inf
 
   revalidatePath("/history");
   revalidatePath(`/preview/${rev.projectId}`);
+  await audit({
+    kind: "bom.export.generated",
+    refType: "export", refId: row.id,
+    summary: `${row.fileName} exported`,
+    payload: { revisionId: rev.id, byteSize: row.byteSize },
+  });
   return row;
 }

@@ -6,12 +6,14 @@ import { db } from "@/db/client";
 import { items } from "@/db/schema";
 import { ItemInput, ItemPatch, type ItemInput as ItemInputType, type ItemPatch as ItemPatchType } from "@/lib/schemas/item";
 import { getCurrentOrgId } from "../org";
+import { audit } from "../audit";
 
 export async function createItem(input: ItemInputType) {
   const data = ItemInput.parse(input);
   const orgId = await getCurrentOrgId();
   const [row] = await db.insert(items).values({ ...data, organizationId: orgId }).returning();
   revalidatePath("/catalog");
+  await audit({ kind: "item.created", refType: "item", refId: row.id, summary: `Item ${row.sku} added` });
   return row;
 }
 
