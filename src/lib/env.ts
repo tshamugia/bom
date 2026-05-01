@@ -9,7 +9,9 @@ const Schema = z.object({
   AWS_REGION: z.string().min(1),
   AWS_ACCESS_KEY_ID: z.string().optional(),
   AWS_SECRET_ACCESS_KEY: z.string().optional(),
+  AWS_S3_ENDPOINT: z.string().url().optional(),
   S3_BUCKET: z.string().min(1),
+  S3_FORCE_PATH_STYLE: z.string().optional(),
   EMAIL_FROM: z.string().email(),
 });
 

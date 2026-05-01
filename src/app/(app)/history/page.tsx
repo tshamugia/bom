@@ -1,8 +1,19 @@
-export default function Page() {
+import { listExports } from "@/server/queries/exports";
+import { PageHead } from "@/components/master/page-head";
+import { HistoryTable } from "@/components/history/history-table";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/icons";
+
+export default async function HistoryPage() {
+  const rows = await listExports();
   return (
-    <div>
-      <h1 className="text-[20px] font-semibold tracking-tight">History</h1>
-      <p className="text-[13px] text-[var(--color-text-3)]">Built in plan 04.</p>
-    </div>
+    <>
+      <PageHead
+        title="History"
+        subtitle="All previously generated bills of materials. Re-download or audit."
+        actions={<Button variant="outline"><Icon.Filter size={14} className="mr-1.5" /> Filter</Button>}
+      />
+      <HistoryTable rows={rows as any} />
+    </>
   );
 }
