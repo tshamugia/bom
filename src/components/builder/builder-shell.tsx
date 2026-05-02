@@ -1,17 +1,19 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTweaks } from "@/stores/tweaks-store";
 import { FilterPanel } from "./filter-panel";
+import { FilterBar } from "./filter-bar";
 import { SearchAddCombo, type CatalogItem } from "./search-add-combo";
-import { BomLineTable, type Line } from "./bom-line-table";
+import { SectionedLineTable, type Line } from "./sectioned-line-table";
 import { SummaryBar } from "./summary-bar";
 import { ColumnsMenu } from "./columns-menu";
 import { LayoutToggle } from "./layout-toggle";
 import { CsvImportDialog } from "./csv-import-dialog";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
+import type { SectionInfo } from "./section-row";
 
 type Props = {
   projectId: string;
@@ -25,11 +27,34 @@ type Props = {
   categoryCounts: Record<string, number>;
   stockCounts: Record<string, number>;
   lines: Line[];
+  sections: SectionInfo[];
 };
 
 export function BuilderShell(p: Props) {
   const router = useRouter();
   const { layout } = useTweaks();
+  const storageKey = `bom-builder-active-section:${p.revisionId}`;
+  const [rawActiveSectionId, setActiveSectionId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      return window.sessionStorage.getItem(storageKey);
+    } catch {
+      return null;
+    }
+  });
+
+  // Derive: if the persisted/selected section no longer exists, ignore it.
+  const activeSectionId = rawActiveSectionId && p.sections.some(s => s.id === rawActiveSectionId)
+    ? rawActiveSectionId
+    : null;
+
+  // Persist whenever the effective active section changes.
+  useEffect(() => {
+    try {
+      if (activeSectionId) window.sessionStorage.setItem(storageKey, activeSectionId);
+      else window.sessionStorage.removeItem(storageKey);
+    } catch {}
+  }, [storageKey, activeSectionId]);
 
   // Map BOM lines back to catalog item ids via SKU lookup, so SearchAddCombo
   // can mark them as "In BOM".
@@ -59,22 +84,43 @@ export function BuilderShell(p: Props) {
         </div>
       </div>
 
-      <div className={layout === "stacked" ? "grid grid-cols-1 gap-4" : "grid grid-cols-[248px_1fr] items-start gap-4"}>
-        <FilterPanel
-          vendors={p.vendors}
-          categories={p.categories}
-          vendorCounts={p.vendorCounts}
-          categoryCounts={p.categoryCounts}
-          stockCounts={p.stockCounts}
-        />
+      <div className={layout === "stacked" ? "block" : "grid grid-cols-[248px_1fr] items-start gap-4"}>
+        {layout === "stacked" ? (
+          <FilterBar
+            vendors={p.vendors}
+            categories={p.categories}
+            vendorCounts={p.vendorCounts}
+            categoryCounts={p.categoryCounts}
+            stockCounts={p.stockCounts}
+          />
+        ) : (
+          <FilterPanel
+            vendors={p.vendors}
+            categories={p.categories}
+            vendorCounts={p.vendorCounts}
+            categoryCounts={p.categoryCounts}
+            stockCounts={p.stockCounts}
+          />
+        )}
 
         <div className="overflow-hidden rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
           <div className="flex gap-2 border-b border-[var(--color-line-soft)] bg-[var(--color-surface-2)] p-3.5">
-            <SearchAddCombo revisionId={p.revisionId} catalog={p.catalog} lineItemIds={lineCatalogIds} />
+            <SearchAddCombo
+              revisionId={p.revisionId}
+              catalog={p.catalog}
+              lineItemIds={lineCatalogIds}
+              activeSectionId={activeSectionId}
+            />
             <CsvImportDialog revisionId={p.revisionId} />
             <ColumnsMenu />
           </div>
-          <BomLineTable lines={p.lines} />
+          <SectionedLineTable
+            revisionId={p.revisionId}
+            lines={p.lines}
+            sections={p.sections}
+            activeSectionId={activeSectionId}
+            onActiveSectionChange={setActiveSectionId}
+          />
           <SummaryBar lineCount={p.lines.length} totalUnits={totalUnits} vendors={vendorCount} totalValue={totalValue} />
         </div>
       </div>

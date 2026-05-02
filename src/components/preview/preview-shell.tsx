@@ -9,7 +9,8 @@ import { SummaryCard } from "./summary-card";
 import { ExportOptionsCard, type ExportOpts } from "./export-options-card";
 import { ApproversCard } from "./approvers-card";
 import { GenerateDialog } from "./generate-dialog";
-import type { Line } from "@/components/builder/bom-line-table";
+import type { Line } from "@/components/builder/sectioned-line-table";
+import type { SectionInfo } from "@/components/builder/section-row";
 import { requestApproval } from "@/server/actions/approvals";
 import { toast } from "sonner";
 
@@ -23,6 +24,7 @@ type Props = {
   revisionId: string;
   revisionLetter: string;
   lines: Line[];
+  sections: SectionInfo[];
   steps: Array<{ position: number; role: string; status: "pending" | "active" | "approved" | "rejected" | "skipped"; assigneeName: string | null }> | null;
 };
 
@@ -86,6 +88,7 @@ export function PreviewShell(p: Props) {
           }}
           revisionLetter={p.revisionLetter}
           lines={p.lines}
+          sections={p.sections}
           generatedOn={new Date().toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
         />
         <div className="sticky top-[68px] flex flex-col gap-3">

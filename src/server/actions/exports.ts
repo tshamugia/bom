@@ -1,10 +1,10 @@
 "use server";
 
 import { z } from "zod";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
-import { bomExports, bomLines, bomRevisions, items, projects, vendors, user } from "@/db/schema";
+import { bomExports, bomLines, bomRevisions, bomSections, items, projects, vendors, user } from "@/db/schema";
 import { getCurrentOrgId, requireSession } from "../org";
 import { audit } from "../audit";
 import { buildBomWorkbook, type BomRow } from "@/lib/excel";
@@ -45,17 +45,21 @@ export async function generateExport(input: { revisionId: string; options: z.inf
       sku: items.sku, description: items.description, manufacturer: items.manufacturer,
       unit: items.unit, qty: bomLines.qty, unitPriceSnapshot: bomLines.unitPriceSnapshot,
       vendorName: vendors.name, stockState: items.stockState, position: bomLines.position,
+      sectionName: bomSections.name, sectionPosition: bomSections.position,
     })
     .from(bomLines)
     .innerJoin(items, eq(items.id, bomLines.itemId))
     .leftJoin(vendors, eq(vendors.id, items.vendorId))
+    .leftJoin(bomSections, eq(bomSections.id, bomLines.sectionId))
     .where(eq(bomLines.revisionId, rev.id))
-    .orderBy(bomLines.position);
+    .orderBy(sql`${bomSections.position} ASC NULLS FIRST`, asc(bomLines.position));
 
   const rows: BomRow[] = lines.map(l => ({
     sku: l.sku, description: l.description, manufacturer: l.manufacturer,
     vendor: l.vendorName, unit: l.unit, qty: l.qty, unitPrice: Number(l.unitPriceSnapshot),
     stock: l.stockState,
+    sectionName: l.sectionName,
+    sectionPosition: l.sectionPosition,
   }));
 
   const buf = await buildBomWorkbook({

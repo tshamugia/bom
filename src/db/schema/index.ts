@@ -7,6 +7,7 @@ export * from "./items";
 export * from "./enums";
 export * from "./projects";
 export * from "./bom-revisions";
+export * from "./bom-sections";
 export * from "./bom-lines";
 export * from "./bom-exports";
 export * from "./approvals";

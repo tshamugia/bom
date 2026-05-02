@@ -1,16 +1,30 @@
-import type { Line } from "@/components/builder/bom-line-table";
+import type { Line } from "@/components/builder/sectioned-line-table";
+import type { SectionInfo } from "@/components/builder/section-row";
 
 export function DocumentPreview({
-  project, revisionLetter, lines, generatedOn,
+  project, revisionLetter, lines, sections, generatedOn,
 }: {
   project: { code: string; name: string; owner: string; target: string; quantity: number };
   revisionLetter: string;
   lines: Line[];
+  sections: SectionInfo[];
   generatedOn: string;
 }) {
   const subtotal = lines.reduce((s, l) => s + l.qty * Number(l.unitPriceSnapshot), 0);
   const tax = subtotal * 0.08;
   const grand = subtotal + tax;
+
+  // Group lines: Uncategorized first, then named sections in position order.
+  const uncat = lines.filter(l => l.sectionId === null);
+  const sectionGroups = sections
+    .slice()
+    .sort((a, b) => a.position - b.position)
+    .map(section => ({
+      section,
+      lines: lines.filter(l => l.sectionId === section.id),
+    }));
+
+  const COLS = 8;
 
   return (
     <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-11 py-9 shadow-[var(--shadow-elev)]">
@@ -48,17 +62,22 @@ export function DocumentPreview({
           </tr>
         </thead>
         <tbody>
-          {lines.map((l, i) => (
-            <tr key={l.id}>
-              <td className="border-b border-[var(--color-line)] px-2 py-1.5 text-[var(--color-text-3)]">{i + 1}</td>
-              <td className="border-b border-[var(--color-line)] px-2 py-1.5 font-mono">{l.sku}</td>
-              <td className="border-b border-[var(--color-line)] px-2 py-1.5">{l.description}<div className="text-[10px] text-[var(--color-text-3)]">{l.manufacturer}</div></td>
-              <td className="border-b border-[var(--color-line)] px-2 py-1.5">{l.vendorName ?? "—"}</td>
-              <td className="border-b border-[var(--color-line)] px-2 py-1.5">{l.unit}</td>
-              <td className="border-b border-[var(--color-line)] px-2 py-1.5 text-right tabular-nums">{l.qty}</td>
-              <td className="border-b border-[var(--color-line)] px-2 py-1.5 text-right tabular-nums">${Number(l.unitPriceSnapshot).toFixed(3)}</td>
-              <td className="border-b border-[var(--color-line)] px-2 py-1.5 text-right font-medium tabular-nums">${(l.qty * Number(l.unitPriceSnapshot)).toFixed(2)}</td>
-            </tr>
+          {uncat.length > 0 && (
+            <SectionGroup
+              title="Uncategorized"
+              titleStyle="muted"
+              lines={uncat}
+              cols={COLS}
+            />
+          )}
+          {sectionGroups.map(({ section, lines: groupLines }) => (
+            <SectionGroup
+              key={section.id}
+              title={section.name}
+              titleStyle="bold"
+              lines={groupLines}
+              cols={COLS}
+            />
           ))}
         </tbody>
       </table>
@@ -76,6 +95,54 @@ export function DocumentPreview({
         <span>Page 1 of 1</span>
       </div>
     </div>
+  );
+}
+
+function SectionGroup({
+  title, titleStyle, lines, cols,
+}: {
+  title: string;
+  titleStyle: "bold" | "muted";
+  lines: Line[];
+  cols: number;
+}) {
+  if (lines.length === 0) return null;
+  const sectionTotal = lines.reduce((s, l) => s + l.qty * Number(l.unitPriceSnapshot), 0);
+  return (
+    <>
+      <tr>
+        <td
+          colSpan={cols}
+          className={`border-b border-[var(--color-line)] bg-[var(--color-surface-2)] px-2 py-1.5 text-[11.5px] ${
+            titleStyle === "bold" ? "font-bold tracking-tight" : "italic text-[var(--color-text-3)]"
+          }`}
+        >
+          {title}
+        </td>
+      </tr>
+      {lines.map((l, i) => (
+        <tr key={l.id}>
+          <td className="border-b border-[var(--color-line)] px-2 py-1.5 text-[var(--color-text-3)]">{i + 1}</td>
+          <td className="border-b border-[var(--color-line)] px-2 py-1.5 font-mono">{l.sku}</td>
+          <td className="border-b border-[var(--color-line)] px-2 py-1.5">{l.description}<div className="text-[10px] text-[var(--color-text-3)]">{l.manufacturer}</div></td>
+          <td className="border-b border-[var(--color-line)] px-2 py-1.5">{l.vendorName ?? "—"}</td>
+          <td className="border-b border-[var(--color-line)] px-2 py-1.5">{l.unit}</td>
+          <td className="border-b border-[var(--color-line)] px-2 py-1.5 text-right tabular-nums">{l.qty}</td>
+          <td className="border-b border-[var(--color-line)] px-2 py-1.5 text-right tabular-nums">${Number(l.unitPriceSnapshot).toFixed(3)}</td>
+          <td className="border-b border-[var(--color-line)] px-2 py-1.5 text-right font-medium tabular-nums">${(l.qty * Number(l.unitPriceSnapshot)).toFixed(2)}</td>
+        </tr>
+      ))}
+      {titleStyle === "bold" && (
+        <tr>
+          <td colSpan={cols - 1} className="border-b border-[var(--color-line)] px-2 py-1.5 text-right text-[11px] text-[var(--color-text-3)]">
+            Subtotal — {title}
+          </td>
+          <td className="border-b border-[var(--color-line)] px-2 py-1.5 text-right text-[11.5px] font-semibold tabular-nums">
+            ${sectionTotal.toFixed(2)}
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 

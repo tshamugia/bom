@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { projects, bomRevisions, bomLines, items, vendors, categories, subcategories } from "@/db/schema";
+import { projects, bomRevisions, bomLines, bomSections, items, vendors, categories, subcategories } from "@/db/schema";
 import { getCurrentOrgId } from "../org";
 
 export async function listProjects() {
@@ -69,6 +69,7 @@ export async function getActiveRevision(projectId: string) {
 export async function getLines(revisionId: string) {
   const orgId = await getCurrentOrgId();
   // Defense-in-depth: scope through projects→org.
+  // Order by section position (NULLS FIRST so Uncategorized lines come first), then line position.
   return db
     .select({
       id: bomLines.id, qty: bomLines.qty, position: bomLines.position,
@@ -76,14 +77,33 @@ export async function getLines(revisionId: string) {
       itemId: items.id, sku: items.sku, description: items.description,
       manufacturer: items.manufacturer, unit: items.unit, stockState: items.stockState,
       vendorName: vendors.name, categoryName: categories.name, subcategoryName: subcategories.name,
+      sectionId: bomLines.sectionId,
+      sectionName: bomSections.name,
+      sectionPosition: bomSections.position,
     })
     .from(bomLines)
     .innerJoin(items, eq(items.id, bomLines.itemId))
     .leftJoin(vendors, eq(vendors.id, items.vendorId))
     .leftJoin(categories, eq(categories.id, items.categoryId))
     .leftJoin(subcategories, eq(subcategories.id, items.subcategoryId))
+    .leftJoin(bomSections, eq(bomSections.id, bomLines.sectionId))
     .innerJoin(bomRevisions, eq(bomRevisions.id, bomLines.revisionId))
     .innerJoin(projects, eq(projects.id, bomRevisions.projectId))
     .where(and(eq(bomLines.revisionId, revisionId), eq(projects.organizationId, orgId)))
-    .orderBy(asc(bomLines.position));
+    .orderBy(sql`${bomSections.position} ASC NULLS FIRST`, asc(bomLines.position));
+}
+
+export async function getSections(revisionId: string) {
+  const orgId = await getCurrentOrgId();
+  return db
+    .select({
+      id: bomSections.id,
+      name: bomSections.name,
+      position: bomSections.position,
+    })
+    .from(bomSections)
+    .innerJoin(bomRevisions, eq(bomRevisions.id, bomSections.revisionId))
+    .innerJoin(projects, eq(projects.id, bomRevisions.projectId))
+    .where(and(eq(bomSections.revisionId, revisionId), eq(projects.organizationId, orgId)))
+    .orderBy(asc(bomSections.position));
 }

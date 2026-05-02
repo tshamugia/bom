@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation";
 import { inArray } from "drizzle-orm";
-import { getProject, getActiveRevision, getLines } from "@/server/queries/projects";
+import { getProject, getActiveRevision, getLines, getSections } from "@/server/queries/projects";
 import { listItems, listCategories } from "@/server/queries/catalog";
 import { listVendors } from "@/server/queries/vendors";
 import { db } from "@/db/client";
 import { subcategories } from "@/db/schema";
 import { BuilderShell } from "@/components/builder/builder-shell";
-import type { Line } from "@/components/builder/bom-line-table";
+import type { Line } from "@/components/builder/sectioned-line-table";
 
 export default async function BuilderPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await params;
@@ -22,7 +22,10 @@ export default async function BuilderPage({ params }: { params: Promise<{ projec
   const rev = await getActiveRevision(projectId);
   if (!rev) notFound();
 
-  const lines = await getLines(rev.id);
+  const [lines, sections] = await Promise.all([
+    getLines(rev.id),
+    getSections(rev.id),
+  ]);
 
   // Pull subcategories grouped by category for the filter panel.
   const catIds = cats.map(c => c.id);
@@ -61,6 +64,7 @@ export default async function BuilderPage({ params }: { params: Promise<{ projec
       categoryCounts={categoryCounts}
       stockCounts={stockCounts}
       lines={lines as Line[]}
+      sections={sections}
     />
   );
 }

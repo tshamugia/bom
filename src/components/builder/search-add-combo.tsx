@@ -14,8 +14,8 @@ export type CatalogItem = {
 };
 
 export function SearchAddCombo({
-  revisionId, catalog, lineItemIds,
-}: { revisionId: string; catalog: CatalogItem[]; lineItemIds: Set<string> }) {
+  revisionId, catalog, lineItemIds, activeSectionId,
+}: { revisionId: string; catalog: CatalogItem[]; lineItemIds: Set<string>; activeSectionId?: string | null }) {
   const s = useBuilder();
   const ref = useRef<HTMLDivElement>(null);
   const [pending, start] = useTransition();
@@ -44,7 +44,7 @@ export function SearchAddCombo({
   function add(itemId: string) {
     setAdding(itemId);
     start(async () => {
-      await addLine({ revisionId, itemId });
+      await addLine({ revisionId, itemId, sectionId: activeSectionId ?? null });
       setAdding(null);
       useBuilder.setState({ search: "", comboOpen: false });
     });

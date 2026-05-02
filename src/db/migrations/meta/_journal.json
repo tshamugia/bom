@@ -50,6 +50,20 @@
       "when": 1777746887100,
       "tag": "0006_cold_bill_hollister",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1777754771260,
+      "tag": "0007_equal_madripoor",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1777754801222,
+      "tag": "0008_brown_piledriver",
+      "breakpoints": true
     }
   ]
 }

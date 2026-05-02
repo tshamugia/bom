@@ -6,7 +6,12 @@ import { user } from "./auth";
 export const auditKindEnum = pgEnum("audit_kind", [
   "bom.created",
   "bom.line.added",
+  "bom.line.moved",
   "bom.export.generated",
+  "bom.section.created",
+  "bom.section.renamed",
+  "bom.section.reordered",
+  "bom.section.deleted",
   "approval.requested",
   "approval.approved",
   "approval.rejected",
