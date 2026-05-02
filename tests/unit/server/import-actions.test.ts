@@ -25,6 +25,7 @@ vi.mock("@/lib/s3", async () => {
 
 import { getCurrentOrgId, requireSession } from "@/server/org";
 import { prepareImport } from "@/server/actions/import";
+import { getDryRun } from "@/server/queries/import";
 
 beforeEach(async () => { await resetDb(); });
 
@@ -86,4 +87,32 @@ test("prepareImport rejects oversize file", async () => {
   expect(r.ok).toBe(false);
   if (r.ok) return;
   expect(r.error).toBe("too_large");
+});
+
+test("getDryRun re-derives the result from the staged S3 file", async () => {
+  const org = await ensureOrg();
+  vi.mocked(getCurrentOrgId).mockResolvedValue(org.id);
+  vi.mocked(requireSession).mockResolvedValue({ user: { id: "u1" } } as never);
+
+  const fd = new FormData();
+  fd.set("file", await makeFile([
+    ["A", "d", "m", "pcs", 1, 0, "in-stock", "", "", ""],
+  ]));
+  const prep = await prepareImport(fd);
+  if (!prep.ok) throw new Error("prepare failed");
+
+  const r = await getDryRun(prep.result.importId);
+  expect(r.ok).toBe(true);
+  if (!r.ok) return;
+  expect(r.result.counts.toAdd).toBe(1);
+});
+
+test("getDryRun returns expired when file is gone", async () => {
+  const org = await ensureOrg();
+  vi.mocked(getCurrentOrgId).mockResolvedValue(org.id);
+  vi.mocked(requireSession).mockResolvedValue({ user: { id: "u1" } } as never);
+  const r = await getDryRun("nonexistent-id");
+  expect(r.ok).toBe(false);
+  if (r.ok) return;
+  expect(r.error).toBe("expired");
 });
