@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Badge } from "@/components/master/status-badge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
 

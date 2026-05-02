@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
 import { useTweaks, type ColumnKey } from "@/stores/tweaks-store";
-import { StockBadge } from "@/components/master/status-badge";
+import { StockBadge } from "@/components/ui/badge";
 import { moveLineToSection, removeLine, updateLineQty } from "@/server/actions/bom-lines";
 import { SectionRow, type SectionInfo } from "./section-row";
 import { NewSectionInlineCreate } from "./new-section-popover";

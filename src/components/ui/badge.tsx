@@ -1,52 +1,38 @@
-import { mergeProps } from "@base-ui/react/merge-props"
-import { useRender } from "@base-ui/react/use-render"
-import { cva, type VariantProps } from "class-variance-authority"
+type Tone = "success" | "info" | "warning" | "danger" | "accent" | "gray";
 
-import { cn } from "@/lib/utils"
+const TONES: Record<Tone, string> = {
+  success: "bg-[var(--color-success-soft)] text-[var(--color-success)]",
+  info:    "bg-[var(--color-info-soft)] text-[var(--color-info)]",
+  warning: "bg-[var(--color-warning-soft)] text-[var(--color-warning)]",
+  danger:  "bg-[var(--color-danger-soft)] text-[var(--color-danger)]",
+  accent:  "bg-[var(--color-accent-soft)] text-[var(--color-accent-text)]",
+  gray:    "bg-[var(--color-surface-3)] text-[var(--color-text-2)]",
+};
 
-const badgeVariants = cva(
-  "group/badge inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3!",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
-        secondary:
-          "bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80",
-        destructive:
-          "bg-destructive/10 text-destructive focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:focus-visible:ring-destructive/40 [a]:hover:bg-destructive/20",
-        outline:
-          "border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground",
-        ghost:
-          "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
-  }
-)
-
-function Badge({
-  className,
-  variant = "default",
-  render,
-  ...props
-}: useRender.ComponentProps<"span"> & VariantProps<typeof badgeVariants>) {
-  return useRender({
-    defaultTagName: "span",
-    props: mergeProps<"span">(
-      {
-        className: cn(badgeVariants({ variant }), className),
-      },
-      props
-    ),
-    render,
-    state: {
-      slot: "badge",
-      variant,
-    },
-  })
+export function Badge({ tone = "gray", children }: { tone?: Tone; children: React.ReactNode }) {
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-px text-[11px] font-medium ${TONES[tone]}`}>
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+      {children}
+    </span>
+  );
 }
 
-export { Badge, badgeVariants }
+export function VendorStatusBadge({ status }: { status: "preferred" | "approved" | "review" }) {
+  const map = { preferred: ["success", "Preferred"], approved: ["info", "Approved"], review: ["warning", "Under review"] } as const;
+  const [tone, label] = map[status];
+  return <Badge tone={tone as Tone}>{label}</Badge>;
+}
+
+export function StockBadge({ state }: { state: "in-stock" | "low-stock" | "backorder" | "out-of-stock" }) {
+  const map = {
+    "in-stock":     ["success", "In stock"],
+    "low-stock":    ["warning", "Low"],
+    "backorder":    ["danger", "Backorder"],
+    "out-of-stock": ["danger", "Out"],
+  } as const;
+  const [tone, label] = map[state];
+  return <Badge tone={tone as Tone}>{label}</Badge>;
+}
+
+export type { Tone };

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ApprovalStatusBadge } from "@/components/approvals/approval-status-badge";
-import { Badge } from "@/components/master/status-badge";
+import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 

@@ -1,3 +1,5 @@
+import { Icon } from "@/components/icons";
+
 type Item = {
   id: string;
   kind: string;
@@ -6,6 +8,30 @@ type Item = {
   actorName: string | null;
 };
 
+type Tone = "success" | "info" | "warning" | "danger" | "accent";
+
+const TONE_COLORS: Record<Tone, string> = {
+  success: "var(--color-success)",
+  info:    "var(--color-info)",
+  warning: "var(--color-warning)",
+  danger:  "var(--color-danger)",
+  accent:  "var(--color-accent)",
+};
+
+function kindStyle(kind: string): { tone: Tone; icon: typeof Icon[keyof typeof Icon] } {
+  if (kind.includes(".approved"))                             return { tone: "success", icon: Icon.Check };
+  if (kind.includes(".rejected"))                             return { tone: "danger",  icon: Icon.X };
+  if (kind.includes(".deleted"))                              return { tone: "danger",  icon: Icon.Trash };
+  if (kind.includes(".created") || kind.includes(".added"))   return { tone: "success", icon: Icon.Plus };
+  if (kind.includes(".imported"))                             return { tone: "info",    icon: Icon.Upload };
+  if (kind.includes(".exported") || kind.includes(".generated")) return { tone: "info", icon: Icon.Download };
+  if (kind.includes(".requested"))                            return { tone: "info",    icon: Icon.Send };
+  if (kind.includes(".updated") || kind.includes(".renamed")
+      || kind.includes(".moved") || kind.includes(".reordered")) return { tone: "info", icon: Icon.Edit };
+  if (kind.startsWith("stock.") || kind.endsWith(".alert"))   return { tone: "warning", icon: Icon.AlertTriangle };
+  return { tone: "accent", icon: Icon.Activity };
+}
+
 export function ActivityTimeline({ items }: { items: Item[] }) {
   return (
     <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
@@ -13,15 +39,25 @@ export function ActivityTimeline({ items }: { items: Item[] }) {
       <div className="px-4 py-3">
         <ol className="relative pl-6">
           <span className="absolute left-[7px] top-2 bottom-2 w-px bg-[var(--color-line)]" />
-          {items.map((it, i) => (
-            <li key={it.id} className="relative pb-3 last:pb-0">
-              <span className={`absolute left-[-22px] top-1 h-3 w-3 rounded-full border-2 ${i === 0 ? "border-[var(--color-accent)] bg-[var(--color-accent)]" : "border-[var(--color-line-strong)] bg-[var(--color-surface)]"}`} />
-              <div className="text-[13px] font-medium">{it.summary}</div>
-              <div className="text-[11.5px] text-[var(--color-text-3)]">
-                {relative(it.createdAt)} {it.actorName ? `· ${it.actorName}` : ""}
-              </div>
-            </li>
-          ))}
+          {items.map((it) => {
+            const { tone, icon: KindIcon } = kindStyle(it.kind);
+            const color = TONE_COLORS[tone];
+            return (
+              <li key={it.id} className="relative pb-3 last:pb-0">
+                <span
+                  className="absolute left-[-22px] top-1 h-3 w-3 rounded-full border-2"
+                  style={{ borderColor: color, backgroundColor: color }}
+                />
+                <div className="flex items-center gap-1.5 text-[13px] font-medium">
+                  <KindIcon size={12} style={{ color }} />
+                  <span>{it.summary}</span>
+                </div>
+                <div className="text-[11.5px] text-[var(--color-text-3)]">
+                  {relative(it.createdAt)} {it.actorName ? `· ${it.actorName}` : ""}
+                </div>
+              </li>
+            );
+          })}
           {items.length === 0 && <li className="text-[12.5px] text-[var(--color-text-3)]">No recent activity yet.</li>}
         </ol>
       </div>

@@ -3,7 +3,7 @@ import { listProjects } from "@/server/queries/projects";
 import { PageHead } from "@/components/master/page-head";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
-import { Badge } from "@/components/master/status-badge";
+import { Badge } from "@/components/ui/badge";
 import { ApprovalStatusBadge } from "@/components/approvals/approval-status-badge";
 import { ProjectCreateButton } from "@/components/builder/project-picker";
 

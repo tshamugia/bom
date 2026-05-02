@@ -1,4 +1,4 @@
-import { Badge } from "@/components/master/status-badge";
+import { Badge } from "@/components/ui/badge";
 
 type Item = {
   id: string;

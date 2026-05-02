@@ -4,7 +4,7 @@ import { listVendors } from "@/server/queries/vendors";
 import { PageHead } from "@/components/master/page-head";
 import { CatalogFilters } from "@/components/master/catalog-filters";
 import { ItemDialog } from "@/components/master/item-dialog";
-import { StockBadge } from "@/components/master/status-badge";
+import { StockBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
 

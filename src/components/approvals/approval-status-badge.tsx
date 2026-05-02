@@ -1,4 +1,4 @@
-import { Badge } from "@/components/master/status-badge";
+import { Badge } from "@/components/ui/badge";
 
 export function ApprovalStatusBadge({ status, role }: { status: "pending" | "approved" | "rejected" | "cancelled"; role?: string | null }) {
   if (status === "approved")  return <Badge tone="success">Approved</Badge>;

@@ -1,6 +1,6 @@
 import { listVendors, vendorStats } from "@/server/queries/vendors";
 import { PageHead } from "@/components/master/page-head";
-import { VendorStatusBadge } from "@/components/master/status-badge";
+import { VendorStatusBadge } from "@/components/ui/badge";
 import { VendorDialog } from "@/components/master/vendor-dialog";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
