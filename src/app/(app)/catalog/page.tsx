@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { listItems, listCategories } from "@/server/queries/catalog";
 import { listVendors } from "@/server/queries/vendors";
 import { PageHead } from "@/components/master/page-head";
@@ -23,6 +24,9 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
         actions={
           <>
             <Button variant="outline"><Icon.Download size={14} className="mr-1.5" /> Export</Button>
+            <Link href="/catalog/import">
+              <Button variant="outline"><Icon.Upload size={14} className="mr-1.5" /> Import</Button>
+            </Link>
             <ItemDialog
               vendors={vendors}
               categories={cats}
