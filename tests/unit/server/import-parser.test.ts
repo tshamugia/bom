@@ -123,3 +123,15 @@ describe("parseImportBuffer error categories", () => {
     expect(r.error).toBe("unreadable");
   });
 });
+
+test("parses a 5,000-row file in under 2 seconds", async () => {
+  const fs = await import("node:fs");
+  const path = "tests/fixtures/catalog-import/big.xlsx";
+  if (!fs.existsSync(path)) return;
+  const buf = fs.readFileSync(path);
+  const t0 = performance.now();
+  const r = await parseImportBuffer(buf);
+  const elapsed = performance.now() - t0;
+  expect(r.ok).toBe(true);
+  expect(elapsed).toBeLessThan(2000);
+});
