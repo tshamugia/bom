@@ -45,6 +45,7 @@ next-env.d.ts
 playwright-report/
 test-results/
 coverage/
+tests/fixtures/catalog-import/big.xlsx
 
 # windows debug
 *.stackdump
