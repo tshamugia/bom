@@ -12,7 +12,7 @@ import {
 export async function parseImportBuffer(buf: Buffer): Promise<ParserResult> {
   const wb = new ExcelJS.Workbook();
   try {
-    await wb.xlsx.load(buf);
+    await wb.xlsx.load(buf as unknown as ArrayBuffer);
   } catch {
     return { ok: false, error: "unreadable" };
   }
@@ -95,7 +95,7 @@ function readCell(v: ExcelJS.CellValue): string {
   if (typeof v === "number" || typeof v === "boolean") return String(v);
   if (v instanceof Date) return v.toISOString();
   if (typeof v === "object") {
-    const obj = v as Record<string, unknown>;
+    const obj = v as unknown as Record<string, unknown>;
     if (typeof obj.text === "string") return obj.text.trim();
     if (Array.isArray(obj.richText)) {
       return obj.richText.map((p: { text?: string }) => p.text ?? "").join("").trim();
