@@ -12,6 +12,7 @@ export const auditKindEnum = pgEnum("audit_kind", [
   "approval.rejected",
   "vendor.created",
   "item.created",
+  "catalog.imported",
 ]);
 
 export const auditLog = pgTable(
