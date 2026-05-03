@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getProject, getActiveRevision, getLines, getSections } from "@/server/queries/projects";
+import { getProject, getActiveRevision, getLines, getSections, getLatestProcurementRevision } from "@/server/queries/projects";
 import { getForProject } from "@/server/queries/approvals";
 import { db } from "@/db/client";
 import { user } from "@/db/schema";
@@ -13,9 +13,10 @@ export default async function PreviewPage({ params }: { params: Promise<{ projec
   if (!project) notFound();
   const rev = await getActiveRevision(projectId);
   if (!rev) notFound();
-  const [lines, sections] = await Promise.all([
+  const [lines, sections, procurementRev] = await Promise.all([
     getLines(rev.id),
     getSections(rev.id),
+    getLatestProcurementRevision(project.id),
   ]);
   const workflow = await getForProject(project.id);
 
@@ -35,7 +36,10 @@ export default async function PreviewPage({ params }: { params: Promise<{ projec
       projectQuantity={project.quantity}
       revisionId={rev.id}
       revisionLetter={rev.letter}
-      lines={lines as any}
+      procurementRevision={procurementRev && procurementRev.status === "committed"
+        ? { id: procurementRev.id, letter: procurementRev.letter }
+        : null}
+      lines={lines as never}
       sections={sections}
       steps={workflow ? workflow.steps.map(s => ({ position: s.position, role: s.role, status: s.status, assigneeName: s.assigneeName })) : null}
     />

@@ -23,6 +23,7 @@ type Props = {
   projectQuantity: number;
   revisionId: string;
   revisionLetter: string;
+  procurementRevision: { id: string; letter: string } | null;
   lines: Line[];
   sections: SectionInfo[];
   steps: Array<{ position: number; role: string; status: "pending" | "active" | "approved" | "rejected" | "skipped"; assigneeName: string | null }> | null;
@@ -40,9 +41,15 @@ export function PreviewShell(p: Props) {
   const [pending, startReview] = useTransition();
 
   function sendForReview() {
+    if (!p.procurementRevision) return;
+    const targetId = p.procurementRevision.id;
     startReview(async () => {
-      await requestApproval({ revisionId: p.revisionId });
-      toast.success("Sent for review");
+      try {
+        await requestApproval({ revisionId: targetId });
+        toast.success("Sent for review");
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Send failed");
+      }
     });
   }
 
@@ -66,8 +73,16 @@ export function PreviewShell(p: Props) {
           <Button variant="outline" onClick={() => window.print()}>
             <Icon.Print size={14} className="mr-1.5" /> Print
           </Button>
-          <Button variant="outline" disabled={pending} onClick={sendForReview}>
-            <Icon.Send size={14} className="mr-1.5" /> Send for review
+          <Button
+            variant="outline"
+            disabled={pending || !p.procurementRevision}
+            title={!p.procurementRevision ? "Commit a revision before sending to procurement." : undefined}
+            onClick={sendForReview}
+          >
+            <Icon.Send size={14} className="mr-1.5" /> Send to procurement
+            {p.procurementRevision && p.procurementRevision.letter !== p.revisionLetter
+              ? <span className="ml-1 text-[11px] text-[var(--color-text-3)]">(Rev {p.procurementRevision.letter})</span>
+              : null}
           </Button>
           <GenerateDialog
             revisionId={p.revisionId}

@@ -99,6 +99,26 @@ export async function getActiveRevision(projectId: string): Promise<ActiveRevisi
   return (row as ActiveRevision | undefined) ?? null;
 }
 
+export async function getLatestProcurementRevision(projectId: string) {
+  const orgId = await getCurrentOrgId();
+  const [row] = await db
+    .select({
+      id: bomRevisions.id,
+      letter: bomRevisions.letter,
+      status: bomRevisions.status,
+    })
+    .from(bomRevisions)
+    .innerJoin(projects, eq(projects.id, bomRevisions.projectId))
+    .where(and(
+      eq(bomRevisions.projectId, projectId),
+      eq(projects.organizationId, orgId),
+      ne(bomRevisions.status, "draft"),
+    ))
+    .orderBy(desc(bomRevisions.createdAt))
+    .limit(1);
+  return row ?? null;
+}
+
 export async function hasOpenDraftForProject(projectId: string, excludeRevisionId?: string) {
   const orgId = await getCurrentOrgId();
   const where = excludeRevisionId
