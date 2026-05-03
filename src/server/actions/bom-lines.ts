@@ -4,7 +4,7 @@ import { z } from "zod";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
-import { bomLines, bomRevisions, bomSections, items, projects } from "@/db/schema";
+import { bomLines, bomRevisions, bomSections, items, projects, vendors } from "@/db/schema";
 import { getCurrentOrgId } from "../org";
 import { audit } from "../audit";
 import { isRevisionImmutable } from "../lib/revision-status";
@@ -47,6 +47,10 @@ export async function addLine(input: { revisionId: string; itemId: string; qty?:
   const [item] = await db.select().from(items).where(and(eq(items.id, itemId), eq(items.organizationId, orgId))).limit(1);
   if (!item) throw new Error("ITEM_NOT_FOUND");
 
+  const [vendorRow] = item.vendorId
+    ? await db.select({ name: vendors.name }).from(vendors).where(eq(vendors.id, item.vendorId)).limit(1)
+    : [];
+
   // Validate section belongs to this revision (defense-in-depth).
   if (sectionId) {
     const [section] = await db
@@ -73,6 +77,11 @@ export async function addLine(input: { revisionId: string; itemId: string; qty?:
     itemId,
     qty: input.qty ?? 1,
     unitPriceSnapshot: item.unitPrice,
+    skuSnapshot: item.sku,
+    descriptionSnapshot: item.description,
+    manufacturerSnapshot: item.manufacturer,
+    unitSnapshot: item.unit,
+    vendorNameSnapshot: vendorRow?.name ?? null,
     position: next,
   }).returning();
   revalidatePath(`/builder/${rev.projectId}`);

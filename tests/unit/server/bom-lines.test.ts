@@ -32,6 +32,20 @@ test("addLine inserts a new line with price snapshot", async () => {
   expect(line.unitPriceSnapshot).toBe("2.0000");
 });
 
+test("addLine captures item + vendor snapshots", async () => {
+  const { revisionId, it1 } = await setup();
+  await addLine({ revisionId, itemId: it1.id, qty: 3 });
+  const [row] = await db
+    .select()
+    .from(bomLines)
+    .where(and(eq(bomLines.revisionId, revisionId), eq(bomLines.itemId, it1.id)));
+  expect(row.skuSnapshot).toBe("A");
+  expect(row.descriptionSnapshot).toBe("a");
+  expect(row.manufacturerSnapshot).toBe("x");
+  expect(row.unitSnapshot).toBe("pcs");
+  expect(row.vendorNameSnapshot).toBe("M");
+});
+
 test("addLine called twice for same item increments qty (no duplicate row)", async () => {
   const { revisionId, it1 } = await setup();
   await addLine({ revisionId, itemId: it1.id });
