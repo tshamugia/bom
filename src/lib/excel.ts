@@ -79,12 +79,28 @@ function groupBySection(rows: BomRow[]): Group[] {
 
 function buildCoverSheet(wb: ExcelJS.Workbook, input: BuildInput) {
   const ws = wb.addWorksheet("Cover");
-  ws.getCell("A1").value = "Bill of Materials";
-  ws.getCell("A1").font = { bold: true, size: 22 };
-  ws.getCell("A3").value = `${input.project.code} — ${input.project.name}`;
-  ws.getCell("A4").value = `Revision ${input.revisionLetter} · Build qty ${input.project.quantity}`;
-  ws.getCell("A5").value = `Owner: ${input.project.owner}`;
-  ws.getCell("A6").value = `Target: ${input.project.target}`;
+  if (input.isDraft) {
+    const band = ws.getRow(1);
+    band.getCell(1).value = "DRAFT — NOT FOR PROCUREMENT";
+    band.getCell(1).font = { bold: true, color: { argb: "FFFFFFFF" }, size: 14 };
+    band.getCell(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFB91C1C" } };
+    band.getCell(1).alignment = { horizontal: "center" };
+    ws.mergeCells(1, 1, 1, 6);
+    band.height = 28;
+    ws.getCell("A2").value = "Bill of Materials";
+    ws.getCell("A2").font = { bold: true, size: 22 };
+    ws.getCell("A4").value = `${input.project.code} — ${input.project.name}`;
+    ws.getCell("A5").value = `Revision ${input.revisionLetter} · Build qty ${input.project.quantity}`;
+    ws.getCell("A6").value = `Owner: ${input.project.owner}`;
+    ws.getCell("A7").value = `Target: ${input.project.target}`;
+  } else {
+    ws.getCell("A1").value = "Bill of Materials";
+    ws.getCell("A1").font = { bold: true, size: 22 };
+    ws.getCell("A3").value = `${input.project.code} — ${input.project.name}`;
+    ws.getCell("A4").value = `Revision ${input.revisionLetter} · Build qty ${input.project.quantity}`;
+    ws.getCell("A5").value = `Owner: ${input.project.owner}`;
+    ws.getCell("A6").value = `Target: ${input.project.target}`;
+  }
 
   const groups = groupBySection(input.rows);
   let row = 8;
@@ -247,6 +263,11 @@ function buildMainSheet(wb: ExcelJS.Workbook, input: BuildInput, name = "BOM") {
   widths.forEach((w, i) => {
     ws.getColumn(i + 1).width = w;
   });
+
+  if (input.isDraft) {
+    ws.headerFooter.oddFooter =
+      `&L&"Arial,Bold"&CDraft snapshot · ${new Date().toISOString().slice(0, 10)} · Owner: ${input.project.owner}`;
+  }
 
   ws.views = [{ state: "frozen", ySplit: 5 }];
 }

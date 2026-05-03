@@ -86,6 +86,25 @@ test("buildBomWorkbook renders section headings and per-section subtotals in col
   expect(subtotalCount).toBe(3);
 });
 
+test("draft workbook embeds DRAFT — NOT FOR PROCUREMENT band on cover", async () => {
+  const buf = await buildBomWorkbook({
+    project: { code: "P", name: "P", quantity: 1, owner: "T", target: "—" },
+    revisionLetter: "A",
+    rows: [{ sku: "S", description: "d", manufacturer: "m", vendor: "V", unit: "pcs", qty: 1, unitPrice: 1, sectionName: null, sectionPosition: null }],
+    options: { includeVendorPricing: false, includeStockAvailability: false, groupByVendor: false, includeCoverPage: true },
+    isDraft: true,
+  });
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(buf as never);
+  const cover = wb.worksheets.find(ws => ws.name === "Cover");
+  expect(cover).toBeDefined();
+  let found = false;
+  cover!.eachRow(row => row.eachCell(cell => {
+    if (typeof cell.value === "string" && cell.value.includes("DRAFT")) found = true;
+  }));
+  expect(found).toBe(true);
+});
+
 test("buildBomWorkbook with only Uncategorized lines stays flat (no heading row)", async () => {
   const buf = await buildBomWorkbook({
     project: { code: "T", name: "T", quantity: 1, owner: "X", target: "—" },
