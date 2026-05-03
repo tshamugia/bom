@@ -109,7 +109,7 @@ async function main() {
   ]).returning();
 
   const beacon = inserted.find(p => p.code === "NB-2412")!;
-  const [revA] = await db.insert(bomRevisions).values({ projectId: beacon.id, letter: "A", status: "in-progress" }).returning();
+  const [revA] = await db.insert(bomRevisions).values({ projectId: beacon.id, letter: "A", status: "draft" }).returning();
 
   const initial: Array<[string, number]> = [
     ["MCU-STM32G0", 1], ["REG-AMS1117-5V", 2], ["CAP-0603-100N", 18], ["CAP-0805-10U", 6],
@@ -121,7 +121,17 @@ async function main() {
   await db.insert(bomLines).values(
     initial.map(([sku, qty], idx) => {
       const it = itemBySku.get(sku)!;
-      return { revisionId: revA.id, itemId: it.id, qty, unitPriceSnapshot: it.unitPrice, position: idx };
+      return {
+        revisionId: revA.id,
+        itemId: it.id,
+        qty,
+        unitPriceSnapshot: it.unitPrice,
+        skuSnapshot: it.sku,
+        descriptionSnapshot: it.description,
+        manufacturerSnapshot: it.manufacturer,
+        unitSnapshot: it.unit,
+        position: idx,
+      };
     }),
   );
 
