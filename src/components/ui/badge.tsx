@@ -35,4 +35,20 @@ export function StockBadge({ state }: { state: "in-stock" | "low-stock" | "backo
   return <Badge tone={tone as Tone}>{label}</Badge>;
 }
 
+type RevisionStatus = "draft" | "committed" | "in-progress" | "review" | "approved" | "locked";
+
+const REVISION_STATUS_MAP: Record<RevisionStatus, { tone: Tone; label: string }> = {
+  "draft":       { tone: "warning", label: "Draft" },
+  "committed":   { tone: "info",    label: "Committed" },
+  "in-progress": { tone: "info",    label: "In review" },
+  "review":      { tone: "info",    label: "In review" },
+  "approved":    { tone: "success", label: "Approved" },
+  "locked":      { tone: "success", label: "Released" },
+};
+
+export function RevisionStatusBadge({ status }: { status: RevisionStatus }) {
+  const { tone, label } = REVISION_STATUS_MAP[status];
+  return <Badge tone={tone}>{label}</Badge>;
+}
+
 export type { Tone };

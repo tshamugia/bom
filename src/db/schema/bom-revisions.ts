@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uniqueIndex, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uniqueIndex, index, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { createId } from "@paralleldrive/cuid2";
 import { projects } from "./projects";
 import { user } from "./auth";
@@ -9,7 +9,7 @@ export const bomRevisions = pgTable(
   {
     id: text("id").primaryKey().$defaultFn(() => createId()),
     projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
-    parentRevisionId: text("parent_revision_id").references((): any => bomRevisions.id, { onDelete: "set null" }),
+    parentRevisionId: text("parent_revision_id").references((): AnyPgColumn => bomRevisions.id, { onDelete: "set null" }),
     letter: text("letter").notNull(),
     status: revisionStatusEnum("status").notNull().default("draft"),
     notes: text("notes"),
