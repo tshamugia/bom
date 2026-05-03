@@ -1,4 +1,5 @@
 import { beforeEach, expect, test, vi } from "vitest";
+import { eq } from "drizzle-orm";
 import { resetDb, ensureOrg } from "@/../tests/test-helpers/db";
 import { db } from "@/db/client";
 import { items, vendors, categories, projects, bomRevisions, bomLines, user } from "@/db/schema";
@@ -33,16 +34,31 @@ async function setup() {
 
   const [p] = await db.insert(projects).values({ organizationId: org.id, code: "TST", name: "Test", status: "in-progress", quantity: 5 }).returning();
   const [r] = await db.insert(bomRevisions).values({ projectId: p.id, letter: "A", status: "in-progress" }).returning();
-  await db.insert(bomLines).values({ revisionId: r.id, itemId: it.id, qty: 4, unitPriceSnapshot: "1.000", position: 0 });
+  await db.insert(bomLines).values({
+    revisionId: r.id,
+    itemId: it.id,
+    qty: 4,
+    unitPriceSnapshot: "1.000",
+    skuSnapshot: it.sku,
+    descriptionSnapshot: it.description,
+    manufacturerSnapshot: it.manufacturer,
+    unitSnapshot: it.unit,
+    vendorNameSnapshot: v.name,
+    position: 0,
+  });
 
   return { orgId: org.id, projectId: p.id, revisionId: r.id, userId: u.id };
+}
+
+function defaultOptions() {
+  return { includeVendorPricing: true, includeStockAvailability: true, groupByVendor: false, includeCoverPage: false };
 }
 
 test("generateExport uploads to S3 and persists a row", async () => {
   const { revisionId, userId } = await setup();
   const ex = await generateExport({
     revisionId,
-    options: { includeVendorPricing: true, includeStockAvailability: true, groupByVendor: false, includeCoverPage: false },
+    options: defaultOptions(),
   });
   expect(ex.id).toBeTruthy();
   expect(ex.fileName).toMatch(/^BOM_TST_Rev_A\.xlsx$/);
@@ -51,4 +67,19 @@ test("generateExport uploads to S3 and persists a row", async () => {
   const list = await listExports();
   expect(list).toHaveLength(1);
   expect(list[0].generatedById).toBe(userId);
+});
+
+test("generateExport on draft revision records revisionStatusAtExport=draft", async () => {
+  const { revisionId } = await setup();
+  await db.update(bomRevisions).set({ status: "draft" }).where(eq(bomRevisions.id, revisionId));
+  const row = await generateExport({ revisionId, options: defaultOptions() });
+  expect(row.revisionStatusAtExport).toBe("draft");
+  expect(row.fileName).toMatch(/^BOM_TST_Rev_A_DRAFT_\d{4}-\d{2}-\d{2}\.xlsx$/);
+});
+
+test("generateExport on committed revision records revisionStatusAtExport=committed", async () => {
+  const { revisionId } = await setup();
+  await db.update(bomRevisions).set({ status: "committed" }).where(eq(bomRevisions.id, revisionId));
+  const row = await generateExport({ revisionId, options: defaultOptions() });
+  expect(row.revisionStatusAtExport).toBe("committed");
 });

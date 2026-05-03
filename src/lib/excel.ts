@@ -25,6 +25,7 @@ export type BuildInput = {
   revisionLetter: string;
   rows: BomRow[];
   options: BuildOptions;
+  isDraft?: boolean;
 };
 
 export async function buildBomWorkbook(input: BuildInput): Promise<Buffer> {
