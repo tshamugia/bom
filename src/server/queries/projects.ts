@@ -1,7 +1,8 @@
 import "server-only";
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { aliasedTable } from "drizzle-orm";
+import { and, asc, count, desc, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { projects, bomRevisions, bomLines, bomSections, items, vendors, categories, subcategories } from "@/db/schema";
+import { projects, bomRevisions, bomLines, bomSections, items, vendors, categories, subcategories, user } from "@/db/schema";
 import { getCurrentOrgId } from "../org";
 
 export async function listProjects() {
@@ -54,16 +55,70 @@ export async function getProject(id: string) {
   return { ...p, activeRevisionId: rev?.id ?? null, activeRevisionLetter: rev?.letter ?? null };
 }
 
-export async function getActiveRevision(projectId: string) {
+export type ActiveRevision = {
+  id: string;
+  letter: string;
+  status: "draft" | "committed" | "in-progress" | "review" | "approved" | "locked";
+  ownerId: string | null;
+  ownerName: string | null;
+  committedById: string | null;
+  committedByName: string | null;
+  committedAt: Date | null;
+  commitMessage: string | null;
+  parentRevisionId: string | null;
+  parentLetter: string | null;
+};
+
+export async function getActiveRevision(projectId: string): Promise<ActiveRevision | null> {
   const orgId = await getCurrentOrgId();
+  const ownerUser = aliasedTable(user, "owner_user");
+  const committedByUser = aliasedTable(user, "committed_by_user");
+  const parent = aliasedTable(bomRevisions, "parent_rev");
   const [row] = await db
-    .select({ id: bomRevisions.id, letter: bomRevisions.letter, status: bomRevisions.status })
+    .select({
+      id: bomRevisions.id,
+      letter: bomRevisions.letter,
+      status: bomRevisions.status,
+      ownerId: bomRevisions.ownerId,
+      ownerName: ownerUser.name,
+      committedById: bomRevisions.committedById,
+      committedByName: committedByUser.name,
+      committedAt: bomRevisions.committedAt,
+      commitMessage: bomRevisions.commitMessage,
+      parentRevisionId: bomRevisions.parentRevisionId,
+      parentLetter: parent.letter,
+    })
     .from(bomRevisions)
     .innerJoin(projects, eq(projects.id, bomRevisions.projectId))
+    .leftJoin(ownerUser, eq(ownerUser.id, bomRevisions.ownerId))
+    .leftJoin(committedByUser, eq(committedByUser.id, bomRevisions.committedById))
+    .leftJoin(parent, eq(parent.id, bomRevisions.parentRevisionId))
     .where(and(eq(projects.id, projectId), eq(projects.organizationId, orgId), sql`${bomRevisions.status} <> 'locked'`))
     .orderBy(desc(bomRevisions.createdAt))
     .limit(1);
-  return row ?? null;
+  return (row as ActiveRevision | undefined) ?? null;
+}
+
+export async function hasOpenDraftForProject(projectId: string, excludeRevisionId?: string) {
+  const orgId = await getCurrentOrgId();
+  const where = excludeRevisionId
+    ? and(
+        eq(bomRevisions.projectId, projectId),
+        eq(bomRevisions.status, "draft"),
+        eq(projects.organizationId, orgId),
+        ne(bomRevisions.id, excludeRevisionId),
+      )
+    : and(
+        eq(bomRevisions.projectId, projectId),
+        eq(bomRevisions.status, "draft"),
+        eq(projects.organizationId, orgId),
+      );
+  const [{ n }] = await db
+    .select({ n: count() })
+    .from(bomRevisions)
+    .innerJoin(projects, eq(projects.id, bomRevisions.projectId))
+    .where(where);
+  return n > 0;
 }
 
 export async function getLines(revisionId: string) {

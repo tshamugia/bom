@@ -11,15 +11,29 @@ import { SummaryBar } from "./summary-bar";
 import { ColumnsMenu } from "./columns-menu";
 import { LayoutToggle } from "./layout-toggle";
 import { CsvImportDialog } from "./csv-import-dialog";
+import { RevisionHeader } from "@/components/revisions/revision-header";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
 import type { SectionInfo } from "./section-row";
+
+type RevisionStatus = "draft" | "committed" | "in-progress" | "review" | "approved" | "locked";
 
 type Props = {
   projectId: string;
   projectCode: string;
   projectName: string;
   revisionId: string;
+  revision: {
+    id: string;
+    letter: string;
+    status: RevisionStatus;
+    ownerName: string | null;
+    committedByName: string | null;
+    committedAt: Date | null;
+    commitMessage: string | null;
+    parentLetter: string | null;
+  };
+  hasOpenDraft: boolean;
   vendors: { id: string; name: string }[];
   categories: { id: string; name: string; subcategories: { id: string; name: string }[] }[];
   catalog: CatalogItem[];
@@ -66,22 +80,26 @@ export function BuilderShell(p: Props) {
   const totalUnits = p.lines.reduce((s, l) => s + l.qty, 0);
   const totalValue = p.lines.reduce((s, l) => s + l.qty * Number(l.unitPriceSnapshot), 0);
   const vendorCount = new Set(p.lines.map(l => l.vendorName).filter(Boolean)).size;
+  const isDraft = p.revision.status === "draft";
 
   return (
     <>
-      <div className="mb-5 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="flex items-center gap-2.5 text-[20px] font-semibold tracking-tight">
-            {p.projectName}
-            <span className="rounded-full bg-[var(--color-surface-3)] px-2 py-px font-mono text-[11px] text-[var(--color-text-2)]">{p.projectCode}</span>
-          </h1>
-          <p className="text-[13px] text-[var(--color-text-3)]">Build the bill of materials by adding items from the catalog.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <LayoutToggle />
-          <Button variant="outline"><Icon.Copy size={14} className="mr-1.5" /> Duplicate</Button>
-          <Button onClick={() => router.push(`/preview/${p.projectId}`)}><Icon.Eye size={14} className="mr-1.5" /> Preview</Button>
-        </div>
+      <RevisionHeader
+        projectId={p.projectId}
+        projectCode={p.projectCode}
+        projectName={p.projectName}
+        revision={p.revision}
+        preflight={{
+          lineCount: p.lines.length,
+          vendorCount,
+          hasZeroQty: p.lines.some(l => l.qty === 0),
+        }}
+        hasOpenDraft={p.hasOpenDraft}
+      />
+      <div className="mb-5 flex items-center justify-end gap-2">
+        <LayoutToggle />
+        <Button variant="outline"><Icon.Copy size={14} className="mr-1.5" /> Duplicate</Button>
+        <Button onClick={() => router.push(`/preview/${p.projectId}`)}><Icon.Eye size={14} className="mr-1.5" /> Preview</Button>
       </div>
 
       <div className={layout === "stacked" ? "block" : "grid grid-cols-[248px_1fr] items-start gap-4"}>
@@ -104,22 +122,25 @@ export function BuilderShell(p: Props) {
         )}
 
         <div className="overflow-hidden rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
-          <div className="flex gap-2 border-b border-[var(--color-line-soft)] bg-[var(--color-surface-2)] p-3.5">
-            <SearchAddCombo
-              revisionId={p.revisionId}
-              catalog={p.catalog}
-              lineItemIds={lineCatalogIds}
-              activeSectionId={activeSectionId}
-            />
-            <CsvImportDialog revisionId={p.revisionId} />
-            <ColumnsMenu />
-          </div>
+          {isDraft && (
+            <div className="flex gap-2 border-b border-[var(--color-line-soft)] bg-[var(--color-surface-2)] p-3.5">
+              <SearchAddCombo
+                revisionId={p.revisionId}
+                catalog={p.catalog}
+                lineItemIds={lineCatalogIds}
+                activeSectionId={activeSectionId}
+              />
+              <CsvImportDialog revisionId={p.revisionId} />
+              <ColumnsMenu />
+            </div>
+          )}
           <SectionedLineTable
             revisionId={p.revisionId}
             lines={p.lines}
             sections={p.sections}
             activeSectionId={activeSectionId}
             onActiveSectionChange={setActiveSectionId}
+            readOnly={!isDraft}
           />
           <SummaryBar lineCount={p.lines.length} totalUnits={totalUnits} vendors={vendorCount} totalValue={totalValue} />
         </div>

@@ -33,6 +33,7 @@ type Props = {
   sections: SectionInfo[];
   activeSectionId: string | null;
   onActiveSectionChange: (id: string | null) => void;
+  readOnly?: boolean;
 };
 
 const UNCAT_KEY = "__uncat__";
@@ -43,6 +44,7 @@ export function SectionedLineTable({
   sections,
   activeSectionId,
   onActiveSectionChange,
+  readOnly = false,
 }: Props) {
   const { columns } = useTweaks();
   const [, start] = useTransition();
@@ -94,6 +96,7 @@ export function SectionedLineTable({
   function handleDrop(targetSectionId: string | null, e: React.DragEvent) {
     e.preventDefault();
     setDropTarget(null);
+    if (readOnly) return;
     const lineId = e.dataTransfer.getData("text/x-bom-line-id");
     if (!lineId) return;
     const line = lines.find(l => l.id === lineId);
@@ -154,6 +157,7 @@ export function SectionedLineTable({
                     drafts={drafts}
                     setDrafts={setDrafts}
                     columns={columns}
+                    readOnly={readOnly}
                   />
                 );
               })}
@@ -210,6 +214,7 @@ export function SectionedLineTable({
                       drafts={drafts}
                       setDrafts={setDrafts}
                       columns={columns}
+                      readOnly={readOnly}
                     />
                   ))
                 )}
@@ -219,10 +224,12 @@ export function SectionedLineTable({
         </table>
       </div>
 
-      <NewSectionInlineCreate
-        revisionId={revisionId}
-        onCreated={s => onActiveSectionChange(s.id)}
-      />
+      {!readOnly && (
+        <NewSectionInlineCreate
+          revisionId={revisionId}
+          onCreated={s => onActiveSectionChange(s.id)}
+        />
+      )}
     </>
   );
 }
@@ -304,24 +311,26 @@ function LineRow({
   drafts,
   setDrafts,
   columns,
+  readOnly = false,
 }: {
   line: Line;
   index: number;
   drafts: Record<string, number>;
   setDrafts: React.Dispatch<React.SetStateAction<Record<string, number>>>;
   columns: Record<ColumnKey, boolean>;
+  readOnly?: boolean;
 }) {
   const [, start] = useTransition();
   const qty = drafts[it.id] ?? it.qty;
   const price = Number(it.unitPriceSnapshot);
   return (
     <tr
-      draggable
-      onDragStart={e => {
+      draggable={!readOnly}
+      onDragStart={readOnly ? undefined : e => {
         e.dataTransfer.setData("text/x-bom-line-id", it.id);
         e.dataTransfer.effectAllowed = "move";
       }}
-      className="group cursor-grab border-b border-[var(--color-line-soft)] last:border-0 hover:bg-[var(--color-surface-2)] active:cursor-grabbing"
+      className={`group border-b border-[var(--color-line-soft)] last:border-0 hover:bg-[var(--color-surface-2)] ${readOnly ? "" : "cursor-grab active:cursor-grabbing"}`}
     >
       <td className="px-3 py-2 text-[11px] tabular-nums text-[var(--color-text-3)]">
         {String(index).padStart(2, "0")}
@@ -342,21 +351,25 @@ function LineRow({
       {columns.unit && <td className="px-3 py-2 text-[var(--color-text-3)]">{it.unit}</td>}
       {columns.qty && (
         <td className="px-3 py-2 text-right">
-          <Input
-            className="h-7 w-16 text-right font-mono text-[12px] tabular-nums"
-            type="number"
-            min={0}
-            value={qty}
-            onChange={e =>
-              setDrafts(d => ({ ...d, [it.id]: Math.max(0, Number(e.target.value) || 0) }))
-            }
-            onBlur={() => {
-              if (qty === it.qty) return;
-              start(async () => {
-                await updateLineQty({ id: it.id, qty });
-              });
-            }}
-          />
+          {readOnly ? (
+            <span className="font-mono text-[12px] tabular-nums">{it.qty}</span>
+          ) : (
+            <Input
+              className="h-7 w-16 text-right font-mono text-[12px] tabular-nums"
+              type="number"
+              min={0}
+              value={qty}
+              onChange={e =>
+                setDrafts(d => ({ ...d, [it.id]: Math.max(0, Number(e.target.value) || 0) }))
+              }
+              onBlur={() => {
+                if (qty === it.qty) return;
+                start(async () => {
+                  await updateLineQty({ id: it.id, qty });
+                });
+              }}
+            />
+          )}
         </td>
       )}
       {columns.price && (
@@ -373,14 +386,16 @@ function LineRow({
         </td>
       )}
       <td className="px-3 py-2 text-right">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="opacity-0 group-hover:opacity-100"
-          onClick={() => start(async () => { await removeLine({ id: it.id }); })}
-        >
-          <Icon.Trash size={14} />
-        </Button>
+        {!readOnly && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="opacity-0 group-hover:opacity-100"
+            onClick={() => start(async () => { await removeLine({ id: it.id }); })}
+          >
+            <Icon.Trash size={14} />
+          </Button>
+        )}
       </td>
     </tr>
   );

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { inArray } from "drizzle-orm";
-import { getProject, getActiveRevision, getLines, getSections } from "@/server/queries/projects";
+import { getProject, getActiveRevision, getLines, getSections, hasOpenDraftForProject } from "@/server/queries/projects";
 import { listItems, listCategories } from "@/server/queries/catalog";
 import { listVendors } from "@/server/queries/vendors";
 import { db } from "@/db/client";
@@ -22,9 +22,10 @@ export default async function BuilderPage({ params }: { params: Promise<{ projec
   const rev = await getActiveRevision(projectId);
   if (!rev) notFound();
 
-  const [lines, sections] = await Promise.all([
+  const [lines, sections, hasOpenDraft] = await Promise.all([
     getLines(rev.id),
     getSections(rev.id),
+    hasOpenDraftForProject(projectId, rev.id),
   ]);
 
   // Pull subcategories grouped by category for the filter panel.
@@ -53,6 +54,17 @@ export default async function BuilderPage({ params }: { params: Promise<{ projec
       projectCode={project.code}
       projectName={project.name}
       revisionId={rev.id}
+      revision={{
+        id: rev.id,
+        letter: rev.letter,
+        status: rev.status,
+        ownerName: rev.ownerName ?? null,
+        committedByName: rev.committedByName ?? null,
+        committedAt: rev.committedAt ?? null,
+        commitMessage: rev.commitMessage ?? null,
+        parentLetter: rev.parentLetter ?? null,
+      }}
+      hasOpenDraft={hasOpenDraft}
       vendors={vendors.map(v => ({ id: v.id, name: v.name }))}
       categories={categories}
       catalog={catalog.map(c => ({
