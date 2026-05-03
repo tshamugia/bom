@@ -22,6 +22,7 @@ export const bomExports = pgTable("bom_export", {
   byteSize: integer("byte_size").notNull(),
   options: jsonb("options").notNull().$type<ExportOptions>(),
   status: exportStatusEnum("status").notNull().default("exported"),
+  revisionStatusAtExport: text("revision_status_at_export").notNull().default("locked"),
   generatedById: text("generated_by_id").references(() => user.id, { onDelete: "set null" }),
   generatedAt: timestamp("generated_at").notNull().defaultNow(),
 });
