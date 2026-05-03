@@ -7,9 +7,13 @@ export const bomSections = pgTable(
   {
     id: text("id").primaryKey().$defaultFn(() => createId()),
     revisionId: text("revision_id").notNull().references(() => bomRevisions.id, { onDelete: "cascade" }),
+    sectionKey: text("section_key").notNull().$defaultFn(() => createId()),
     name: text("name").notNull(),
     position: integer("position").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
-  t => ({ revisionPosIdx: index("bom_section_revision_idx").on(t.revisionId, t.position) }),
+  t => ({
+    revisionPosIdx: index("bom_section_revision_idx").on(t.revisionId, t.position),
+    sectionKeyIdx: index("bom_section_key_idx").on(t.sectionKey),
+  }),
 );
