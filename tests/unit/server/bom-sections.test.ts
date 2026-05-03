@@ -46,10 +46,10 @@ async function setup() {
     .insert(items)
     .values({ sku: "B", description: "b", manufacturer: "x", unit: "pcs", unitPrice: "5.000", onHand: 100, stockState: "in-stock", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id })
     .returning();
-  const [p] = await db.insert(projects).values({ organizationId: org.id, code: "P", name: "P", status: "in-progress" }).returning();
+  const [p] = await db.insert(projects).values({ organizationId: org.id, code: "P", name: "P", status: "draft" }).returning();
   const [r] = await db
     .insert(bomRevisions)
-    .values({ projectId: p.id, letter: "A", status: "in-progress" })
+    .values({ projectId: p.id, letter: "A", status: "draft" })
     .returning();
   return { orgId: org.id, projectId: p.id, revisionId: r.id, it1, it2 };
 }
@@ -125,6 +125,17 @@ test("section CRUD on locked revision is rejected", async () => {
   await db.update(bomRevisions).set({ status: "locked" }).where(eq(bomRevisions.id, revisionId));
 
   await expect(createSection({ revisionId, name: "Locked" })).rejects.toThrow(/REVISION_LOCKED/);
+});
+
+test("section CRUD on committed revision is rejected", async () => {
+  const { revisionId } = await setup();
+  const sec = await createSection({ revisionId, name: "Power" });
+  await db.update(bomRevisions).set({ status: "committed" }).where(eq(bomRevisions.id, revisionId));
+
+  await expect(createSection({ revisionId, name: "Cooling" })).rejects.toThrow(/REVISION_LOCKED/);
+  await expect(renameSection({ id: sec.id, name: "PSU" })).rejects.toThrow(/REVISION_LOCKED/);
+  await expect(reorderSection({ id: sec.id, position: 1 })).rejects.toThrow(/REVISION_LOCKED/);
+  await expect(deleteSection({ id: sec.id, mode: "moveToUncategorized" })).rejects.toThrow(/REVISION_LOCKED/);
 });
 
 test("cross-org access to sections is rejected", async () => {

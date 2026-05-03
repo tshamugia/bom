@@ -7,6 +7,7 @@ import { db } from "@/db/client";
 import { bomLines, bomRevisions, bomSections, projects } from "@/db/schema";
 import { getCurrentOrgId } from "../org";
 import { audit } from "../audit";
+import { isRevisionImmutable } from "../lib/revision-status";
 
 async function ensureRevisionInOrg(revisionId: string) {
   const orgId = await getCurrentOrgId();
@@ -17,7 +18,7 @@ async function ensureRevisionInOrg(revisionId: string) {
     .where(and(eq(bomRevisions.id, revisionId), eq(projects.organizationId, orgId)))
     .limit(1);
   if (!row) throw new Error("REVISION_NOT_FOUND");
-  if (row.status === "locked") throw new Error("REVISION_LOCKED");
+  if (isRevisionImmutable(row.status)) throw new Error("REVISION_LOCKED");
   return { ...row, orgId };
 }
 
@@ -36,7 +37,7 @@ async function ensureSectionAccess(sectionId: string) {
     .where(and(eq(bomSections.id, sectionId), eq(projects.organizationId, orgId)))
     .limit(1);
   if (!row) throw new Error("SECTION_NOT_FOUND");
-  if (row.status === "locked") throw new Error("REVISION_LOCKED");
+  if (isRevisionImmutable(row.status)) throw new Error("REVISION_LOCKED");
   return { ...row, orgId };
 }
 

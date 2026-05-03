@@ -20,8 +20,8 @@ async function setup() {
   const [c] = await db.insert(categories).values({ name: "C", organizationId: org.id }).returning();
   const [it1] = await db.insert(items).values({ sku: "A", description: "a", manufacturer: "x", unit: "pcs", unitPrice: "2.000", onHand: 100, stockState: "in-stock", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id }).returning();
   const [it2] = await db.insert(items).values({ sku: "B", description: "b", manufacturer: "x", unit: "pcs", unitPrice: "5.000", onHand: 100, stockState: "in-stock", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id }).returning();
-  const [p] = await db.insert(projects).values({ organizationId: org.id, code: "P", name: "P", status: "in-progress" }).returning();
-  const [r] = await db.insert(bomRevisions).values({ projectId: p.id, letter: "A", status: "in-progress" }).returning();
+  const [p] = await db.insert(projects).values({ organizationId: org.id, code: "P", name: "P", status: "draft" }).returning();
+  const [r] = await db.insert(bomRevisions).values({ projectId: p.id, letter: "A", status: "draft" }).returning();
   return { orgId: org.id, revisionId: r.id, it1, it2 };
 }
 
@@ -68,8 +68,8 @@ test("addLine rejects a sectionId that belongs to a different revision", async (
   const { revisionId, it1 } = await setup();
   // Create a second revision with its own section.
   const orgId = (await getCurrentOrgId()) as string;
-  const [p2] = await db.insert(projects).values({ organizationId: orgId, code: "P2", name: "P2", status: "in-progress" }).returning();
-  const [r2] = await db.insert(bomRevisions).values({ projectId: p2.id, letter: "A", status: "in-progress" }).returning();
+  const [p2] = await db.insert(projects).values({ organizationId: orgId, code: "P2", name: "P2", status: "draft" }).returning();
+  const [r2] = await db.insert(bomRevisions).values({ projectId: p2.id, letter: "A", status: "draft" }).returning();
   const otherSection = await createSection({ revisionId: r2.id, name: "Other-rev section" });
 
   await expect(
@@ -122,6 +122,34 @@ test("moveLineToSection to null moves a line to Uncategorized", async () => {
   expect(row.sectionId).toBeNull();
 });
 
+test("blocks updateLineQty when revision is committed", async () => {
+  const { revisionId, it1 } = await setup();
+  const line = await addLine({ revisionId, itemId: it1.id });
+  await db.update(bomRevisions).set({ status: "committed" }).where(eq(bomRevisions.id, revisionId));
+  await expect(updateLineQty({ id: line.id, qty: 5 })).rejects.toThrow(/REVISION_LOCKED/);
+});
+
+test("blocks removeLine when revision is committed", async () => {
+  const { revisionId, it1 } = await setup();
+  const line = await addLine({ revisionId, itemId: it1.id });
+  await db.update(bomRevisions).set({ status: "committed" }).where(eq(bomRevisions.id, revisionId));
+  await expect(removeLine({ id: line.id })).rejects.toThrow(/REVISION_LOCKED/);
+});
+
+test("blocks moveLineToSection when revision is committed", async () => {
+  const { revisionId, it1 } = await setup();
+  const a = await createSection({ revisionId, name: "A" });
+  const line = await addLine({ revisionId, itemId: it1.id, sectionId: a.id });
+  await db.update(bomRevisions).set({ status: "committed" }).where(eq(bomRevisions.id, revisionId));
+  await expect(moveLineToSection({ lineId: line.id, sectionId: null })).rejects.toThrow(/REVISION_LOCKED/);
+});
+
+test("blocks addLine when revision is committed", async () => {
+  const { revisionId, it1 } = await setup();
+  await db.update(bomRevisions).set({ status: "committed" }).where(eq(bomRevisions.id, revisionId));
+  await expect(addLine({ revisionId, itemId: it1.id })).rejects.toThrow(/REVISION_LOCKED/);
+});
+
 test("moveLineToSection rejects a destination section from a different revision", async () => {
   const { revisionId, it1 } = await setup();
   const a = await createSection({ revisionId, name: "A" });
@@ -129,8 +157,8 @@ test("moveLineToSection rejects a destination section from a different revision"
 
   // Create another revision and a section in it.
   const orgId = (await getCurrentOrgId()) as string;
-  const [p2] = await db.insert(projects).values({ organizationId: orgId, code: "P2", name: "P2", status: "in-progress" }).returning();
-  const [r2] = await db.insert(bomRevisions).values({ projectId: p2.id, letter: "A", status: "in-progress" }).returning();
+  const [p2] = await db.insert(projects).values({ organizationId: orgId, code: "P2", name: "P2", status: "draft" }).returning();
+  const [r2] = await db.insert(bomRevisions).values({ projectId: p2.id, letter: "A", status: "draft" }).returning();
   const [otherSec] = await db.insert(bomSections).values({ revisionId: r2.id, name: "Other", position: 0 }).returning();
 
   await expect(

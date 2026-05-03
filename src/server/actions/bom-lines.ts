@@ -7,6 +7,7 @@ import { db } from "@/db/client";
 import { bomLines, bomRevisions, bomSections, items, projects } from "@/db/schema";
 import { getCurrentOrgId } from "../org";
 import { audit } from "../audit";
+import { isRevisionImmutable } from "../lib/revision-status";
 
 async function ensureRevisionInOrg(revisionId: string) {
   const orgId = await getCurrentOrgId();
@@ -17,7 +18,7 @@ async function ensureRevisionInOrg(revisionId: string) {
     .where(and(eq(bomRevisions.id, revisionId), eq(projects.organizationId, orgId)))
     .limit(1);
   if (!row) throw new Error("REVISION_NOT_FOUND");
-  if (row.status === "locked") throw new Error("REVISION_LOCKED");
+  if (isRevisionImmutable(row.status)) throw new Error("REVISION_LOCKED");
   return { ...row, orgId };
 }
 
@@ -90,7 +91,7 @@ export async function updateLineQty(input: { id: string; qty: number }) {
     .where(and(eq(bomLines.id, id), eq(projects.organizationId, orgId)))
     .limit(1);
   if (!line) throw new Error("LINE_NOT_FOUND");
-  if (line.status === "locked") throw new Error("REVISION_LOCKED");
+  if (isRevisionImmutable(line.status)) throw new Error("REVISION_LOCKED");
   await db.update(bomLines).set({ qty }).where(eq(bomLines.id, id));
   revalidatePath(`/builder/${line.projectId}`);
 }
@@ -105,7 +106,7 @@ export async function removeLine(input: { id: string }) {
     .where(and(eq(bomLines.id, input.id), eq(projects.organizationId, orgId)))
     .limit(1);
   if (!line) throw new Error("LINE_NOT_FOUND");
-  if (line.status === "locked") throw new Error("REVISION_LOCKED");
+  if (isRevisionImmutable(line.status)) throw new Error("REVISION_LOCKED");
   await db.delete(bomLines).where(eq(bomLines.id, input.id));
   revalidatePath(`/builder/${line.projectId}`);
 }
@@ -135,7 +136,7 @@ export async function moveLineToSection(input: { lineId: string; sectionId: stri
     .where(and(eq(bomLines.id, lineId), eq(projects.organizationId, orgId)))
     .limit(1);
   if (!line) throw new Error("LINE_NOT_FOUND");
-  if (line.status === "locked") throw new Error("REVISION_LOCKED");
+  if (isRevisionImmutable(line.status)) throw new Error("REVISION_LOCKED");
 
   // Validate destination section belongs to the same revision.
   if (sectionId) {
