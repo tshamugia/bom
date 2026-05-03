@@ -4,7 +4,7 @@ import { resetDb, ensureOrg } from "@/../tests/test-helpers/db";
 import { db } from "@/db/client";
 import { items, vendors, categories, projects, bomRevisions, user } from "@/db/schema";
 import { addLine } from "@/server/actions/bom-lines";
-import { commitRevision, branchRevision } from "@/server/actions/revisions";
+import { commitRevision, branchRevision, discardDraft } from "@/server/actions/revisions";
 import { bomLines as bomLinesT, bomSections as bomSectionsT } from "@/db/schema";
 import { createSection } from "@/server/actions/bom-sections";
 
@@ -89,4 +89,19 @@ test("branchRevision rejects when project already has a draft", async () => {
   await commitRevision({ revisionId });
   await branchRevision({ parentRevisionId: revisionId });
   await expect(branchRevision({ parentRevisionId: revisionId })).rejects.toThrow(/DRAFT_ALREADY_EXISTS/);
+});
+
+test("discardDraft removes the revision (cascades lines + sections)", async () => {
+  const { revisionId, it } = await setup();
+  await addLine({ revisionId, itemId: it.id, qty: 1 });
+  await discardDraft({ revisionId });
+  const after = await db.select().from(bomRevisions).where(eq(bomRevisions.id, revisionId));
+  expect(after).toHaveLength(0);
+});
+
+test("discardDraft rejects non-draft revisions", async () => {
+  const { revisionId, it } = await setup();
+  await addLine({ revisionId, itemId: it.id, qty: 1 });
+  await commitRevision({ revisionId });
+  await expect(discardDraft({ revisionId })).rejects.toThrow(/NOT_DRAFT/);
 });

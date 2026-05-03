@@ -179,3 +179,24 @@ export async function branchRevision(input: z.infer<typeof BranchInput>): Promis
   });
   return newId;
 }
+
+const DiscardInput = z.object({ revisionId: z.string() });
+
+export async function discardDraft(input: z.infer<typeof DiscardInput>) {
+  const { revisionId } = DiscardInput.parse(input);
+  const rev = await loadRevisionInOrg(revisionId);
+  if (rev.status !== "draft") throw new Error("REVISION_NOT_DRAFT");
+
+  await db.delete(bomRevisions).where(eq(bomRevisions.id, revisionId));
+
+  revalidatePath(`/builder/${rev.projectId}`);
+  revalidatePath(`/projects/${rev.projectId}/history`);
+  revalidatePath("/dashboard");
+  await audit({
+    kind: "bom.revision.discarded",
+    refType: "project",
+    refId: rev.projectId,
+    summary: `Rev ${rev.letter} draft discarded`,
+    payload: { revisionId, letter: rev.letter },
+  });
+}
