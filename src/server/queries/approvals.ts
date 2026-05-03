@@ -16,6 +16,8 @@ type Row = {
   total: number;
   age: string;
   activeStepRole: string | null;
+  latestExportId: string | null;
+  latestExportFileName: string | null;
 };
 
 async function baseList(filter: { status?: "pending" | "approved" | "rejected"; assigneeUserId?: string }) {
@@ -33,7 +35,9 @@ async function baseList(filter: { status?: "pending" | "approved" | "rejected"; 
       (SELECT COUNT(*) FROM "bom_line" l WHERE l.revision_id = w.revision_id)::int AS "lineCount",
       (SELECT COALESCE(SUM(l.qty * l.unit_price_snapshot), 0) FROM "bom_line" l WHERE l.revision_id = w.revision_id)::float AS "total",
       (SELECT s.role FROM "approval_step" s WHERE s.workflow_id = w.id AND s.position = w.current_step_index LIMIT 1) AS "activeStepRole",
-      (SELECT s.assignee_id FROM "approval_step" s WHERE s.workflow_id = w.id AND s.position = w.current_step_index LIMIT 1) AS "activeAssigneeId"
+      (SELECT s.assignee_id FROM "approval_step" s WHERE s.workflow_id = w.id AND s.position = w.current_step_index LIMIT 1) AS "activeAssigneeId",
+      (SELECT e.id FROM "bom_export" e WHERE e.revision_id = w.revision_id AND e.status = 'exported' ORDER BY e.generated_at DESC LIMIT 1) AS "latestExportId",
+      (SELECT e.file_name FROM "bom_export" e WHERE e.revision_id = w.revision_id AND e.status = 'exported' ORDER BY e.generated_at DESC LIMIT 1) AS "latestExportFileName"
     FROM "approval_workflow" w
     INNER JOIN "bom_revision" r ON r.id = w.revision_id
     INNER JOIN "project" p ON p.id = r.project_id
@@ -72,6 +76,9 @@ export async function listApproved() {
 }
 export async function listRejected() {
   return baseList({ status: "rejected" });
+}
+export async function listAllSent() {
+  return baseList({});
 }
 
 export async function getForProject(projectId: string) {

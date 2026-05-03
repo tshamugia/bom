@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ApprovalStatusBadge } from "@/components/approvals/approval-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
@@ -52,8 +51,10 @@ export function ProjectsTable({ rows }: { rows: Row[] }) {
               <td className="px-4 py-2.5 text-right tabular-nums">${p.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
               <td className="px-4 py-2.5">
                 {p.workflowStatus
-                  ? <ApprovalStatusBadge status={p.workflowStatus} role={p.workflowActiveRole} />
-                  : <Badge tone={p.status === "approved" ? "success" : p.status === "in-progress" ? "info" : "gray"}>{p.status}</Badge>}
+                  ? <Badge tone="success">Sent to procurement</Badge>
+                  : p.status === "in-progress"
+                    ? <Badge tone="warning">In progress</Badge>
+                    : <Badge tone="gray">{p.status}</Badge>}
               </td>
               <td className="px-4 py-2.5 text-[var(--color-text-3)]">{relativeTime(p.updatedAt)}</td>
               <td className="px-4 py-2.5 text-[var(--color-text-3)]">{p.targetDate ?? "—"}</td>

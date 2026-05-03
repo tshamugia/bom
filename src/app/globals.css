@@ -103,7 +103,7 @@ html, body {
   --card-foreground: var(--color-text);
   --popover: var(--color-surface);
   --popover-foreground: var(--color-text);
-  --primary: var(--color-accent);
+  --primary: #3343d6;
   --primary-foreground: #ffffff;
   --secondary: var(--color-surface-2);
   --secondary-foreground: var(--color-text);
@@ -114,7 +114,7 @@ html, body {
   --destructive: var(--color-danger);
   --border: var(--color-line);
   --input: var(--color-line);
-  --ring: var(--color-accent);
+  --ring: #3343d6;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);

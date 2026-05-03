@@ -4,7 +4,6 @@ import { PageHead } from "@/components/master/page-head";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
-import { ApprovalStatusBadge } from "@/components/approvals/approval-status-badge";
 import { ProjectCreateButton } from "@/components/builder/project-picker";
 
 export default async function BuilderIndex() {
@@ -49,8 +48,10 @@ export default async function BuilderIndex() {
                   <td className="px-4 py-2.5 text-right tabular-nums">${p.total.toFixed(2)}</td>
                   <td className="px-4 py-2.5">
                     {p.workflowStatus
-                      ? <ApprovalStatusBadge status={p.workflowStatus} role={p.workflowActiveRole} />
-                      : <Badge tone={p.status === "approved" ? "success" : p.status === "in-progress" ? "info" : "gray"}>{p.status}</Badge>}
+                      ? <Badge tone="success">Sent to procurement</Badge>
+                      : p.status === "in-progress"
+                        ? <Badge tone="warning">In progress</Badge>
+                        : <Badge tone="gray">{p.status}</Badge>}
                   </td>
                   <td className="px-4 py-2.5 text-[var(--color-text-3)]">{p.targetDate ?? "—"}</td>
                   <td className="px-4 py-2.5 text-right">

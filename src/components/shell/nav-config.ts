@@ -29,7 +29,7 @@ export const NAV: NavGroup[] = [
   {
     group: "Process",
     items: [
-      { href: "/approvals", label: "Approvals", icon: "CheckCircle" },
+      { href: "/approvals", label: "Sent BOMs", icon: "CheckCircle" },
     ],
   },
 ];

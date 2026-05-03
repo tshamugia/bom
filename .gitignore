@@ -53,4 +53,5 @@ tests/fixtures/catalog-import/big.xlsx
 # local agent/tooling
 /.claude/
 /doc/superpowers/
+/.superpowers/
 
