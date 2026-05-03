@@ -26,12 +26,17 @@ Procurement teams also have no enforced gate: any revision can be sent downstrea
 
 ## Concepts and lifecycle
 
-A `bom_revision` is the unit of versioning. It has two states that matter for this feature:
+A `bom_revision` is the unit of versioning. The relevant states for this feature:
 
 - **`draft`** — the working copy. Editable. Has an `ownerId` (the person responsible for completing it). Cannot be sent to procurement. Can be exported (with draft watermarking).
-- **`locked`** — committed. Immutable. Has `lockedById`, `lockedAt`, and a `commitMessage`. Diffable, exportable, procurement-ready.
+- **`committed`** — author has committed the revision. Immutable. Has `committedById`, `committedAt`, and a `commitMessage`. Diffable, exportable, procurement-eligible (can be submitted to an approval workflow).
+- **`locked`** — terminal post-approval state already produced by `approveStep` when every approval stage approves. Immutable, diffable, exportable. (Not produced by the new commit action; we leave the existing approval-workflow semantics untouched.)
 
-The intermediate enum values (`in-progress`, `review`, `approved`) remain on `revisionStatusEnum` for backward compatibility but are not gates for this feature.
+A new enum value `committed` is added to `revisionStatusEnum` between `draft` and the existing approval states. The intermediate values `in-progress`, `review`, `approved` remain for backward compatibility with the approval workflow.
+
+**Immutability gate.** Wherever existing code blocks edits via `if (status === "locked")`, the check becomes `if (status === "committed" || status === "locked")`. We centralize this in a small helper to avoid drift.
+
+**Procurement gate.** `requestApproval` currently requires `status !== "locked"`. It is changed to require `status === "committed"` (only committed revisions can be sent to procurement).
 
 ### Lifecycle
 
@@ -42,9 +47,9 @@ The intermediate enum values (`in-progress`, `review`, `approved`) remain on `re
        ▼
    draft (Rev A)
        │
-       │ commit (writes lockedById, lockedAt, commitMessage)
+       │ commit (writes committedById, committedAt, commitMessage)
        ▼
-   locked (Rev A) ────────────────────────► (procurement workflows)
+  committed (Rev A) ─────────────────────► (procurement workflows: in-progress/review/approved/locked)
        │
        │ "New revision" (branch — copies sections + lines forward)
        ▼
@@ -52,12 +57,12 @@ The intermediate enum values (`in-progress`, `review`, `approved`) remain on `re
        │
        │ commit
        ▼
-   locked (Rev B)
+  committed (Rev B)
        │
        ⋮
 ```
 
-**Branching.** Creating a new draft from a locked revision copies all `bom_section` rows and all `bom_line` rows, generating fresh ids. Snapshot fields on `bom_line` are **re-snapshotted from current `item.*` values** at branch time, so the new draft reflects today's catalog state. The diff against the parent revision will surface any deltas this introduces.
+**Branching.** Creating a new draft from a committed (or locked) revision copies all `bom_section` rows and all `bom_line` rows, generating fresh ids. Snapshot fields on `bom_line` are **re-snapshotted from current `item.*` values** at branch time, so the new draft reflects today's catalog state. The diff against the parent revision will surface any deltas this introduces.
 
 **One open draft per project.** A project may have at most one revision in `draft` status at any time. To start a new draft, the prior draft must be either committed or discarded. This keeps "the draft" unambiguous for users and procurement.
 
@@ -70,8 +75,9 @@ The intermediate enum values (`in-progress`, `review`, `approved`) remain on `re
 | Column | Type | Notes |
 |---|---|---|
 | `ownerId` | `text` → `user.id`, on delete `set null` | Person responsible for the draft. Set to creator on insert; mutable. |
-| `lockedById` | `text` → `user.id`, on delete `set null` | Set on commit. |
-| `commitMessage` | `text`, nullable | Optional human-authored description. |
+| `committedById` | `text` → `user.id`, on delete `set null` | Set on commit (the new author-driven action). |
+| `committedAt` | `timestamp`, nullable | Set on commit. |
+| `commitMessage` | `text`, nullable | Optional human-authored description for the commit. |
 | `parentRevisionId` | `text` → `bom_revision.id`, on delete `set null` | Set when branching from a locked revision. Null for the first revision of a project. |
 
 The existing `notes` field stays as freeform notes (decoupled from the commit message).
@@ -118,13 +124,13 @@ A single Drizzle migration adds the columns above and backfills:
 1. Authorize: caller must have edit access on the project.
 2. Load revision; require `status === 'draft'`.
 3. Validate: revision must have at least one line.
-4. Update: `status = 'locked'`, `lockedById = currentUser.id`, `lockedAt = now()`, `commitMessage = input.commitMessage ?? null`.
+4. Update: `status = 'committed'`, `committedById = currentUser.id`, `committedAt = now()`, `commitMessage = input.commitMessage ?? null`.
 5. `audit({ kind: 'bom.revision.committed', refType: 'project', refId: projectId, payload: { revisionId, letter, commitMessage } })`.
 6. Revalidate `/builder/[id]`, `/projects/[id]/history`, `/dashboard`.
 
 ### New: `branchRevision(parentRevisionId)`
 
-1. Authorize and load parent; require `status === 'locked'`.
+1. Authorize and load parent; require `status === 'committed' || status === 'locked'`.
 2. Reject if any draft already exists for the same project (one-open-draft rule).
 3. Compute next letter (`A → B → C …` based on existing revisions for the project).
 4. Insert new `bom_revision` with `status: 'draft'`, `parentRevisionId = parent.id`, `ownerId = currentUser.id`.
@@ -160,9 +166,21 @@ Hard delete (cascade removes lines and sections). Only allowed if `status === 'd
 
 ### Updated: approval workflow creation (procurement gate)
 
-The action that creates an `approval_workflow` for a revision (currently in `src/server/actions/approvals.ts`) gains a guard: `if (revision.status !== 'locked') throw new Error('REVISION_NOT_LOCKED')`. This is the actual procurement gate.
+`requestApproval` in `src/server/actions/approvals.ts` currently rejects when `status === "locked"`. Replace that check with: `if (revision.status !== 'committed') throw new Error('REVISION_NOT_COMMITTED')`. Only committed revisions can be sent to procurement.
 
-When a project's *latest* revision is a draft but a prior locked revision exists, procurement actions in the UI target the **latest locked revision** (Option α from brainstorming). Server actions accept an explicit `revisionId` so the UI can disambiguate.
+When a project's *latest* revision is a draft but a prior committed (or locked) revision exists, procurement actions in the UI target the **latest committed-or-locked revision** (Option α from brainstorming). Server actions accept an explicit `revisionId` so the UI can disambiguate.
+
+### Updated: edit guards in `bom-lines.ts` and `bom-sections.ts`
+
+The existing pattern `if (status === "locked") throw "REVISION_LOCKED"` is replaced by a single helper `isRevisionImmutable(status)` exported from `src/server/lib/revision-status.ts`:
+
+```ts
+export function isRevisionImmutable(status: RevisionStatus): boolean {
+  return status === "committed" || status === "locked";
+}
+```
+
+All five existing guards (in `bom-lines.ts` and `bom-sections.ts`) call this helper.
 
 ## Diff query
 
@@ -242,8 +260,12 @@ type RevisionDiff = {
 Added to `src/components/ui/badge.tsx` alongside the existing `VendorStatusBadge` / `StockBadge`:
 
 ```tsx
-RevisionStatusBadge: status='draft'  → tone="warning", label="Draft"
-                     status='locked' → tone="success", label="Locked"
+RevisionStatusBadge: status='draft'       → tone="warning", label="Draft"
+                     status='committed'   → tone="info",    label="Committed"
+                     status='in-progress' → tone="info",    label="In review"
+                     status='review'      → tone="info",    label="In review"
+                     status='approved'    → tone="success", label="Approved"
+                     status='locked'      → tone="success", label="Released"
 ```
 
 The badge is shown wherever a revision identifier is rendered: builder header, dashboard rows, history list, diff view header.
@@ -251,8 +273,8 @@ The badge is shown wherever a revision identifier is rendered: builder header, d
 ### Builder header
 
 - **Draft revision:** `{Project name} {Code} · [Draft · Rev B] · {owner avatar} {owner name} · Branched from Rev A · 2026-05-01`. Right side: "Discard draft", "Generate export", "Commit revision" (primary).
-- **Locked revision:** `{Project name} {Code} · [Locked · Rev A] · Committed by {name} · {timestamp} · "{commit message}"`. Right side: "Generate export", "Compare to…", "New revision" (primary; disabled if a draft already exists for the project).
-- Locked-revision builder is fully read-only: existing edit handlers throw, but the UI also disables inputs so users don't discover the limit by error.
+- **Committed/locked revision:** `{Project name} {Code} · [{status badge} · Rev A] · Committed by {name} · {timestamp} · "{commit message}"`. Right side: "Generate export", "Compare to…", "New revision" (primary; disabled if a draft already exists for the project).
+- Committed-or-locked builder is fully read-only: existing edit handlers throw via `isRevisionImmutable`, but the UI also disables inputs so users don't discover the limit by error.
 
 ### Commit dialog — `src/components/builder/commit-dialog.tsx`
 
@@ -289,7 +311,7 @@ Table of all revisions for the project, newest first:
 
 - "Send to procurement" / "Request approval" buttons:
   - On a draft → disabled, tooltip: *"Commit this revision before sending to procurement."*
-  - On a draft *with a prior locked revision* → enabled, but the action targets the latest locked revision; tooltip clarifies: *"Sending Rev A. Rev B is still in draft."*
+  - On a draft *with a prior committed/locked revision* → enabled, but the action targets the latest committed-or-locked revision; tooltip clarifies: *"Sending Rev A. Rev B is still in draft."*
 - "Generate export" is always enabled. Watermarking (cover band, filename suffix, footer) is applied automatically when `revisionStatus === 'draft'`.
 
 ## Audit log additions
