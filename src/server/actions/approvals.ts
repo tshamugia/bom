@@ -29,7 +29,7 @@ async function ensureRevisionInOrg(revisionId: string) {
 
 export async function requestApproval(input: { revisionId: string }) {
   const rev = await ensureRevisionInOrg(input.revisionId);
-  if (rev.status === "locked") throw new Error("REVISION_LOCKED");
+  if (rev.status !== "committed") throw new Error("REVISION_NOT_COMMITTED");
   const session = await requireSession();
 
   const [workflow] = await db.insert(approvalWorkflows).values({

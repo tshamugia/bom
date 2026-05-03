@@ -21,7 +21,7 @@ async function setup() {
   const [c] = await db.insert(categories).values({ name: "C", organizationId: org.id }).returning();
   const [it] = await db.insert(items).values({ sku: "X", description: "x", manufacturer: "Y", unit: "pcs", unitPrice: "1.000", onHand: 1, stockState: "in-stock", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id }).returning();
   const [p] = await db.insert(projects).values({ organizationId: org.id, code: "P", name: "P", status: "in-progress" }).returning();
-  const [r] = await db.insert(bomRevisions).values({ projectId: p.id, letter: "A", status: "in-progress" }).returning();
+  const [r] = await db.insert(bomRevisions).values({ projectId: p.id, letter: "A", status: "committed" }).returning();
   await db.insert(bomLines).values({ revisionId: r.id, itemId: it.id, qty: 1, unitPriceSnapshot: "1.000", position: 0 });
   return { orgId: org.id, projectId: p.id, revisionId: r.id, userId: u.id };
 }
@@ -56,6 +56,18 @@ test("approveStep advances the workflow and the last step approves the project",
   const [rev] = await db.select().from(bomRevisions).where(eq(bomRevisions.id, revisionId));
   expect(rev.status).toBe("locked");
   expect(rev.lockedAt).not.toBeNull();
+});
+
+test("requestApproval rejects a draft revision", async () => {
+  const { revisionId } = await setup();
+  await db.update(bomRevisions).set({ status: "draft" }).where(eq(bomRevisions.id, revisionId));
+  await expect(requestApproval({ revisionId })).rejects.toThrow(/NOT_COMMITTED/);
+});
+
+test("requestApproval rejects a locked revision", async () => {
+  const { revisionId } = await setup();
+  await db.update(bomRevisions).set({ status: "locked" }).where(eq(bomRevisions.id, revisionId));
+  await expect(requestApproval({ revisionId })).rejects.toThrow(/NOT_COMMITTED/);
 });
 
 test("rejectStep ends the workflow and sets project back to in-progress", async () => {
