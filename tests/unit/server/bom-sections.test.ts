@@ -62,6 +62,15 @@ test("createSection inserts with auto-incremented position", async () => {
   expect(b.position).toBe(1);
 });
 
+test("createSection assigns a unique sectionKey", async () => {
+  const { revisionId } = await setup();
+  const a = await createSection({ revisionId, name: "X" });
+  const b = await createSection({ revisionId, name: "Y" });
+  expect(a.sectionKey).toBeTruthy();
+  expect(b.sectionKey).toBeTruthy();
+  expect(a.sectionKey).not.toBe(b.sectionKey);
+});
+
 test("renameSection updates the name", async () => {
   const { revisionId } = await setup();
   const a = await createSection({ revisionId, name: "Old" });
