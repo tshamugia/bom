@@ -1,9 +1,8 @@
-import { pgTable, text, timestamp, integer, numeric, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createId } from "@paralleldrive/cuid2";
 import { organizations } from "./organizations";
 import { vendors } from "./vendors";
 import { categories, subcategories } from "./categories";
-import { stockStateEnum } from "./enums";
 
 export const items = pgTable(
   "item",
@@ -14,9 +13,6 @@ export const items = pgTable(
     description: text("description").notNull(),
     manufacturer: text("manufacturer").notNull(),
     unit: text("unit").notNull().default("pcs"),
-    unitPrice: numeric("unit_price", { precision: 12, scale: 4 }).notNull(),
-    onHand: integer("on_hand").notNull().default(0),
-    stockState: stockStateEnum("stock_state").notNull().default("in-stock"),
     vendorId: text("vendor_id").references(() => vendors.id, { onDelete: "set null" }),
     categoryId: text("category_id").references(() => categories.id, { onDelete: "set null" }),
     subcategoryId: text("subcategory_id").references(() => subcategories.id, { onDelete: "set null" }),

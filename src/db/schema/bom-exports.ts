@@ -12,10 +12,7 @@ export type ExportColumnKey =
   | "manufacturer"
   | "vendor"
   | "unit"
-  | "qty"
-  | "unitPrice"
-  | "total"
-  | "stock";
+  | "qty";
 
 export type ExportOptions = {
   columns: Record<ExportColumnKey, boolean>;

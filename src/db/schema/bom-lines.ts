@@ -1,4 +1,4 @@
-import { pgTable, text, integer, numeric, timestamp, uniqueIndex, index } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, uniqueIndex, index } from "drizzle-orm/pg-core";
 import { createId } from "@paralleldrive/cuid2";
 import { bomRevisions } from "./bom-revisions";
 import { bomSections } from "./bom-sections";
@@ -12,7 +12,6 @@ export const bomLines = pgTable(
     sectionId: text("section_id").references(() => bomSections.id, { onDelete: "set null" }),
     itemId: text("item_id").notNull().references(() => items.id, { onDelete: "restrict" }),
     qty: integer("qty").notNull().default(0),
-    unitPriceSnapshot: numeric("unit_price_snapshot", { precision: 12, scale: 4 }).notNull(),
     skuSnapshot: text("sku_snapshot").notNull().default(""),
     descriptionSnapshot: text("description_snapshot").notNull().default(""),
     manufacturerSnapshot: text("manufacturer_snapshot"),
