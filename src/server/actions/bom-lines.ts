@@ -76,7 +76,6 @@ export async function addLine(input: { revisionId: string; itemId: string; qty?:
     sectionId: sectionId ?? null,
     itemId,
     qty: input.qty ?? 1,
-    unitPriceSnapshot: item.unitPrice,
     skuSnapshot: item.sku,
     descriptionSnapshot: item.description,
     manufacturerSnapshot: item.manufacturer,

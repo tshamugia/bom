@@ -140,7 +140,7 @@ export async function branchRevision(input: z.infer<typeof BranchInput>): Promis
     for (const l of parentLines) {
       const [item] = await tx
         .select({
-          unitPrice: items.unitPrice, sku: items.sku, description: items.description,
+          sku: items.sku, description: items.description,
           manufacturer: items.manufacturer, unit: items.unit, vendorId: items.vendorId,
         })
         .from(items)
@@ -155,7 +155,6 @@ export async function branchRevision(input: z.infer<typeof BranchInput>): Promis
         sectionId: l.sectionId ? sectionIdMap.get(l.sectionId) ?? null : null,
         itemId: l.itemId,
         qty: l.qty,
-        unitPriceSnapshot: item.unitPrice,
         skuSnapshot: item.sku,
         descriptionSnapshot: item.description,
         manufacturerSnapshot: item.manufacturer,

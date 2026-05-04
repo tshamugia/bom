@@ -30,7 +30,7 @@ async function setup() {
 
   const [v] = await db.insert(vendors).values({ name: "M", code: "M", country: "US", leadTime: "3d", rating: 4, status: "approved", organizationId: org.id }).returning();
   const [c] = await db.insert(categories).values({ name: "C", organizationId: org.id }).returning();
-  const [it] = await db.insert(items).values({ sku: "X-1", description: "x", manufacturer: "Y", unit: "pcs", unitPrice: "1.000", onHand: 10, stockState: "in-stock", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id }).returning();
+  const [it] = await db.insert(items).values({ sku: "X-1", description: "x", manufacturer: "Y", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id }).returning();
 
   const [p] = await db.insert(projects).values({ organizationId: org.id, code: "TST", name: "Test", status: "in-progress", quantity: 5 }).returning();
   const [r] = await db.insert(bomRevisions).values({ projectId: p.id, letter: "A", status: "in-progress" }).returning();
@@ -38,7 +38,6 @@ async function setup() {
     revisionId: r.id,
     itemId: it.id,
     qty: 4,
-    unitPriceSnapshot: "1.000",
     skuSnapshot: it.sku,
     descriptionSnapshot: it.description,
     manufacturerSnapshot: it.manufacturer,
@@ -59,9 +58,6 @@ function defaultOptions() {
       vendor: true,
       unit: true,
       qty: true,
-      unitPrice: true,
-      total: true,
-      stock: true,
     },
     groupByVendor: false,
     includeCoverPage: false,

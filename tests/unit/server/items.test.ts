@@ -21,7 +21,7 @@ async function setup() {
 
 test("createItem persists and listItems returns it", async () => {
   const { vendorId, categoryId } = await setup();
-  await createItem({ sku: "RES-1", description: "10k", manufacturer: "Yageo", unit: "pcs", unitPrice: "0.012", onHand: 100, stockState: "in-stock", vendorId, categoryId, subcategoryId: null });
+  await createItem({ sku: "RES-1", description: "10k", manufacturer: "Yageo", unit: "pcs", vendorId, categoryId, subcategoryId: null });
   const items = await listItems({});
   expect(items).toHaveLength(1);
   expect(items[0].sku).toBe("RES-1");
@@ -29,15 +29,15 @@ test("createItem persists and listItems returns it", async () => {
 
 test("listItems filters by search term across sku/desc/mfr", async () => {
   const { vendorId, categoryId } = await setup();
-  await createItem({ sku: "RES-1", description: "10k resistor", manufacturer: "Yageo", unit: "pcs", unitPrice: "0.012", onHand: 100, stockState: "in-stock", vendorId, categoryId, subcategoryId: null });
-  await createItem({ sku: "CAP-1", description: "100nF cap",   manufacturer: "Murata", unit: "pcs", unitPrice: "0.018", onHand: 100, stockState: "in-stock", vendorId, categoryId, subcategoryId: null });
+  await createItem({ sku: "RES-1", description: "10k resistor", manufacturer: "Yageo", unit: "pcs", vendorId, categoryId, subcategoryId: null });
+  await createItem({ sku: "CAP-1", description: "100nF cap",   manufacturer: "Murata", unit: "pcs", vendorId, categoryId, subcategoryId: null });
   expect((await listItems({ search: "yageo" })).map(i => i.sku)).toEqual(["RES-1"]);
   expect((await listItems({ search: "100n" })).map(i => i.sku)).toEqual(["CAP-1"]);
 });
 
 test("deleteItem removes it", async () => {
   const { vendorId, categoryId } = await setup();
-  const it = await createItem({ sku: "RES-1", description: "10k", manufacturer: "Yageo", unit: "pcs", unitPrice: "0.012", onHand: 100, stockState: "in-stock", vendorId, categoryId, subcategoryId: null });
+  const it = await createItem({ sku: "RES-1", description: "10k", manufacturer: "Yageo", unit: "pcs", vendorId, categoryId, subcategoryId: null });
   await deleteItem({ id: it.id });
   expect(await listItems({})).toHaveLength(0);
 });

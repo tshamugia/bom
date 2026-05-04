@@ -18,18 +18,17 @@ async function setup() {
   vi.mocked(requireSession).mockResolvedValue({ user: { id: "u1", name: "Tester" } } as never);
   const [v] = await db.insert(vendors).values({ name: "M", code: "M", country: "US", leadTime: "3d", rating: 4, status: "approved", organizationId: org.id }).returning();
   const [c] = await db.insert(categories).values({ name: "C", organizationId: org.id }).returning();
-  const [it1] = await db.insert(items).values({ sku: "A", description: "a", manufacturer: "x", unit: "pcs", unitPrice: "2.000", onHand: 100, stockState: "in-stock", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id }).returning();
-  const [it2] = await db.insert(items).values({ sku: "B", description: "b", manufacturer: "x", unit: "pcs", unitPrice: "5.000", onHand: 100, stockState: "in-stock", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id }).returning();
+  const [it1] = await db.insert(items).values({ sku: "A", description: "a", manufacturer: "x", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id }).returning();
+  const [it2] = await db.insert(items).values({ sku: "B", description: "b", manufacturer: "x", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id }).returning();
   const [p] = await db.insert(projects).values({ organizationId: org.id, code: "P", name: "P", status: "draft" }).returning();
   const [r] = await db.insert(bomRevisions).values({ projectId: p.id, letter: "A", status: "draft" }).returning();
   return { orgId: org.id, revisionId: r.id, it1, it2 };
 }
 
-test("addLine inserts a new line with price snapshot", async () => {
+test("addLine inserts a new line with qty=1 by default", async () => {
   const { revisionId, it1 } = await setup();
   const line = await addLine({ revisionId, itemId: it1.id });
   expect(line.qty).toBe(1);
-  expect(line.unitPriceSnapshot).toBe("2.0000");
 });
 
 test("addLine captures item + vendor snapshots", async () => {

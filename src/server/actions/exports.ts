@@ -4,7 +4,7 @@ import { z } from "zod";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
-import { bomExports, bomLines, bomRevisions, bomSections, items, projects, user } from "@/db/schema";
+import { bomExports, bomLines, bomRevisions, bomSections, projects, user } from "@/db/schema";
 import { getCurrentOrgId, requireSession } from "../org";
 import { audit } from "../audit";
 import { buildBomWorkbook, type BomRow } from "@/lib/excel";
@@ -18,9 +18,6 @@ const Columns = z
     vendor: z.boolean(),
     unit: z.boolean(),
     qty: z.boolean(),
-    unitPrice: z.boolean(),
-    total: z.boolean(),
-    stock: z.boolean(),
   })
   .refine(c => c.sku && c.qty, { message: "SKU and Qty columns are required" });
 
@@ -61,15 +58,12 @@ export async function generateExport(input: { revisionId: string; options: z.inf
       manufacturer: bomLines.manufacturerSnapshot,
       unit: bomLines.unitSnapshot,
       qty: bomLines.qty,
-      unitPriceSnapshot: bomLines.unitPriceSnapshot,
       vendorName: bomLines.vendorNameSnapshot,
-      stockState: items.stockState,
       position: bomLines.position,
       sectionName: bomSections.name,
       sectionPosition: bomSections.position,
     })
     .from(bomLines)
-    .innerJoin(items, eq(items.id, bomLines.itemId))
     .leftJoin(bomSections, eq(bomSections.id, bomLines.sectionId))
     .where(eq(bomLines.revisionId, rev.id))
     .orderBy(sql`${bomSections.position} ASC NULLS FIRST`, asc(bomLines.position));
@@ -81,8 +75,6 @@ export async function generateExport(input: { revisionId: string; options: z.inf
     vendor: l.vendorName,
     unit: l.unit,
     qty: l.qty,
-    unitPrice: Number(l.unitPriceSnapshot),
-    stock: l.stockState,
     sectionName: l.sectionName,
     sectionPosition: l.sectionPosition,
   }));

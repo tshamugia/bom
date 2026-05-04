@@ -50,8 +50,8 @@ test("prepareImport returns dry-run result with counts and auto-creates", async 
 
   const fd = new FormData();
   fd.set("file", await makeFile([
-    ["RES-1", "10k",  "Yageo",  "pcs", 0.012, 100, "in-stock", "MSR",   "Passive", "Resistors"],
-    ["NEW-1", "100u", "TDK",    "pcs", 0.5,   10,  "in-stock", "NEWCO", "Sensors", "Pressure"],
+    ["RES-1", "10k",  "Yageo", "pcs", "MSR",   "Passive", "Resistors"],
+    ["NEW-1", "100u", "TDK",   "pcs", "NEWCO", "Sensors", "Pressure"],
   ]));
   const r = await prepareImport(fd);
 
@@ -97,7 +97,7 @@ test("getDryRun re-derives the result from the staged S3 file", async () => {
 
   const fd = new FormData();
   fd.set("file", await makeFile([
-    ["A", "d", "m", "pcs", 1, 0, "in-stock", "", "", ""],
+    ["A", "d", "m", "pcs", "", "", ""],
   ]));
   const prep = await prepareImport(fd);
   if (!prep.ok) throw new Error("prepare failed");
@@ -133,14 +133,14 @@ test("commitImport (skip duplicates): inserts new items, leaves existing untouch
   await db.insert(items).values({
     organizationId: org.id,
     sku: "OLD-1", description: "old desc", manufacturer: "old mfr",
-    unit: "pcs", unitPrice: "5.0000", onHand: 50, stockState: "in-stock",
+    unit: "pcs",
     vendorId: v.id, categoryId: null, subcategoryId: null,
   });
 
   const fd = new FormData();
   fd.set("file", await makeFile([
-    ["OLD-1", "NEW DESC", "NEW MFR", "pcs", 9.99, 1,  "in-stock", "MSR",   "",        ""],
-    ["NEW-1", "something", "TDK",     "pcs", 0.5,  10, "in-stock", "NEWCO", "Sensors", "Pressure"],
+    ["OLD-1", "NEW DESC",  "NEW MFR", "pcs", "MSR",   "",        ""],
+    ["NEW-1", "something", "TDK",     "pcs", "NEWCO", "Sensors", "Pressure"],
   ]));
   const prep = await prepareImport(fd);
   if (!prep.ok) throw new Error("prepare failed");
@@ -167,13 +167,13 @@ test("commitImport (update duplicates): overwrites existing item", async () => {
   await db.insert(items).values({
     organizationId: org.id,
     sku: "OLD-1", description: "old desc", manufacturer: "old mfr",
-    unit: "pcs", unitPrice: "5.0000", onHand: 50, stockState: "in-stock",
+    unit: "pcs",
     vendorId: null, categoryId: null, subcategoryId: null,
   });
 
   const fd = new FormData();
   fd.set("file", await makeFile([
-    ["OLD-1", "NEW DESC", "NEW MFR", "pcs", 9.99, 1, "in-stock", "", "", ""],
+    ["OLD-1", "NEW DESC", "NEW MFR", "pcs", "", "", ""],
   ]));
   const prep = await prepareImport(fd);
   if (!prep.ok) throw new Error("prepare failed");
@@ -185,7 +185,6 @@ test("commitImport (update duplicates): overwrites existing item", async () => {
 
   const [old] = await db.select().from(items).where(eq(items.sku, "OLD-1"));
   expect(old.description).toBe("NEW DESC");
-  expect(Number(old.unitPrice)).toBe(9.99);
 });
 
 test("commitImport returns expired when staging file is gone", async () => {
@@ -201,8 +200,8 @@ test("commitImport produces errors.xlsx when there are error rows", async () => 
 
   const fd = new FormData();
   fd.set("file", await makeFile([
-    ["GOOD-1", "d", "m", "pcs", 1,    0, "in-stock", "", "", ""],
-    ["",       "d", "m", "pcs", 1,    0, "in-stock", "", "", ""],
+    ["GOOD-1", "d", "m", "pcs", "", "", ""],
+    ["",       "d", "m", "pcs", "", "", ""],
   ]));
   const prep = await prepareImport(fd);
   if (!prep.ok) throw new Error("prepare failed");
