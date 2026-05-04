@@ -1,11 +1,7 @@
 import { z } from "zod";
 
-export const STOCK_STATES = ["in-stock", "low-stock", "backorder", "out-of-stock"] as const;
-export type StockState = (typeof STOCK_STATES)[number];
-
 export const TEMPLATE_COLUMNS = [
   "sku", "description", "manufacturer", "unit",
-  "unit_price", "on_hand", "stock_state",
   "vendor_code", "category", "subcategory",
 ] as const;
 export type TemplateColumn = (typeof TEMPLATE_COLUMNS)[number];
@@ -16,9 +12,6 @@ export type ParsedRow = {
   description: string;
   manufacturer: string;
   unit: string;
-  unitPrice: number;
-  onHand: number;
-  stockState: StockState;
   vendorCode: string | null;
   category: string | null;
   subcategory: string | null;
@@ -26,8 +19,6 @@ export type ParsedRow = {
 
 export type RowErrorReason =
   | "missing_required"
-  | "bad_type"
-  | "bad_enum"
   | "bad_subcategory_without_category"
   | "subcategory_not_in_category"
   | "duplicate_in_file";
