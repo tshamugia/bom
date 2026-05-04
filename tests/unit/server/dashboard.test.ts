@@ -5,7 +5,7 @@ import {
   user, vendors, categories, items, projects, bomRevisions, bomLines,
   approvalWorkflows, approvalSteps, auditLog,
 } from "@/db/schema";
-import { getStats, getRecentActivity, getStockAlerts } from "@/server/queries/dashboard";
+import { getStats, getRecentActivity } from "@/server/queries/dashboard";
 
 vi.mock("@/server/org", () => ({ getCurrentOrgId: vi.fn() }));
 import { getCurrentOrgId } from "@/server/org";
@@ -19,14 +19,12 @@ async function setup() {
   const [u] = await db.insert(user).values({ id: "u1", name: "U", email: "u@example.com", emailVerified: true }).returning();
   const [v] = await db.insert(vendors).values({ name: "M", code: "M", country: "US", leadTime: "3d", rating: 4, status: "approved", organizationId: org.id }).returning();
   const [c] = await db.insert(categories).values({ name: "C", organizationId: org.id }).returning();
-  const [it1] = await db.insert(items).values({ sku: "OK",  description: "ok",  manufacturer: "y", unit: "pcs", unitPrice: "1.000", onHand: 10, stockState: "in-stock", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id }).returning();
-  const [it2] = await db.insert(items).values({ sku: "LOW", description: "low", manufacturer: "y", unit: "pcs", unitPrice: "1.000", onHand: 0,  stockState: "backorder", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id }).returning();
-  const [it3] = await db.insert(items).values({ sku: "AMB", description: "amb", manufacturer: "y", unit: "pcs", unitPrice: "1.000", onHand: 5,  stockState: "low-stock", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id }).returning();
+  const [it1] = await db.insert(items).values({ sku: "OK", description: "ok", manufacturer: "y", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id }).returning();
 
   const [p1] = await db.insert(projects).values({ organizationId: org.id, code: "A", name: "A", status: "in-progress" }).returning();
   const [p2] = await db.insert(projects).values({ organizationId: org.id, code: "B", name: "B", status: "approved" }).returning();
   const [r1] = await db.insert(bomRevisions).values({ projectId: p1.id, letter: "A", status: "in-progress" }).returning();
-  await db.insert(bomLines).values({ revisionId: r1.id, itemId: it1.id, qty: 5, unitPriceSnapshot: "1.000", position: 0 });
+  await db.insert(bomLines).values({ revisionId: r1.id, itemId: it1.id, qty: 5, position: 0 });
 
   const [wf] = await db.insert(approvalWorkflows).values({ revisionId: r1.id, status: "pending", currentStepIndex: 0 }).returning();
   await db.insert(approvalSteps).values({ workflowId: wf.id, position: 0, role: "Engineering", status: "active" });
@@ -42,7 +40,6 @@ test("getStats returns counts", async () => {
   await setup();
   const s = await getStats();
   expect(s.activeBoms).toBe(1);
-  expect(s.openValue).toBeCloseTo(5.0);
   expect(s.approvalsPending).toBe(1);
 });
 
@@ -54,8 +51,3 @@ test("getRecentActivity returns latest first", async () => {
   expect(list[1].summary).toBe("A sent for review");
 });
 
-test("getStockAlerts excludes in-stock items", async () => {
-  await setup();
-  const list = await getStockAlerts();
-  expect(list.map(i => i.sku).sort()).toEqual(["AMB", "LOW"]);
-});

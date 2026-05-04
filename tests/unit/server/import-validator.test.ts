@@ -17,9 +17,6 @@ const baseRow = (over: Partial<ParsedRow> = {}): ParsedRow => ({
   description: "d",
   manufacturer: "m",
   unit: "pcs",
-  unitPrice: 1,
-  onHand: 0,
-  stockState: "in-stock",
   vendorCode: null,
   category: null,
   subcategory: null,
@@ -65,7 +62,7 @@ describe("validateRows", () => {
   test("parser-supplied errors are passed through and counted", () => {
     const r = validateRows({
       rows: [],
-      parserErrors: [{ rowNumber: 5, sku: "BAD", reason: "bad_type", field: "unit_price", value: "$1" }],
+      parserErrors: [{ rowNumber: 5, sku: "BAD", reason: "missing_required", field: "sku" }],
       importId: "i", fileName: "f",
     }, ctx());
     expect(r.counts.errored).toBe(1);

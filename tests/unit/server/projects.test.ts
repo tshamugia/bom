@@ -16,24 +16,23 @@ async function setup() {
   const [v] = await db.insert(vendors).values({ name: "M", code: "M", country: "US", leadTime: "3d", rating: 4, status: "approved", organizationId: org.id }).returning();
   const [c] = await db.insert(categories).values({ name: "C", organizationId: org.id }).returning();
   const [it] = await db.insert(items).values({
-    sku: "X-1", description: "x", manufacturer: "Y", unit: "pcs", unitPrice: "1.000",
-    onHand: 10, stockState: "in-stock", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id,
+    sku: "X-1", description: "x", manufacturer: "Y", unit: "pcs",
+    vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id,
   }).returning();
 
   const [p] = await db.insert(projects).values({ organizationId: org.id, code: "P-1", name: "Project One", status: "in-progress" }).returning();
   const [r] = await db.insert(bomRevisions).values({ projectId: p.id, letter: "A", status: "in-progress" }).returning();
-  await db.insert(bomLines).values({ revisionId: r.id, itemId: it.id, qty: 3, unitPriceSnapshot: "1.000", position: 0 });
+  await db.insert(bomLines).values({ revisionId: r.id, itemId: it.id, qty: 3, position: 0 });
 
   return { orgId: org.id, projectId: p.id, revId: r.id };
 }
 
-test("listProjects returns the project with line count and total", async () => {
+test("listProjects returns the project with line count", async () => {
   const { projectId } = await setup();
   const list = await listProjects();
   expect(list).toHaveLength(1);
   expect(list[0].id).toBe(projectId);
   expect(list[0].lineCount).toBe(1);
-  expect(list[0].total).toBeCloseTo(3.0);
 });
 
 test("getProject hydrates project + active revision id", async () => {

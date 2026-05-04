@@ -40,11 +40,11 @@ async function setup() {
   const [c] = await db.insert(categories).values({ name: "C", organizationId: org.id }).returning();
   const [it1] = await db
     .insert(items)
-    .values({ sku: "A", description: "a", manufacturer: "x", unit: "pcs", unitPrice: "2.000", onHand: 100, stockState: "in-stock", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id })
+    .values({ sku: "A", description: "a", manufacturer: "x", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id })
     .returning();
   const [it2] = await db
     .insert(items)
-    .values({ sku: "B", description: "b", manufacturer: "x", unit: "pcs", unitPrice: "5.000", onHand: 100, stockState: "in-stock", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id })
+    .values({ sku: "B", description: "b", manufacturer: "x", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id })
     .returning();
   const [p] = await db.insert(projects).values({ organizationId: org.id, code: "P", name: "P", status: "draft" }).returning();
   const [r] = await db

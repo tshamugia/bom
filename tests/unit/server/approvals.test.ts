@@ -19,10 +19,10 @@ async function setup() {
 
   const [v] = await db.insert(vendors).values({ name: "M", code: "M", country: "US", leadTime: "3d", rating: 4, status: "approved", organizationId: org.id }).returning();
   const [c] = await db.insert(categories).values({ name: "C", organizationId: org.id }).returning();
-  const [it] = await db.insert(items).values({ sku: "X", description: "x", manufacturer: "Y", unit: "pcs", unitPrice: "1.000", onHand: 1, stockState: "in-stock", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id }).returning();
+  const [it] = await db.insert(items).values({ sku: "X", description: "x", manufacturer: "Y", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id }).returning();
   const [p] = await db.insert(projects).values({ organizationId: org.id, code: "P", name: "P", status: "in-progress" }).returning();
   const [r] = await db.insert(bomRevisions).values({ projectId: p.id, letter: "A", status: "committed" }).returning();
-  await db.insert(bomLines).values({ revisionId: r.id, itemId: it.id, qty: 1, unitPriceSnapshot: "1.000", position: 0 });
+  await db.insert(bomLines).values({ revisionId: r.id, itemId: it.id, qty: 1, position: 0 });
   return { orgId: org.id, projectId: p.id, revisionId: r.id, userId: u.id };
 }
 

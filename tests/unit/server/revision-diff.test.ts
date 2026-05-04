@@ -22,11 +22,11 @@ async function seed() {
   const [v1] = await db.insert(vendors).values({ name: "V1", code: "V1", country: "US", leadTime: "3d", rating: 4, status: "approved", organizationId: org.id }).returning();
   const [v2] = await db.insert(vendors).values({ name: "V2", code: "V2", country: "US", leadTime: "3d", rating: 4, status: "approved", organizationId: org.id }).returning();
   const [c] = await db.insert(categories).values({ name: "C", organizationId: org.id }).returning();
-  const it = async (sku: string, price: string, vendorId: string) =>
-    (await db.insert(items).values({ sku, description: sku, manufacturer: "m", unit: "pcs", unitPrice: price, onHand: 100, stockState: "in-stock", vendorId, categoryId: c.id, subcategoryId: null, organizationId: org.id }).returning())[0];
-  const a = await it("A", "1.000", v1.id);
-  const b = await it("B", "2.000", v1.id);
-  const cItem = await it("C", "3.000", v2.id);
+  const it = async (sku: string, vendorId: string) =>
+    (await db.insert(items).values({ sku, description: sku, manufacturer: "m", unit: "pcs", vendorId, categoryId: c.id, subcategoryId: null, organizationId: org.id }).returning())[0];
+  const a = await it("A", v1.id);
+  const b = await it("B", v1.id);
+  const cItem = await it("C", v2.id);
   const [p] = await db.insert(projects).values({ organizationId: org.id, code: "P", name: "P", status: "draft" }).returning();
   const [r] = await db.insert(bomRevisions).values({ projectId: p.id, letter: "A", status: "draft", ownerId: "u1" }).returning();
   return { orgId: org.id, projectId: p.id, leftId: r.id, a, b, c: cItem, v2 };
@@ -88,14 +88,3 @@ test("diff: section rename detected via sectionKey", async () => {
   expect(diff.sections.removed).toHaveLength(0);
 });
 
-test("diff: totals delta", async () => {
-  const { leftId, a, b } = await seed();
-  await addLine({ revisionId: leftId, itemId: a.id, qty: 2 }); // 2 * 1.000 = 2
-  await commitRevision({ revisionId: leftId });
-  const rightId = await branchRevision({ parentRevisionId: leftId });
-  await addLine({ revisionId: rightId, itemId: b.id, qty: 1 }); // +2
-  const diff = await getRevisionDiff(leftId, rightId);
-  expect(diff.totals.leftValue).toBe(2);
-  expect(diff.totals.rightValue).toBe(4);
-  expect(diff.totals.delta).toBe(2);
-});

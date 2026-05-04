@@ -14,7 +14,7 @@ async function makeXlsx(rows: (string | number | null)[][], headers: string[] = 
 describe("parseImportBuffer", () => {
   test("parses a well-formed sheet", async () => {
     const buf = await makeXlsx([
-      ["RES-1", "10k resistor", "Yageo", "pcs", 0.012, 100, "in-stock", "MSR", "Passive", "Resistors"],
+      ["RES-1", "10k resistor", "Yageo", "pcs", "MSR", "Passive", "Resistors"],
     ]);
     const r = await parseImportBuffer(buf);
     expect(r.ok).toBe(true);
@@ -27,9 +27,6 @@ describe("parseImportBuffer", () => {
       description: "10k resistor",
       manufacturer: "Yageo",
       unit: "pcs",
-      unitPrice: 0.012,
-      onHand: 100,
-      stockState: "in-stock",
       vendorCode: "MSR",
       category: "Passive",
       subcategory: "Resistors",
@@ -52,7 +49,7 @@ describe("parseImportBuffer", () => {
 describe("parseImportBuffer error categories", () => {
   test("missing_required when sku blank", async () => {
     const buf = await makeXlsx([
-      ["", "desc", "mfr", "pcs", 1, 0, "in-stock", "", "", ""],
+      ["", "desc", "mfr", "pcs", "", "", ""],
     ]);
     const r = await parseImportBuffer(buf);
     expect(r.ok).toBe(true);
@@ -61,29 +58,9 @@ describe("parseImportBuffer error categories", () => {
     expect(r.rowErrors[0]).toMatchObject({ reason: "missing_required", field: "sku" });
   });
 
-  test("bad_type on non-numeric price", async () => {
-    const buf = await makeXlsx([
-      ["X", "desc", "mfr", "pcs", "$1.00", 0, "in-stock", "", "", ""],
-    ]);
-    const r = await parseImportBuffer(buf);
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    expect(r.rowErrors[0]).toMatchObject({ reason: "bad_type", field: "unit_price" });
-  });
-
-  test("bad_enum on unknown stock state", async () => {
-    const buf = await makeXlsx([
-      ["X", "desc", "mfr", "pcs", 1, 0, "weird", "", "", ""],
-    ]);
-    const r = await parseImportBuffer(buf);
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    expect(r.rowErrors[0]).toMatchObject({ reason: "bad_enum", field: "stock_state" });
-  });
-
   test("bad_subcategory_without_category", async () => {
     const buf = await makeXlsx([
-      ["X", "desc", "mfr", "pcs", 1, 0, "in-stock", "", "", "Resistors"],
+      ["X", "desc", "mfr", "pcs", "", "", "Resistors"],
     ]);
     const r = await parseImportBuffer(buf);
     expect(r.ok).toBe(true);
@@ -93,8 +70,8 @@ describe("parseImportBuffer error categories", () => {
 
   test("duplicate_in_file flagged on second occurrence only", async () => {
     const buf = await makeXlsx([
-      ["X", "desc", "mfr", "pcs", 1, 0, "in-stock", "", "", ""],
-      ["X", "desc", "mfr", "pcs", 1, 0, "in-stock", "", "", ""],
+      ["X", "desc", "mfr", "pcs", "", "", ""],
+      ["X", "desc", "mfr", "pcs", "", "", ""],
     ]);
     const r = await parseImportBuffer(buf);
     expect(r.ok).toBe(true);
@@ -106,14 +83,14 @@ describe("parseImportBuffer error categories", () => {
 
   test("blank rows skipped, defaults applied", async () => {
     const buf = await makeXlsx([
-      ["", "", "", "", "", "", "", "", "", ""],
-      ["Y", "desc", "mfr", "", 1, "", "", "", "", ""],
+      ["", "", "", "", "", "", ""],
+      ["Y", "desc", "mfr", "", "", "", ""],
     ]);
     const r = await parseImportBuffer(buf);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.rows).toHaveLength(1);
-    expect(r.rows[0]).toMatchObject({ unit: "pcs", onHand: 0, stockState: "in-stock" });
+    expect(r.rows[0]).toMatchObject({ unit: "pcs" });
   });
 
   test("rejects unreadable buffer", async () => {
