@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
 import { DocumentPreview } from "./document-preview";
 import { SummaryCard } from "./summary-card";
-import { ExportOptionsCard, type ExportOpts } from "./export-options-card";
+import { ExportOptionsCard, DEFAULT_EXPORT_OPTS, type ExportOpts } from "./export-options-card";
 import { ApproversCard } from "./approvers-card";
 import { GenerateDialog } from "./generate-dialog";
 import type { Line } from "@/components/builder/sectioned-line-table";
@@ -31,13 +31,7 @@ type Props = {
 
 export function PreviewShell(p: Props) {
   const router = useRouter();
-  const [opts, setOpts] = useState<ExportOpts>({
-    includeVendorPricing: true,
-    includeStockAvailability: true,
-    groupByVendor: false,
-    includeCoverPage: false,
-    format: "xlsx",
-  });
+  const [opts, setOpts] = useState<ExportOpts>(DEFAULT_EXPORT_OPTS);
   const [pending, startReview] = useTransition();
 
   function sendForReview() {

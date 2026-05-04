@@ -51,7 +51,21 @@ async function setup() {
 }
 
 function defaultOptions() {
-  return { includeVendorPricing: true, includeStockAvailability: true, groupByVendor: false, includeCoverPage: false };
+  return {
+    columns: {
+      sku: true,
+      description: true,
+      manufacturer: true,
+      vendor: true,
+      unit: true,
+      qty: true,
+      unitPrice: true,
+      total: true,
+      stock: true,
+    },
+    groupByVendor: false,
+    includeCoverPage: false,
+  };
 }
 
 test("generateExport uploads to S3 and persists a row", async () => {

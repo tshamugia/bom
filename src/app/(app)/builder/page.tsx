@@ -20,17 +20,19 @@ export default async function BuilderIndex() {
           <thead>
             <tr className="bg-[var(--color-surface-2)] text-[11px] uppercase tracking-wider text-[var(--color-text-3)]">
               <th className="px-4 py-2.5 text-left font-medium">Project</th>
+              <th className="px-4 py-2.5 text-left font-medium">Owner</th>
+              <th className="px-4 py-2.5 text-left font-medium">Rev</th>
               <th className="px-4 py-2.5 text-right font-medium">Lines</th>
               <th className="px-4 py-2.5 text-right font-medium">Total</th>
               <th className="px-4 py-2.5 text-left font-medium">Status</th>
-              <th className="px-4 py-2.5 text-left font-medium">Target</th>
+              <th className="px-4 py-2.5 text-left font-medium">Deadline</th>
               <th />
             </tr>
           </thead>
           <tbody>
             {list.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-[12.5px] text-[var(--color-text-3)]">
+                <td colSpan={8} className="px-4 py-12 text-center text-[12.5px] text-[var(--color-text-3)]">
                   <div className="text-[13.5px]">No projects yet</div>
                   <div className="mt-1">Click &quot;New BOM&quot; to create your first project.</div>
                 </td>
@@ -44,6 +46,8 @@ export default async function BuilderIndex() {
                       <div className="font-mono text-[11px] text-[var(--color-text-3)]">{p.code}</div>
                     </Link>
                   </td>
+                  <td className="px-4 py-2.5">{p.ownerName ?? "—"}</td>
+                  <td className="px-4 py-2.5 font-mono text-[11px] text-[var(--color-text-3)]">{p.revLetter ? `Rev ${p.revLetter}` : "—"}</td>
                   <td className="px-4 py-2.5 text-right tabular-nums">{p.lineCount}</td>
                   <td className="px-4 py-2.5 text-right tabular-nums">${p.total.toFixed(2)}</td>
                   <td className="px-4 py-2.5">

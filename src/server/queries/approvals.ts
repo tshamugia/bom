@@ -12,6 +12,7 @@ type Row = {
   projectCode: string;
   projectName: string;
   ownerName: string | null;
+  revLetter: string | null;
   lineCount: number;
   total: number;
   age: string;
@@ -32,6 +33,7 @@ async function baseList(filter: { status?: "pending" | "approved" | "rejected"; 
       p.code                 AS "projectCode",
       p.name                 AS "projectName",
       u.name                 AS "ownerName",
+      r.letter               AS "revLetter",
       (SELECT COUNT(*) FROM "bom_line" l WHERE l.revision_id = w.revision_id)::int AS "lineCount",
       (SELECT COALESCE(SUM(l.qty * l.unit_price_snapshot), 0) FROM "bom_line" l WHERE l.revision_id = w.revision_id)::float AS "total",
       (SELECT s.role FROM "approval_step" s WHERE s.workflow_id = w.id AND s.position = w.current_step_index LIMIT 1) AS "activeStepRole",

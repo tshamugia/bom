@@ -10,6 +10,8 @@ type Row = {
   status: string;
   updatedAt: Date;
   targetDate: string | null;
+  ownerName: string | null;
+  revLetter: string | null;
   lineCount: number;
   total: number;
   workflowStatus: "pending" | "approved" | "rejected" | null;
@@ -27,11 +29,13 @@ export function ProjectsTable({ rows }: { rows: Row[] }) {
         <thead>
           <tr className="bg-[var(--color-surface-2)] text-[11px] uppercase tracking-wider text-[var(--color-text-3)]">
             <th className="px-4 py-2.5 text-left font-medium">Project</th>
+            <th className="px-4 py-2.5 text-left font-medium">Owner</th>
+            <th className="px-4 py-2.5 text-left font-medium">Rev</th>
             <th className="px-4 py-2.5 text-right font-medium">Lines</th>
             <th className="px-4 py-2.5 text-right font-medium">Total</th>
             <th className="px-4 py-2.5 text-left font-medium">Status</th>
             <th className="px-4 py-2.5 text-left font-medium">Updated</th>
-            <th className="px-4 py-2.5 text-left font-medium">Target</th>
+            <th className="px-4 py-2.5 text-left font-medium">Deadline</th>
             <th />
           </tr>
         </thead>
@@ -47,6 +51,8 @@ export function ProjectsTable({ rows }: { rows: Row[] }) {
                   </div>
                 </Link>
               </td>
+              <td className="px-4 py-2.5">{p.ownerName ?? "—"}</td>
+              <td className="px-4 py-2.5 font-mono text-[11px] text-[var(--color-text-3)]">{p.revLetter ? `Rev ${p.revLetter}` : "—"}</td>
               <td className="px-4 py-2.5 text-right tabular-nums">{p.lineCount}</td>
               <td className="px-4 py-2.5 text-right tabular-nums">${p.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
               <td className="px-4 py-2.5">

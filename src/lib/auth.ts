@@ -22,9 +22,19 @@ export const auth = betterAuth({
     user: {
       create: {
         after: async (user) => {
-          const [org] = await db.select().from(organizations).limit(1);
-          if (!org) return;
-          await db.insert(memberships).values({ userId: user.id, organizationId: org.id, role: "member" });
+          const [existing] = await db.select().from(organizations).limit(1);
+          if (existing) {
+            await db.insert(memberships).values({ userId: user.id, organizationId: existing.id, role: "member" });
+            return;
+          }
+          const baseName = user.name?.trim() || user.email.split("@")[0] || "Workspace";
+          const slugBase = baseName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "workspace";
+          const slug = `${slugBase}-${user.id.slice(-6)}`;
+          const [org] = await db
+            .insert(organizations)
+            .values({ name: `${baseName}'s Workspace`, slug })
+            .returning();
+          await db.insert(memberships).values({ userId: user.id, organizationId: org.id, role: "owner" });
         },
       },
     },

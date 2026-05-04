@@ -26,7 +26,14 @@ export function GenerateDialog({
 
   function go() {
     start(async () => {
-      const ex = await generateExport({ revisionId, options: { includeVendorPricing: opts.includeVendorPricing, includeStockAvailability: opts.includeStockAvailability, groupByVendor: opts.groupByVendor, includeCoverPage: opts.includeCoverPage } });
+      const ex = await generateExport({
+        revisionId,
+        options: {
+          columns: opts.columns,
+          groupByVendor: opts.groupByVendor,
+          includeCoverPage: opts.includeCoverPage,
+        },
+      });
       setOpen(false);
       toast.success(`BOM exported — ${ex.fileName}`);
       window.open(`/api/exports/${ex.id}/download`, "_blank");

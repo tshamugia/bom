@@ -10,13 +10,16 @@ export async function listProjects() {
   return db.execute(sql/* sql */`
     SELECT
       p.id, p.code, p.name, p.status, p.updated_at AS "updatedAt", p.target_date AS "targetDate",
+      u.name AS "ownerName",
+      stats.letter AS "revLetter",
       COALESCE(stats.line_count, 0)::int AS "lineCount",
       COALESCE(stats.total, 0)::float    AS "total",
       wf.status AS "workflowStatus",
       wf.active_role AS "workflowActiveRole"
     FROM "project" p
+    LEFT JOIN "user" u ON u.id = p.owner_id
     LEFT JOIN LATERAL (
-      SELECT r.id, COUNT(l.*) AS line_count, COALESCE(SUM(l.qty * l.unit_price_snapshot), 0) AS total
+      SELECT r.id, r.letter, COUNT(l.*) AS line_count, COALESCE(SUM(l.qty * l.unit_price_snapshot), 0) AS total
       FROM "bom_revision" r
       LEFT JOIN "bom_line" l ON l.revision_id = r.id
       WHERE r.project_id = p.id AND r.status <> 'locked'
@@ -36,6 +39,7 @@ export async function listProjects() {
   `).then(r => r as unknown as Array<{
     id: string; code: string; name: string; status: string;
     updatedAt: Date; targetDate: string | null;
+    ownerName: string | null; revLetter: string | null;
     lineCount: number; total: number;
     workflowStatus: "pending" | "approved" | "rejected" | null;
     workflowActiveRole: string | null;

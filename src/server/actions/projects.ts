@@ -5,14 +5,15 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { projects, bomRevisions } from "@/db/schema";
 import { ProjectInput, ProjectPatch, type ProjectInput as ProjectInputType, type ProjectPatch as ProjectPatchType } from "@/lib/schemas/project";
-import { getCurrentOrgId } from "../org";
+import { getCurrentOrgId, requireSession } from "../org";
 import { audit } from "../audit";
 
 export async function createProject(input: ProjectInputType) {
   const data = ProjectInput.parse(input);
+  const session = await requireSession();
   const orgId = await getCurrentOrgId();
   const project = await db.transaction(async tx => {
-    const [created] = await tx.insert(projects).values({ ...data, organizationId: orgId, status: "draft" }).returning();
+    const [created] = await tx.insert(projects).values({ ...data, organizationId: orgId, ownerId: session.user.id, status: "draft" }).returning();
     await tx.insert(bomRevisions).values({ projectId: created.id, letter: "A", status: "draft" });
     return created;
   });

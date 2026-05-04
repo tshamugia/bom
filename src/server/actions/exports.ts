@@ -10,9 +10,22 @@ import { audit } from "../audit";
 import { buildBomWorkbook, type BomRow } from "@/lib/excel";
 import { putObject } from "@/lib/s3";
 
+const Columns = z
+  .object({
+    sku: z.boolean(),
+    description: z.boolean(),
+    manufacturer: z.boolean(),
+    vendor: z.boolean(),
+    unit: z.boolean(),
+    qty: z.boolean(),
+    unitPrice: z.boolean(),
+    total: z.boolean(),
+    stock: z.boolean(),
+  })
+  .refine(c => c.sku && c.qty, { message: "SKU and Qty columns are required" });
+
 const Options = z.object({
-  includeVendorPricing: z.boolean(),
-  includeStockAvailability: z.boolean(),
+  columns: Columns,
   groupByVendor: z.boolean(),
   includeCoverPage: z.boolean(),
 });

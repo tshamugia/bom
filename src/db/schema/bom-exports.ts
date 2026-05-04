@@ -6,9 +6,19 @@ import { user } from "./auth";
 export const exportFormatEnum = pgEnum("export_format", ["xlsx", "csv", "pdf"]);
 export const exportStatusEnum = pgEnum("export_status", ["exported", "archived", "failed"]);
 
+export type ExportColumnKey =
+  | "sku"
+  | "description"
+  | "manufacturer"
+  | "vendor"
+  | "unit"
+  | "qty"
+  | "unitPrice"
+  | "total"
+  | "stock";
+
 export type ExportOptions = {
-  includeVendorPricing: boolean;
-  includeStockAvailability: boolean;
+  columns: Record<ExportColumnKey, boolean>;
   groupByVendor: boolean;
   includeCoverPage: boolean;
 };
