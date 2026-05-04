@@ -14,7 +14,6 @@ type Row = {
   ownerName: string | null;
   revLetter: string | null;
   lineCount: number;
-  total: number;
   age: string;
   activeStepRole: string | null;
   latestExportId: string | null;
@@ -35,7 +34,6 @@ async function baseList(filter: { status?: "pending" | "approved" | "rejected"; 
       u.name                 AS "ownerName",
       r.letter               AS "revLetter",
       (SELECT COUNT(*) FROM "bom_line" l WHERE l.revision_id = w.revision_id)::int AS "lineCount",
-      (SELECT COALESCE(SUM(l.qty * l.unit_price_snapshot), 0) FROM "bom_line" l WHERE l.revision_id = w.revision_id)::float AS "total",
       (SELECT s.role FROM "approval_step" s WHERE s.workflow_id = w.id AND s.position = w.current_step_index LIMIT 1) AS "activeStepRole",
       (SELECT s.assignee_id FROM "approval_step" s WHERE s.workflow_id = w.id AND s.position = w.current_step_index LIMIT 1) AS "activeAssigneeId",
       (SELECT e.id FROM "bom_export" e WHERE e.revision_id = w.revision_id AND e.status = 'exported' ORDER BY e.generated_at DESC LIMIT 1) AS "latestExportId",

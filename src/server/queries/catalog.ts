@@ -9,7 +9,6 @@ export type ItemFilter = {
   categoryId?: string;
   subcategoryId?: string;
   vendorId?: string;
-  stockState?: "in-stock" | "low-stock" | "backorder" | "out-of-stock";
 };
 
 export async function listItems(filter: ItemFilter) {
@@ -18,7 +17,6 @@ export async function listItems(filter: ItemFilter) {
   if (filter.categoryId) conds.push(eq(items.categoryId, filter.categoryId));
   if (filter.subcategoryId) conds.push(eq(items.subcategoryId, filter.subcategoryId));
   if (filter.vendorId) conds.push(eq(items.vendorId, filter.vendorId));
-  if (filter.stockState) conds.push(eq(items.stockState, filter.stockState));
   if (filter.search) {
     const q = `%${filter.search}%`;
     conds.push(or(ilike(items.sku, q), ilike(items.description, q), ilike(items.manufacturer, q))!);
@@ -27,7 +25,7 @@ export async function listItems(filter: ItemFilter) {
   return db
     .select({
       id: items.id, sku: items.sku, description: items.description, manufacturer: items.manufacturer,
-      unit: items.unit, unitPrice: items.unitPrice, onHand: items.onHand, stockState: items.stockState,
+      unit: items.unit,
       vendorName: vendors.name, vendorId: vendors.id,
       categoryName: categories.name, categoryId: categories.id,
       subcategoryName: subcategories.name, subcategoryId: subcategories.id,

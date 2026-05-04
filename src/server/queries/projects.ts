@@ -13,13 +13,12 @@ export async function listProjects() {
       u.name AS "ownerName",
       stats.letter AS "revLetter",
       COALESCE(stats.line_count, 0)::int AS "lineCount",
-      COALESCE(stats.total, 0)::float    AS "total",
       wf.status AS "workflowStatus",
       wf.active_role AS "workflowActiveRole"
     FROM "project" p
     LEFT JOIN "user" u ON u.id = p.owner_id
     LEFT JOIN LATERAL (
-      SELECT r.id, r.letter, COUNT(l.*) AS line_count, COALESCE(SUM(l.qty * l.unit_price_snapshot), 0) AS total
+      SELECT r.id, r.letter, COUNT(l.*) AS line_count
       FROM "bom_revision" r
       LEFT JOIN "bom_line" l ON l.revision_id = r.id
       WHERE r.project_id = p.id AND r.status <> 'locked'
@@ -40,7 +39,7 @@ export async function listProjects() {
     id: string; code: string; name: string; status: string;
     updatedAt: Date; targetDate: string | null;
     ownerName: string | null; revLetter: string | null;
-    lineCount: number; total: number;
+    lineCount: number;
     workflowStatus: "pending" | "approved" | "rejected" | null;
     workflowActiveRole: string | null;
   }>);
@@ -152,9 +151,8 @@ export async function getLines(revisionId: string) {
   return db
     .select({
       id: bomLines.id, qty: bomLines.qty, position: bomLines.position,
-      unitPriceSnapshot: bomLines.unitPriceSnapshot,
       itemId: items.id, sku: items.sku, description: items.description,
-      manufacturer: items.manufacturer, unit: items.unit, stockState: items.stockState,
+      manufacturer: items.manufacturer, unit: items.unit,
       vendorName: vendors.name, categoryName: categories.name, subcategoryName: subcategories.name,
       sectionId: bomLines.sectionId,
       sectionName: bomSections.name,

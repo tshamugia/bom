@@ -12,7 +12,6 @@ export type LineSnapshot = {
   unit: string;
   vendor: string | null;
   qty: number;
-  unitPrice: number;
   section: string | null;
 };
 
@@ -26,7 +25,6 @@ export type LineChange = {
     unit?: { from: string; to: string };
     vendor?: { from: string | null; to: string | null };
     qty?: { from: number; to: number };
-    price?: { from: number; to: number };
     section?: { from: string | null; to: string | null };
   };
 };
@@ -41,7 +39,6 @@ export type RevisionDiff = {
     reordered: Array<{ name: string; from: number; to: number }>;
   };
   lines: { added: LineSnapshot[]; removed: LineSnapshot[]; changed: LineChange[] };
-  totals: { leftValue: number; rightValue: number; delta: number };
 };
 
 async function loadSide(revisionId: string, orgId: string) {
@@ -67,7 +64,6 @@ async function loadSide(revisionId: string, orgId: string) {
     .select({
       itemId: bomLines.itemId,
       qty: bomLines.qty,
-      unitPriceSnapshot: bomLines.unitPriceSnapshot,
       sku: bomLines.skuSnapshot,
       description: bomLines.descriptionSnapshot,
       manufacturer: bomLines.manufacturerSnapshot,
@@ -116,7 +112,7 @@ export async function getRevisionDiff(leftId: string, rightId: string): Promise<
   const toSnapshot = (l: typeof left.lines[number], side: typeof left): LineSnapshot => ({
     itemId: l.itemId, sku: l.sku, description: l.description,
     manufacturer: l.manufacturer, unit: l.unit, vendor: l.vendor,
-    qty: l.qty, unitPrice: Number(l.unitPriceSnapshot),
+    qty: l.qty,
     section: sectionNameById(side.sections, l.sectionId),
   });
 
@@ -136,8 +132,6 @@ export async function getRevisionDiff(leftId: string, rightId: string): Promise<
       if (l.unit !== r.unit) changes.unit = { from: l.unit, to: r.unit };
       if (l.vendor !== r.vendor) changes.vendor = { from: l.vendor, to: r.vendor };
       if (l.qty !== r.qty) changes.qty = { from: l.qty, to: r.qty };
-      const lp = Number(l.unitPriceSnapshot), rp = Number(r.unitPriceSnapshot);
-      if (lp !== rp) changes.price = { from: lp, to: rp };
       const ls = sectionNameById(left.sections, l.sectionId);
       const rs = sectionNameById(right.sections, r.sectionId);
       if (ls !== rs) changes.section = { from: ls, to: rs };
@@ -147,16 +141,10 @@ export async function getRevisionDiff(leftId: string, rightId: string): Promise<
     }
   }
 
-  const sumValue = (ls: typeof left.lines) =>
-    ls.reduce((s, l) => s + l.qty * Number(l.unitPriceSnapshot), 0);
-  const leftValue = sumValue(left.lines);
-  const rightValue = sumValue(right.lines);
-
   return {
     left: { id: left.rev.id, letter: left.rev.letter },
     right: { id: right.rev.id, letter: right.rev.letter, status: right.rev.status },
     sections, lines,
-    totals: { leftValue, rightValue, delta: rightValue - leftValue },
   };
 }
 
