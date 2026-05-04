@@ -2,11 +2,9 @@ import "server-only";
 import ExcelJS from "exceljs";
 import {
   TEMPLATE_COLUMNS,
-  STOCK_STATES,
   type ParsedRow,
   type ParserResult,
   type RowError,
-  type StockState,
 } from "@/lib/schemas/import";
 
 export async function parseImportBuffer(buf: Buffer): Promise<ParserResult> {
@@ -26,7 +24,6 @@ export async function parseImportBuffer(buf: Buffer): Promise<ParserResult> {
     const v = headerRow.getCell(c).value;
     rawHeaders.push(typeof v === "string" ? v : v == null ? "" : String(v));
   }
-  // Drop trailing empties so a 2-column header reports as ["sku","qty"], not padded with "".
   while (rawHeaders.length > 0 && rawHeaders[rawHeaders.length - 1] === "") rawHeaders.pop();
   const found = rawHeaders;
 
@@ -45,21 +42,12 @@ export async function parseImportBuffer(buf: Buffer): Promise<ParserResult> {
     const cells = TEMPLATE_COLUMNS.map((_, i) => readCell(row.getCell(i + 1).value));
     if (cells.every(c => c === "")) continue;
 
-    const [sku, description, manufacturer, unitRaw, unitPriceRaw, onHandRaw, stockStateRaw, vendorCode, category, subcategory] = cells;
+    const [sku, description, manufacturer, unitRaw, vendorCode, category, subcategory] = cells;
     const errors: RowError[] = [];
 
     if (!sku) errors.push({ rowNumber: r, sku: "", reason: "missing_required", field: "sku" });
     if (!description) errors.push({ rowNumber: r, sku, reason: "missing_required", field: "description" });
     if (!manufacturer) errors.push({ rowNumber: r, sku, reason: "missing_required", field: "manufacturer" });
-
-    const unitPrice = strictNumber(unitPriceRaw);
-    if (unitPrice === null || unitPrice < 0) errors.push({ rowNumber: r, sku, reason: "bad_type", field: "unit_price", value: unitPriceRaw });
-
-    const onHand = onHandRaw === "" ? 0 : strictInteger(onHandRaw);
-    if (onHand === null || onHand < 0) errors.push({ rowNumber: r, sku, reason: "bad_type", field: "on_hand", value: onHandRaw });
-
-    const stockState: StockState = (stockStateRaw === "" ? "in-stock" : stockStateRaw) as StockState;
-    if (!STOCK_STATES.includes(stockState)) errors.push({ rowNumber: r, sku, reason: "bad_enum", field: "stock_state", value: stockStateRaw });
 
     if (!category && subcategory) errors.push({ rowNumber: r, sku, reason: "bad_subcategory_without_category", field: "subcategory", value: subcategory });
 
@@ -77,9 +65,6 @@ export async function parseImportBuffer(buf: Buffer): Promise<ParserResult> {
       description,
       manufacturer,
       unit: unitRaw === "" ? "pcs" : unitRaw,
-      unitPrice: unitPrice as number,
-      onHand: onHand as number,
-      stockState,
       vendorCode: vendorCode || null,
       category: category || null,
       subcategory: subcategory || null,
@@ -103,18 +88,4 @@ function readCell(v: ExcelJS.CellValue): string {
     if ("result" in obj) return readCell(obj.result as ExcelJS.CellValue);
   }
   return String(v).trim();
-}
-
-function strictNumber(s: string): number | null {
-  if (s === "") return null;
-  if (!/^-?\d+(\.\d+)?$/.test(s)) return null;
-  const n = Number(s);
-  return Number.isFinite(n) ? n : null;
-}
-
-function strictInteger(s: string): number | null {
-  if (s === "") return null;
-  if (!/^-?\d+$/.test(s)) return null;
-  const n = Number(s);
-  return Number.isFinite(n) ? n : null;
 }
