@@ -4,7 +4,6 @@ import { join } from "node:path";
 
 const TEMPLATE_COLUMNS = [
   "sku", "description", "manufacturer", "unit",
-  "unit_price", "on_hand", "stock_state",
   "vendor_code", "category", "subcategory",
 ] as const;
 
@@ -16,7 +15,7 @@ async function main() {
   const ws = wb.addWorksheet("items");
   ws.addRow([...TEMPLATE_COLUMNS]);
   for (let i = 0; i < 5000; i++) {
-    ws.addRow([`PERF-${i.toString().padStart(5, "0")}`, "perf row", "Mfg", "pcs", 0.01 + (i % 100) / 100, i % 200, "in-stock", "MSR", "Passive", "Resistors"]);
+    ws.addRow([`PERF-${i.toString().padStart(5, "0")}`, "perf row", "Mfg", "pcs", "MSR", "Passive", "Resistors"]);
   }
   const buf = Buffer.from(await wb.xlsx.writeBuffer());
   writeFileSync(join(OUT, "big.xlsx"), buf);

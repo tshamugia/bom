@@ -5,7 +5,6 @@ test("dashboard renders KPIs, projects table, and recent activity reflects a ven
   await signUpAndGo(page, "/dashboard");
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
   await expect(page.getByText("Active BOMs", { exact: true })).toBeVisible();
-  await expect(page.getByText("Open value", { exact: true })).toBeVisible();
   await expect(page.getByText("Approvals pending", { exact: true })).toBeVisible();
   await expect(page.getByText("Northstar Beacon v3.2")).toBeVisible();
   await expect(page.getByText("FER-BLM18-600")).toBeVisible();

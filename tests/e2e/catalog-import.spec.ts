@@ -34,5 +34,5 @@ test("catalog import: errors flagged in preview", async ({ page }) => {
   await expect(page).toHaveURL(/\/catalog\/import\?id=/);
   await expect(page.getByText(/rows with errors/)).toBeVisible();
   await expect(page.getByText("missing_required")).toBeVisible();
-  await expect(page.getByText("bad_type")).toBeVisible();
+  await expect(page.getByText("duplicate_in_file")).toBeVisible();
 });
