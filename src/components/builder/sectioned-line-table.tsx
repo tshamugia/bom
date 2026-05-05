@@ -125,15 +125,13 @@ export function SectionedLineTable({
             <SectionGroupBody
               key={UNCAT_KEY}
               header={
-                sections.length > 0 ? (
-                  <UncategorizedHeader
-                    count={grouped.uncat.length}
-                    collapsed={!!collapsed[UNCAT_KEY]}
-                    onToggle={() => setCollapsed(c => ({ ...c, [UNCAT_KEY]: !c[UNCAT_KEY] }))}
-                    visibleColCount={visibleColCount}
-                    isDropTarget={dropTarget === UNCAT_KEY}
-                  />
-                ) : null
+                <UncategorizedHeader
+                  count={grouped.uncat.length}
+                  collapsed={!!collapsed[UNCAT_KEY]}
+                  onToggle={() => setCollapsed(c => ({ ...c, [UNCAT_KEY]: !c[UNCAT_KEY] }))}
+                  visibleColCount={visibleColCount}
+                  isDropTarget={dropTarget === UNCAT_KEY}
+                />
               }
               isCollapsed={!!collapsed[UNCAT_KEY]}
               onDragOver={e => {

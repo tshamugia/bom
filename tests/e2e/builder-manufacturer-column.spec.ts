@@ -22,7 +22,9 @@ test("manufacturer is a toggleable column between Vendor and Unit", async ({ pag
   // Description cell no longer carries the muted manufacturer subtitle.
   // Take a row whose manufacturer cell has a non-empty value, and assert the
   // matching Description cell does NOT contain that text as a nested element.
-  const firstRow = page.locator("tbody tr").first();
+  // Pick the first data row (a row with more than one <td> — section/uncategorized
+  // headers use a single <td colspan>, so they're skipped).
+  const firstRow = page.locator("tbody tr").filter({ has: page.locator("td:nth-child(2)") }).first();
   const sampleMfr = (await firstRow.locator("td").nth(mfrIdx).innerText()).trim();
   if (sampleMfr && sampleMfr !== "—") {
     const descIdx = headerTexts.findIndex(t => /Description/i.test(t));
