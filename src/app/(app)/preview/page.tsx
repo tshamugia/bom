@@ -28,7 +28,7 @@ export default async function PreviewIndex() {
                 <span>{p.targetDate ?? "—"}</span>
               </div>
             </div>
-            <div className="shrink-0 text-[12.5px] text-[var(--color-text-3)]">{p.lineCount} lines · ${p.total.toFixed(2)}</div>
+            <div className="shrink-0 text-[12.5px] text-[var(--color-text-3)]">{p.lineCount} lines</div>
           </Link>
         ))}
       </div>

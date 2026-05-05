@@ -9,10 +9,7 @@ export type ExportColumnKey =
   | "manufacturer"
   | "vendor"
   | "unit"
-  | "qty"
-  | "unitPrice"
-  | "total"
-  | "stock";
+  | "qty";
 
 export type ExportColumns = Record<ExportColumnKey, boolean>;
 
@@ -32,9 +29,6 @@ const COLUMN_LABELS: Record<ExportColumnKey, string> = {
   vendor: "Vendor",
   unit: "Unit",
   qty: "Qty",
-  unitPrice: "Unit price",
-  total: "Total",
-  stock: "Stock",
 };
 
 const COLUMN_ORDER: ExportColumnKey[] = [
@@ -44,9 +38,6 @@ const COLUMN_ORDER: ExportColumnKey[] = [
   "vendor",
   "unit",
   "qty",
-  "unitPrice",
-  "total",
-  "stock",
 ];
 
 export const DEFAULT_EXPORT_OPTS: ExportOpts = {
@@ -57,9 +48,6 @@ export const DEFAULT_EXPORT_OPTS: ExportOpts = {
     vendor: true,
     unit: true,
     qty: true,
-    unitPrice: true,
-    total: true,
-    stock: true,
   },
   groupByVendor: false,
   includeCoverPage: false,

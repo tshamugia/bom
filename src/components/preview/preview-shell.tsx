@@ -47,9 +47,6 @@ export function PreviewShell(p: Props) {
     });
   }
 
-  const subtotal = p.lines.reduce((s, l) => s + l.qty * Number(l.unitPriceSnapshot), 0);
-  const tax = subtotal * 0.08;
-  const grand = subtotal + tax;
   const totalUnits = p.lines.reduce((s, l) => s + l.qty, 0);
   const vendorCount = new Set(p.lines.map(l => l.vendorName).filter(Boolean)).size;
 
@@ -101,7 +98,7 @@ export function PreviewShell(p: Props) {
           generatedOn={new Date().toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
         />
         <div className="sticky top-[68px] flex flex-col gap-3">
-          <SummaryCard lines={p.lines.length} totalUnits={totalUnits} vendors={vendorCount} subtotal={subtotal} tax={tax} grand={grand} />
+          <SummaryCard lines={p.lines.length} totalUnits={totalUnits} vendors={vendorCount} />
           <ExportOptionsCard opts={opts} onChange={setOpts} />
           <ApproversCard steps={p.steps} />
         </div>

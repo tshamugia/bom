@@ -1,5 +1,5 @@
-export function SummaryCard({ lines, totalUnits, vendors, subtotal, tax, grand }: {
-  lines: number; totalUnits: number; vendors: number; subtotal: number; tax: number; grand: number;
+export function SummaryCard({ lines, totalUnits, vendors }: {
+  lines: number; totalUnits: number; vendors: number;
 }) {
   return (
     <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
@@ -10,18 +10,15 @@ export function SummaryCard({ lines, totalUnits, vendors, subtotal, tax, grand }
         <Term k="Lines" v={lines} />
         <Term k="Total units" v={totalUnits.toLocaleString()} />
         <Term k="Vendors" v={vendors} />
-        <Term k="Subtotal" v={`$${subtotal.toFixed(2)}`} />
-        <Term k="Tax" v={`$${tax.toFixed(2)}`} />
-        <Term k="Grand total" v={`$${grand.toFixed(2)}`} bold />
       </dl>
     </div>
   );
 }
-function Term({ k, v, bold }: { k: string; v: string | number; bold?: boolean }) {
+function Term({ k, v }: { k: string; v: string | number }) {
   return (
     <>
-      <dt className={`text-[var(--color-text-3)] ${bold ? "font-semibold text-[var(--color-text)]" : ""}`}>{k}</dt>
-      <dd className={`m-0 tabular-nums ${bold ? "font-semibold" : ""}`}>{v}</dd>
+      <dt className="text-[var(--color-text-3)]">{k}</dt>
+      <dd className="m-0 tabular-nums">{v}</dd>
     </>
   );
 }
