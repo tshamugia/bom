@@ -10,18 +10,16 @@ export async function GET() {
   lines.push("");
   lines.push("Stat,Value");
   lines.push(`Active BOMs,${stats.activeBoms}`);
-  lines.push(`Open value,${stats.openValue.toFixed(2)}`);
   lines.push(`Approvals pending,${stats.approvalsPending}`);
   lines.push(`Avg. lead time (days),${stats.avgLeadTimeDays}`);
   lines.push("");
-  lines.push("Project code,Project name,Lines,Total,Status,Updated,Target");
+  lines.push("Project code,Project name,Lines,Status,Updated,Target");
   for (const p of projects as any[]) {
     const safe = (s: string | null | undefined) => `"${(s ?? "").replace(/"/g, '""')}"`;
     lines.push([
       safe(p.code),
       safe(p.name),
       p.lineCount,
-      p.total.toFixed(2),
       safe(p.status),
       safe(new Date(p.updatedAt).toISOString()),
       safe(p.targetDate),
