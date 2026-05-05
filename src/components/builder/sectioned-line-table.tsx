@@ -55,6 +55,7 @@ export function SectionedLineTable({
     if (columns.desc) n++;
     if (columns.cat) n++;
     if (columns.vendor) n++;
+    if (columns.mfr) n++;
     if (columns.unit) n++;
     if (columns.qty) n++;
     return n;
@@ -112,6 +113,7 @@ export function SectionedLineTable({
               {columns.desc && <Th>Description</Th>}
               {columns.cat && <Th>Category</Th>}
               {columns.vendor && <Th>Vendor</Th>}
+              {columns.mfr && <Th>Manufacturer</Th>}
               {columns.unit && <Th>Unit</Th>}
               {columns.qty && <Th align="right">Qty</Th>}
               <Th w={32} />
@@ -123,13 +125,15 @@ export function SectionedLineTable({
             <SectionGroupBody
               key={UNCAT_KEY}
               header={
-                <UncategorizedHeader
-                  count={grouped.uncat.length}
-                  collapsed={!!collapsed[UNCAT_KEY]}
-                  onToggle={() => setCollapsed(c => ({ ...c, [UNCAT_KEY]: !c[UNCAT_KEY] }))}
-                  visibleColCount={visibleColCount}
-                  isDropTarget={dropTarget === UNCAT_KEY}
-                />
+                sections.length > 0 ? (
+                  <UncategorizedHeader
+                    count={grouped.uncat.length}
+                    collapsed={!!collapsed[UNCAT_KEY]}
+                    onToggle={() => setCollapsed(c => ({ ...c, [UNCAT_KEY]: !c[UNCAT_KEY] }))}
+                    visibleColCount={visibleColCount}
+                    isDropTarget={dropTarget === UNCAT_KEY}
+                  />
+                ) : null
               }
               isCollapsed={!!collapsed[UNCAT_KEY]}
               onDragOver={e => {
@@ -327,10 +331,7 @@ function LineRow({
       </td>
       {columns.sku && <td className="px-3 py-2 font-mono text-[11.5px]">{it.sku}</td>}
       {columns.desc && (
-        <td className="px-3 py-2">
-          {it.description}
-          <div className="text-[11px] text-[var(--color-text-3)]">{it.manufacturer}</div>
-        </td>
+        <td className="px-3 py-2">{it.description}</td>
       )}
       {columns.cat && (
         <td className="px-3 py-2 text-[var(--color-text-3)]">
@@ -338,6 +339,11 @@ function LineRow({
         </td>
       )}
       {columns.vendor && <td className="px-3 py-2">{it.vendorName ?? "—"}</td>}
+      {columns.mfr && (
+        <td className="px-3 py-2 text-[var(--color-text-3)]">
+          {it.manufacturer || "—"}
+        </td>
+      )}
       {columns.unit && <td className="px-3 py-2 text-[var(--color-text-3)]">{it.unit}</td>}
       {columns.qty && (
         <td className="px-3 py-2 text-right">
