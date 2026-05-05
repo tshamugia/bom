@@ -7,8 +7,6 @@ export type BomRow = {
   vendor: string | null;
   unit: string;
   qty: number;
-  unitPrice: number;
-  stock?: string;
   sectionName: string | null;
   sectionPosition: number | null;
 };
@@ -19,10 +17,7 @@ export type ExportColumnKey =
   | "manufacturer"
   | "vendor"
   | "unit"
-  | "qty"
-  | "unitPrice"
-  | "total"
-  | "stock";
+  | "qty";
 
 export type ExportColumns = Record<ExportColumnKey, boolean>;
 
@@ -45,7 +40,6 @@ type ColumnDescriptor = {
   header: string;
   width: number;
   align?: "right";
-  numFmt?: string;
 };
 
 const COLUMN_DESCRIPTORS: Record<ExportColumnKey, ColumnDescriptor> = {
@@ -55,9 +49,6 @@ const COLUMN_DESCRIPTORS: Record<ExportColumnKey, ColumnDescriptor> = {
   vendor:       { key: "vendor",       header: "Vendor",       width: 22 },
   unit:         { key: "unit",         header: "Unit",         width: 8 },
   qty:          { key: "qty",          header: "Qty",          width: 8, align: "right" },
-  unitPrice:    { key: "unitPrice",    header: "Unit price",   width: 12, align: "right", numFmt: '"$"#,##0.00' },
-  total:        { key: "total",        header: "Total",        width: 14, align: "right", numFmt: '"$"#,##0.00' },
-  stock:        { key: "stock",        header: "Stock",        width: 18 },
 };
 
 const COLUMN_ORDER: ExportColumnKey[] = [
@@ -67,9 +58,6 @@ const COLUMN_ORDER: ExportColumnKey[] = [
   "vendor",
   "unit",
   "qty",
-  "unitPrice",
-  "total",
-  "stock",
 ];
 
 function selectedColumns(opts: BuildOptions): ColumnDescriptor[] {
@@ -150,7 +138,6 @@ function buildCoverSheet(wb: ExcelJS.Workbook, input: BuildInput) {
     ws.getCell("A6").value = `Target: ${input.project.target}`;
   }
 
-  const showTotals = input.options.columns.unitPrice || input.options.columns.total;
   const groups = groupBySection(input.rows);
   let row = 8;
   if (groups.length > 0) {
@@ -160,13 +147,8 @@ function buildCoverSheet(wb: ExcelJS.Workbook, input: BuildInput) {
     for (const g of groups) {
       const label = g.name ?? "Uncategorized";
       const lineCount = g.rows.length;
-      const total = g.rows.reduce((s, r) => s + r.qty * r.unitPrice, 0);
       ws.getCell(`A${row}`).value = label;
       ws.getCell(`B${row}`).value = `${lineCount} line${lineCount === 1 ? "" : "s"}`;
-      if (showTotals) {
-        ws.getCell(`C${row}`).value = total;
-        ws.getCell(`C${row}`).numFmt = '"$"#,##0.00';
-      }
       row++;
     }
     row++;
@@ -177,14 +159,12 @@ function buildCoverSheet(wb: ExcelJS.Workbook, input: BuildInput) {
   ws.getCell(`A${row + 1}`).value = "438 Industrial Way · Oakland, CA";
   ws.getColumn(1).width = 40;
   ws.getColumn(2).width = 16;
-  ws.getColumn(3).width = 16;
 }
 
 function buildMainSheet(wb: ExcelJS.Workbook, input: BuildInput, name = "BOM") {
   const ws = wb.addWorksheet(name);
 
   const cols = selectedColumns(input.options);
-  // Index column "#" is always present as the leftmost column.
   const indexColIndex = 1;
   const dataColStart = 2;
   const colIndexByKey = new Map<ExportColumnKey, number>();
@@ -216,16 +196,8 @@ function buildMainSheet(wb: ExcelJS.Workbook, input: BuildInput, name = "BOM") {
     cell.border = { bottom: { style: "thin", color: { argb: "FFE4E6EB" } } };
   });
 
-  const qtyColIdx = colIndexByKey.get("qty");
-  const unitPriceColIdx = colIndexByKey.get("unitPrice");
-  const totalColIdx = colIndexByKey.get("total");
-  // Subtotal lives in the column immediately after Total when Total is shown.
-  const subtotalColIdx = totalColIdx ? totalColIdx + 1 : null;
-
   const groups = groupBySection(input.rows);
   let currentRow = 6;
-  let firstDataRow: number | null = null;
-  let lastDataRow: number | null = null;
   let groupIndex = 0;
 
   for (const group of groups) {
@@ -245,7 +217,6 @@ function buildMainSheet(wb: ExcelJS.Workbook, input: BuildInput, name = "BOM") {
       currentRow++;
     }
 
-    const groupFirstDataRow = currentRow;
     group.rows.forEach((r, idx) => {
       const row = ws.getRow(currentRow);
       row.getCell(indexColIndex).value = idx + 1;
@@ -259,72 +230,18 @@ function buildMainSheet(wb: ExcelJS.Workbook, input: BuildInput, name = "BOM") {
           case "vendor":       cell.value = r.vendor ?? "—"; break;
           case "unit":         cell.value = r.unit; break;
           case "qty":          cell.value = r.qty; break;
-          case "unitPrice":
-            cell.value = r.unitPrice;
-            cell.numFmt = c.numFmt!;
-            break;
-          case "total": {
-            // Total = qty * unitPrice. Prefer a live formula when both columns are present;
-            // otherwise emit a static computed value.
-            if (qtyColIdx && unitPriceColIdx) {
-              cell.value = {
-                formula: `${colLetter(unitPriceColIdx)}${currentRow}*${colLetter(qtyColIdx)}${currentRow}`,
-              };
-            } else {
-              cell.value = r.qty * r.unitPrice;
-            }
-            cell.numFmt = c.numFmt!;
-            break;
-          }
-          case "stock": cell.value = r.stock ?? ""; break;
         }
       }
-      if (firstDataRow === null) firstDataRow = currentRow;
-      lastDataRow = currentRow;
       currentRow++;
     });
-    const groupLastDataRow = currentRow - 1;
-
-    // Per-section subtotal alongside the Total column when it's visible.
-    if (totalColIdx && subtotalColIdx && group.rows.length > 0 && !onlyUncategorized) {
-      const subtotalRow = ws.getRow(currentRow);
-      const labelCell = subtotalRow.getCell(totalColIdx);
-      labelCell.value = `Subtotal — ${group.name ?? "Uncategorized"}`;
-      labelCell.font = { italic: true, color: { argb: "FF6B7180" }, size: 10 };
-      labelCell.alignment = { horizontal: "right" };
-      const totalColLet = colLetter(totalColIdx);
-      const subCell = subtotalRow.getCell(subtotalColIdx);
-      subCell.value = {
-        formula: `SUM(${totalColLet}${groupFirstDataRow}:${totalColLet}${groupLastDataRow})`,
-      };
-      subCell.font = { bold: true };
-      subCell.numFmt = '"$"#,##0.00';
-      currentRow++;
-    }
 
     groupIndex++;
   }
 
-  if (totalColIdx && firstDataRow !== null && lastDataRow !== null) {
-    const totalsRow = ws.getRow(currentRow + 1);
-    const totalColLet = colLetter(totalColIdx);
-    totalsRow.getCell(totalColIdx - 1).value = "Total";
-    totalsRow.getCell(totalColIdx - 1).font = { bold: true };
-    totalsRow.getCell(totalColIdx - 1).alignment = { horizontal: "right" };
-    totalsRow.getCell(totalColIdx).value = {
-      formula: `SUM(${totalColLet}${firstDataRow}:${totalColLet}${lastDataRow})`,
-    };
-    totalsRow.getCell(totalColIdx).font = { bold: true };
-    totalsRow.getCell(totalColIdx).numFmt = '"$"#,##0.00';
-  }
-
-  // Column widths.
   ws.getColumn(indexColIndex).width = 4;
   cols.forEach((c, i) => {
     ws.getColumn(dataColStart + i).width = c.width;
   });
-  // Reserve width for the subtotal column when present.
-  if (subtotalColIdx) ws.getColumn(subtotalColIdx).width = 18;
 
   if (input.isDraft) {
     ws.headerFooter.oddFooter =

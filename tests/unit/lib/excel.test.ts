@@ -3,8 +3,8 @@ import ExcelJS from "exceljs";
 import { buildBomWorkbook, type BomRow, type ExportColumns } from "@/lib/excel";
 
 const ROWS: BomRow[] = [
-  { sku: "RES-1", description: "10k", manufacturer: "Yageo", vendor: "Mouser", unit: "pcs", qty: 10, unitPrice: 0.012, sectionName: null, sectionPosition: null },
-  { sku: "CAP-1", description: "100nF", manufacturer: "Murata", vendor: "DigiSource", unit: "pcs", qty: 18, unitPrice: 0.018, sectionName: null, sectionPosition: null },
+  { sku: "RES-1", description: "10k", manufacturer: "Yageo", vendor: "Mouser", unit: "pcs", qty: 10, sectionName: null, sectionPosition: null },
+  { sku: "CAP-1", description: "100nF", manufacturer: "Murata", vendor: "DigiSource", unit: "pcs", qty: 18, sectionName: null, sectionPosition: null },
 ];
 
 function allColumns(overrides: Partial<ExportColumns> = {}): ExportColumns {
@@ -15,14 +15,11 @@ function allColumns(overrides: Partial<ExportColumns> = {}): ExportColumns {
     vendor: true,
     unit: true,
     qty: true,
-    unitPrice: true,
-    total: true,
-    stock: false,
     ...overrides,
   };
 }
 
-test("buildBomWorkbook produces a workbook with header, rows, and totals", async () => {
+test("buildBomWorkbook produces a workbook with header and rows", async () => {
   const buf = await buildBomWorkbook({
     project: { code: "TEST-1", name: "Test Project", quantity: 50, owner: "M. Chen", target: "May 14, 2026" },
     revisionLetter: "A",
@@ -38,9 +35,8 @@ test("buildBomWorkbook produces a workbook with header, rows, and totals", async
   expect(sheet!.getCell("A5").value).toBe("#");
   expect(sheet!.getCell("B5").value).toBe("SKU");
   expect(sheet!.getCell("B6").value).toBe("RES-1");
-  // With all columns selected (no stock), the Total column is column I (9).
-  const totalCell = sheet!.getRow(7).getCell(9);
-  expect(typeof totalCell.value).toBe("object");
+  expect(sheet!.getCell("G5").value).toBe("Qty");
+  expect(sheet!.getRow(6).getCell(7).value).toBe(10);
 });
 
 test("groupByVendor=true creates per-vendor sheets", async () => {
@@ -56,12 +52,12 @@ test("groupByVendor=true creates per-vendor sheets", async () => {
   expect(wb.getWorksheet("DigiSource")).toBeDefined();
 });
 
-test("buildBomWorkbook renders section headings and per-section subtotals", async () => {
+test("buildBomWorkbook renders section heading rows", async () => {
   const SECTIONED: BomRow[] = [
-    { sku: "U-1", description: "stray", manufacturer: "x", vendor: "V", unit: "pcs", qty: 2, unitPrice: 1.0, sectionName: null, sectionPosition: null },
-    { sku: "FA-1", description: "smoke", manufacturer: "x", vendor: "V", unit: "pcs", qty: 4, unitPrice: 2.0, sectionName: "Fire Alarm", sectionPosition: 0 },
-    { sku: "FA-2", description: "horn", manufacturer: "x", vendor: "V", unit: "pcs", qty: 1, unitPrice: 5.0, sectionName: "Fire Alarm", sectionPosition: 0 },
-    { sku: "IT-1", description: "switch", manufacturer: "x", vendor: "V", unit: "pcs", qty: 3, unitPrice: 10.0, sectionName: "IT Network", sectionPosition: 1 },
+    { sku: "U-1", description: "stray", manufacturer: "x", vendor: "V", unit: "pcs", qty: 2, sectionName: null, sectionPosition: null },
+    { sku: "FA-1", description: "smoke", manufacturer: "x", vendor: "V", unit: "pcs", qty: 4, sectionName: "Fire Alarm", sectionPosition: 0 },
+    { sku: "FA-2", description: "horn", manufacturer: "x", vendor: "V", unit: "pcs", qty: 1, sectionName: "Fire Alarm", sectionPosition: 0 },
+    { sku: "IT-1", description: "switch", manufacturer: "x", vendor: "V", unit: "pcs", qty: 3, sectionName: "IT Network", sectionPosition: 1 },
   ];
 
   const buf = await buildBomWorkbook({
@@ -83,26 +79,15 @@ test("buildBomWorkbook renders section headings and per-section subtotals", asyn
     }
   });
   expect(headings.map(h => h.value)).toEqual(["Uncategorized", "Fire Alarm", "IT Network"]);
-
-  // Subtotals sit in the column immediately after Total. With all columns visible (no stock),
-  // Total is col 9 and the subtotal column is col 10.
-  let subtotalCount = 0;
-  sheet.eachRow(row => {
-    const j = row.getCell(10).value;
-    if (j && typeof j === "object" && "formula" in j && typeof j.formula === "string" && j.formula.startsWith("SUM(")) {
-      subtotalCount++;
-    }
-  });
-  expect(subtotalCount).toBe(3);
 });
 
 test("draft workbook embeds DRAFT — NOT FOR PROCUREMENT band on cover", async () => {
   const buf = await buildBomWorkbook({
     project: { code: "P", name: "P", quantity: 1, owner: "T", target: "—" },
     revisionLetter: "A",
-    rows: [{ sku: "S", description: "d", manufacturer: "m", vendor: "V", unit: "pcs", qty: 1, unitPrice: 1, sectionName: null, sectionPosition: null }],
+    rows: [{ sku: "S", description: "d", manufacturer: "m", vendor: "V", unit: "pcs", qty: 1, sectionName: null, sectionPosition: null }],
     options: {
-      columns: allColumns({ unitPrice: false, total: false }),
+      columns: allColumns(),
       groupByVendor: false,
       includeCoverPage: true,
     },
@@ -146,9 +131,6 @@ test("hidden columns are omitted from the header row", async () => {
         vendor: false,
         unit: false,
         qty: true,
-        unitPrice: false,
-        total: false,
-        stock: false,
       },
       groupByVendor: false,
       includeCoverPage: false,
@@ -157,7 +139,6 @@ test("hidden columns are omitted from the header row", async () => {
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(buf as never);
   const sheet = wb.getWorksheet("BOM")!;
-  // Header row: # | SKU | Qty
   expect(sheet.getCell("A5").value).toBe("#");
   expect(sheet.getCell("B5").value).toBe("SKU");
   expect(sheet.getCell("C5").value).toBe("Qty");
