@@ -22,9 +22,6 @@ export default async function DiffPage({
         <span className="text-[var(--color-text-3)]">→</span>
         <Badge tone="gray">Rev {diff.right.letter}</Badge>
         <RevisionStatusBadge status={diff.right.status as never} />
-        <span className="ml-auto text-[13px]">
-          Total: {diff.totals.delta >= 0 ? "+" : ""}${diff.totals.delta.toFixed(2)}
-        </span>
       </div>
 
       <div className="mb-4 grid grid-cols-4 gap-2 text-[12px]">

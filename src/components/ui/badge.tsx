@@ -24,17 +24,6 @@ export function VendorStatusBadge({ status }: { status: "preferred" | "approved"
   return <Badge tone={tone as Tone}>{label}</Badge>;
 }
 
-export function StockBadge({ state }: { state: "in-stock" | "low-stock" | "backorder" | "out-of-stock" }) {
-  const map = {
-    "in-stock":     ["success", "In stock"],
-    "low-stock":    ["warning", "Low"],
-    "backorder":    ["danger", "Backorder"],
-    "out-of-stock": ["danger", "Out"],
-  } as const;
-  const [tone, label] = map[state];
-  return <Badge tone={tone as Tone}>{label}</Badge>;
-}
-
 type RevisionStatus = "draft" | "committed" | "in-progress" | "review" | "approved" | "locked";
 
 const REVISION_STATUS_MAP: Record<RevisionStatus, { tone: Tone; label: string }> = {

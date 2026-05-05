@@ -10,7 +10,6 @@ type Row = {
   ownerName: string | null;
   revLetter: string | null;
   lineCount: number;
-  total: number;
   status: "pending" | "approved" | "rejected" | "cancelled";
   age: string;
   latestExportId: string | null;
@@ -27,7 +26,6 @@ export function ApprovalsTable({ rows }: { rows: Row[] }) {
             <th className="px-4 py-2.5 text-left font-medium">Owner</th>
             <th className="px-4 py-2.5 text-left font-medium">Rev</th>
             <th className="px-4 py-2.5 text-right font-medium">Lines</th>
-            <th className="px-4 py-2.5 text-right font-medium">Total</th>
             <th className="px-4 py-2.5 text-left font-medium">Sent</th>
             <th className="px-4 py-2.5 text-left font-medium">Status</th>
             <th />
@@ -36,7 +34,7 @@ export function ApprovalsTable({ rows }: { rows: Row[] }) {
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={8} className="px-4 py-12 text-center text-[12.5px] text-[var(--color-text-3)]">
+              <td colSpan={7} className="px-4 py-12 text-center text-[12.5px] text-[var(--color-text-3)]">
                 No BOMs have been sent yet.
               </td>
             </tr>
@@ -50,7 +48,6 @@ export function ApprovalsTable({ rows }: { rows: Row[] }) {
                 <td className="px-4 py-2.5">{r.ownerName ?? "—"}</td>
                 <td className="px-4 py-2.5 font-mono text-[11px] text-[var(--color-text-3)]">{r.revLetter ? `Rev ${r.revLetter}` : "—"}</td>
                 <td className="px-4 py-2.5 text-right tabular-nums">{r.lineCount}</td>
-                <td className="px-4 py-2.5 text-right tabular-nums">${r.total.toFixed(2)}</td>
                 <td className="px-4 py-2.5 text-[var(--color-text-3)]">{r.age} ago</td>
                 <td className="px-4 py-2.5">
                   <Badge tone="success">Sent to procurement</Badge>

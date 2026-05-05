@@ -23,7 +23,6 @@ export default async function BuilderIndex() {
               <th className="px-4 py-2.5 text-left font-medium">Owner</th>
               <th className="px-4 py-2.5 text-left font-medium">Rev</th>
               <th className="px-4 py-2.5 text-right font-medium">Lines</th>
-              <th className="px-4 py-2.5 text-right font-medium">Total</th>
               <th className="px-4 py-2.5 text-left font-medium">Status</th>
               <th className="px-4 py-2.5 text-left font-medium">Deadline</th>
               <th />
@@ -32,7 +31,7 @@ export default async function BuilderIndex() {
           <tbody>
             {list.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-12 text-center text-[12.5px] text-[var(--color-text-3)]">
+                <td colSpan={7} className="px-4 py-12 text-center text-[12.5px] text-[var(--color-text-3)]">
                   <div className="text-[13.5px]">No projects yet</div>
                   <div className="mt-1">Click &quot;New BOM&quot; to create your first project.</div>
                 </td>
@@ -49,7 +48,6 @@ export default async function BuilderIndex() {
                   <td className="px-4 py-2.5">{p.ownerName ?? "—"}</td>
                   <td className="px-4 py-2.5 font-mono text-[11px] text-[var(--color-text-3)]">{p.revLetter ? `Rev ${p.revLetter}` : "—"}</td>
                   <td className="px-4 py-2.5 text-right tabular-nums">{p.lineCount}</td>
-                  <td className="px-4 py-2.5 text-right tabular-nums">${p.total.toFixed(2)}</td>
                   <td className="px-4 py-2.5">
                     {p.workflowStatus
                       ? <Badge tone="success">Sent to procurement</Badge>
