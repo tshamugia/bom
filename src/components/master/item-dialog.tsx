@@ -23,8 +23,7 @@ export function ItemDialog({
   const form = useForm({
     resolver: zodResolver(ItemInput),
     defaultValues: {
-      sku: "", description: "", manufacturer: "", unit: "pcs", unitPrice: "0",
-      onHand: 0, stockState: "in-stock" as const,
+      sku: "", description: "", manufacturer: "", unit: "pcs",
       vendorId: vendors[0]?.id ?? null, categoryId: categories[0]?.id ?? null, subcategoryId: null,
     },
   });
@@ -44,11 +43,7 @@ export function ItemDialog({
             <div className="space-y-1.5"><Label>Manufacturer</Label><Input {...form.register("manufacturer")} /></div>
           </div>
           <div className="space-y-1.5"><Label>Description</Label><Input {...form.register("description")} /></div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="space-y-1.5"><Label>Unit</Label><Input {...form.register("unit")} /></div>
-            <div className="space-y-1.5"><Label>Unit price</Label><Input {...form.register("unitPrice")} /></div>
-            <div className="space-y-1.5"><Label>On hand</Label><Input type="number" {...form.register("onHand", { valueAsNumber: true })} /></div>
-          </div>
+          <div className="space-y-1.5"><Label>Unit</Label><Input {...form.register("unit")} /></div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Vendor</Label>
