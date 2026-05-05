@@ -41,11 +41,9 @@ export default async function BuilderPage({ params }: { params: Promise<{ projec
   // Aggregations for filter counts.
   const vendorCounts: Record<string, number> = {};
   const categoryCounts: Record<string, number> = {};
-  const stockCounts: Record<string, number> = {};
   for (const it of catalog) {
     if (it.vendorName) vendorCounts[it.vendorName] = (vendorCounts[it.vendorName] ?? 0) + 1;
     if (it.categoryName) categoryCounts[it.categoryName] = (categoryCounts[it.categoryName] ?? 0) + 1;
-    stockCounts[it.stockState] = (stockCounts[it.stockState] ?? 0) + 1;
   }
 
   return (
@@ -69,12 +67,11 @@ export default async function BuilderPage({ params }: { params: Promise<{ projec
       categories={categories}
       catalog={catalog.map(c => ({
         id: c.id, sku: c.sku, description: c.description, manufacturer: c.manufacturer,
-        unitPrice: c.unitPrice, vendorName: c.vendorName, categoryId: c.categoryId,
-        subcategoryId: c.subcategoryId, stockState: c.stockState,
+        vendorName: c.vendorName, categoryId: c.categoryId,
+        subcategoryId: c.subcategoryId,
       }))}
       vendorCounts={vendorCounts}
       categoryCounts={categoryCounts}
-      stockCounts={stockCounts}
       lines={lines as Line[]}
       sections={sections}
     />

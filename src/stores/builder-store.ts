@@ -6,13 +6,12 @@ type State = {
   vendorFilter: Set<string>;
   categoryFilter: Set<string>;
   subcategoryFilter: Set<string>;
-  stockFilter: Set<string>;
   search: string;
   comboOpen: boolean;
 };
 
 type Actions = {
-  toggle: (key: "vendorFilter" | "categoryFilter" | "subcategoryFilter" | "stockFilter", value: string) => void;
+  toggle: (key: "vendorFilter" | "categoryFilter" | "subcategoryFilter", value: string) => void;
   setSearch: (v: string) => void;
   setComboOpen: (v: boolean) => void;
   clear: () => void;
@@ -22,7 +21,6 @@ export const useBuilder = create<State & Actions>((set) => ({
   vendorFilter: new Set(),
   categoryFilter: new Set(),
   subcategoryFilter: new Set(),
-  stockFilter: new Set(),
   search: "",
   comboOpen: false,
 
@@ -38,7 +36,6 @@ export const useBuilder = create<State & Actions>((set) => ({
     vendorFilter: new Set(),
     categoryFilter: new Set(),
     subcategoryFilter: new Set(),
-    stockFilter: new Set(),
     search: "",
   }),
 }));

@@ -8,13 +8,12 @@ type Vendor = { id: string; name: string };
 type Category = { id: string; name: string; subcategories: { id: string; name: string }[] };
 
 export function FilterPanel({
-  vendors, categories, vendorCounts, categoryCounts, stockCounts,
+  vendors, categories, vendorCounts, categoryCounts,
 }: {
   vendors: Vendor[];
   categories: Category[];
   vendorCounts: Record<string, number>;
   categoryCounts: Record<string, number>;
-  stockCounts: Record<string, number>;
 }) {
   const s = useBuilder();
   const activeCatIds = Array.from(s.categoryFilter);
@@ -58,15 +57,6 @@ export function FilterPanel({
           </FilterGroup>
         </>
       )}
-
-      <Divider />
-      <FilterGroup title="Stock availability">
-        {(["in-stock", "low-stock", "backorder"] as const).map(st => (
-          <Row key={st} label={st.replace("-", " ")} count={stockCounts[st] ?? 0}
-            checked={s.stockFilter.has(st)}
-            onChange={() => s.toggle("stockFilter", st)} />
-        ))}
-      </FilterGroup>
     </div>
   );
 }

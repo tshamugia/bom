@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
 import { useTweaks, type ColumnKey } from "@/stores/tweaks-store";
-import { StockBadge } from "@/components/ui/badge";
 import { moveLineToSection, removeLine, updateLineQty } from "@/server/actions/bom-lines";
 import { SectionRow, type SectionInfo } from "./section-row";
 import { NewSectionInlineCreate } from "./new-section-popover";
@@ -17,11 +16,9 @@ export type Line = {
   manufacturer: string;
   unit: string;
   qty: number;
-  unitPriceSnapshot: string;
   vendorName: string | null;
   subcategoryName: string | null;
   categoryName: string | null;
-  stockState: "in-stock" | "low-stock" | "backorder" | "out-of-stock";
   sectionId: string | null;
   sectionName: string | null;
   sectionPosition: number | null;
@@ -60,9 +57,6 @@ export function SectionedLineTable({
     if (columns.vendor) n++;
     if (columns.unit) n++;
     if (columns.qty) n++;
-    if (columns.price) n++;
-    if (columns.total) n++;
-    if (columns.stock) n++;
     return n;
   }, [columns]);
 
@@ -120,9 +114,6 @@ export function SectionedLineTable({
               {columns.vendor && <Th>Vendor</Th>}
               {columns.unit && <Th>Unit</Th>}
               {columns.qty && <Th align="right">Qty</Th>}
-              {columns.price && <Th align="right">Unit price</Th>}
-              {columns.total && <Th align="right">Total</Th>}
-              {columns.stock && <Th>Stock</Th>}
               <Th w={32} />
             </tr>
           </thead>
@@ -322,7 +313,6 @@ function LineRow({
 }) {
   const [, start] = useTransition();
   const qty = drafts[it.id] ?? it.qty;
-  const price = Number(it.unitPriceSnapshot);
   return (
     <tr
       draggable={!readOnly}
@@ -370,19 +360,6 @@ function LineRow({
               }}
             />
           )}
-        </td>
-      )}
-      {columns.price && (
-        <td className="px-3 py-2 text-right tabular-nums">${price.toFixed(3)}</td>
-      )}
-      {columns.total && (
-        <td className="px-3 py-2 text-right font-medium tabular-nums">
-          ${(qty * price).toFixed(2)}
-        </td>
-      )}
-      {columns.stock && (
-        <td className="px-3 py-2">
-          <StockBadge state={it.stockState} />
         </td>
       )}
       <td className="px-3 py-2 text-right">

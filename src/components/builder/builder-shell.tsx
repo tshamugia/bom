@@ -39,7 +39,6 @@ type Props = {
   catalog: CatalogItem[];
   vendorCounts: Record<string, number>;
   categoryCounts: Record<string, number>;
-  stockCounts: Record<string, number>;
   lines: Line[];
   sections: SectionInfo[];
 };
@@ -78,7 +77,6 @@ export function BuilderShell(p: Props) {
   }, [p.catalog, p.lines]);
 
   const totalUnits = p.lines.reduce((s, l) => s + l.qty, 0);
-  const totalValue = p.lines.reduce((s, l) => s + l.qty * Number(l.unitPriceSnapshot), 0);
   const vendorCount = new Set(p.lines.map(l => l.vendorName).filter(Boolean)).size;
   const isDraft = p.revision.status === "draft";
 
@@ -109,7 +107,6 @@ export function BuilderShell(p: Props) {
             categories={p.categories}
             vendorCounts={p.vendorCounts}
             categoryCounts={p.categoryCounts}
-            stockCounts={p.stockCounts}
           />
         ) : (
           <FilterPanel
@@ -117,7 +114,6 @@ export function BuilderShell(p: Props) {
             categories={p.categories}
             vendorCounts={p.vendorCounts}
             categoryCounts={p.categoryCounts}
-            stockCounts={p.stockCounts}
           />
         )}
 
@@ -142,7 +138,7 @@ export function BuilderShell(p: Props) {
             onActiveSectionChange={setActiveSectionId}
             readOnly={!isDraft}
           />
-          <SummaryBar lineCount={p.lines.length} totalUnits={totalUnits} vendors={vendorCount} totalValue={totalValue} />
+          <SummaryBar lineCount={p.lines.length} totalUnits={totalUnits} vendors={vendorCount} />
         </div>
       </div>
     </>

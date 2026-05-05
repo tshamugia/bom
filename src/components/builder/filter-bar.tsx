@@ -17,22 +17,18 @@ type Vendor = { id: string; name: string };
 type Subcategory = { id: string; name: string };
 type Category = { id: string; name: string; subcategories: Subcategory[] };
 
-const STOCK_OPTIONS = ["in-stock", "low-stock", "backorder"] as const;
-
 export function FilterBar({
-  vendors, categories, vendorCounts, categoryCounts, stockCounts,
+  vendors, categories, vendorCounts, categoryCounts,
 }: {
   vendors: Vendor[];
   categories: Category[];
   vendorCounts: Record<string, number>;
   categoryCounts: Record<string, number>;
-  stockCounts: Record<string, number>;
 }) {
   const s = useBuilder();
   const vendorActive = s.vendorFilter.size;
   const categoryActive = s.categoryFilter.size + s.subcategoryFilter.size;
-  const stockActive = s.stockFilter.size;
-  const anyActive = vendorActive + categoryActive + stockActive > 0;
+  const anyActive = vendorActive + categoryActive > 0;
 
   return (
     <div className="mb-3 flex items-center gap-2">
@@ -88,24 +84,6 @@ export function FilterBar({
               </div>
             );
           })}
-        </DropdownMenuGroup>
-      </FacetTrigger>
-
-      <FacetTrigger label="Stock" count={stockActive}>
-        <DropdownMenuGroup>
-          <DropdownMenuLabel>Stock availability</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {STOCK_OPTIONS.map(st => (
-            <DropdownMenuCheckboxItem
-              key={st}
-              checked={s.stockFilter.has(st)}
-              onCheckedChange={() => s.toggle("stockFilter", st)}
-              closeOnClick={false}
-            >
-              <span className="flex-1 capitalize">{st.replace("-", " ")}</span>
-              <span className="ml-3 text-[11px] tabular-nums text-[var(--color-text-4)]">{stockCounts[st] ?? 0}</span>
-            </DropdownMenuCheckboxItem>
-          ))}
         </DropdownMenuGroup>
       </FacetTrigger>
 

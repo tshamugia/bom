@@ -9,8 +9,8 @@ import { addLine } from "@/server/actions/bom-lines";
 
 export type CatalogItem = {
   id: string; sku: string; description: string; manufacturer: string;
-  unitPrice: string; vendorName: string | null; categoryId: string | null;
-  subcategoryId: string | null; stockState: string;
+  vendorName: string | null; categoryId: string | null;
+  subcategoryId: string | null;
 };
 
 export function SearchAddCombo({
@@ -35,11 +35,10 @@ export function SearchAddCombo({
       if (s.vendorFilter.size && !(it.vendorName && s.vendorFilter.has(it.vendorName))) return false;
       if (s.categoryFilter.size && !(it.categoryId && s.categoryFilter.has(it.categoryId))) return false;
       if (s.subcategoryFilter.size && !(it.subcategoryId && s.subcategoryFilter.has(it.subcategoryId))) return false;
-      if (s.stockFilter.size && !s.stockFilter.has(it.stockState)) return false;
       if (q && !(it.sku.toLowerCase().includes(q) || it.description.toLowerCase().includes(q) || it.manufacturer.toLowerCase().includes(q))) return false;
       return true;
     }).slice(0, 80);
-  }, [catalog, s.search, s.vendorFilter, s.categoryFilter, s.subcategoryFilter, s.stockFilter]);
+  }, [catalog, s.search, s.vendorFilter, s.categoryFilter, s.subcategoryFilter]);
 
   function add(itemId: string) {
     setAdding(itemId);
@@ -70,12 +69,11 @@ export function SearchAddCombo({
             return (
               <div
                 key={it.id}
-                className="grid cursor-pointer grid-cols-[130px_1fr_auto_auto] items-center gap-2.5 border-b border-[var(--color-line-soft)] px-3 py-2 text-[12.5px] last:border-0 hover:bg-[var(--color-accent-soft)]"
+                className="grid cursor-pointer grid-cols-[130px_1fr_auto] items-center gap-2.5 border-b border-[var(--color-line-soft)] px-3 py-2 text-[12.5px] last:border-0 hover:bg-[var(--color-accent-soft)]"
                 onClick={() => !inBom && add(it.id)}
               >
                 <span className="font-mono text-[11.5px]">{it.sku}</span>
                 <span className="truncate text-[var(--color-text-2)]">{it.description}</span>
-                <span className="tabular-nums text-[var(--color-text-2)]">${Number(it.unitPrice).toFixed(3)}</span>
                 {inBom ? (
                   <span className="rounded-full bg-[var(--color-success-soft)] px-2 py-px text-[11px] text-[var(--color-success)]">In BOM</span>
                 ) : (

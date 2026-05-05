@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type ColumnKey = "sku" | "desc" | "cat" | "vendor" | "unit" | "qty" | "price" | "total" | "stock";
+export type ColumnKey = "sku" | "desc" | "cat" | "vendor" | "unit" | "qty";
 
 type State = {
   layout: "split" | "stacked";
@@ -18,7 +18,7 @@ export const useTweaks = create<State & Actions>()(
   persist(
     set => ({
       layout: "split",
-      columns: { sku: true, desc: true, cat: true, vendor: true, unit: true, qty: true, price: true, total: true, stock: true },
+      columns: { sku: true, desc: true, cat: true, vendor: true, unit: true, qty: true },
       setLayout: layout => set({ layout }),
       toggleColumn: k =>
         set(s => ({ columns: { ...s.columns, [k]: !s.columns[k] } })),

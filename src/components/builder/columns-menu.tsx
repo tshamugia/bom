@@ -7,7 +7,7 @@ import { useTweaks, type ColumnKey } from "@/stores/tweaks-store";
 
 const LABELS: Record<ColumnKey, string> = {
   sku: "SKU / Part #", desc: "Description", cat: "Category", vendor: "Vendor",
-  unit: "Unit", qty: "Quantity", price: "Unit price", total: "Total price", stock: "Stock status",
+  unit: "Unit", qty: "Quantity",
 };
 
 export function ColumnsMenu() {
