@@ -1,8 +1,8 @@
 import "server-only";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { bomLines, bomRevisions, bomSections, projects } from "@/db/schema";
-import { getCurrentOrgId } from "../org";
+import { bomLines, bomRevisions, bomSections } from "@/db/schema";
+import { requireSession } from "../auth-context";
 
 export type LineSnapshot = {
   itemId: string;
@@ -41,7 +41,7 @@ export type RevisionDiff = {
   lines: { added: LineSnapshot[]; removed: LineSnapshot[]; changed: LineChange[] };
 };
 
-async function loadSide(revisionId: string, orgId: string) {
+async function loadSide(revisionId: string) {
   const [rev] = await db
     .select({
       id: bomRevisions.id,
@@ -50,8 +50,7 @@ async function loadSide(revisionId: string, orgId: string) {
       projectId: bomRevisions.projectId,
     })
     .from(bomRevisions)
-    .innerJoin(projects, eq(projects.id, bomRevisions.projectId))
-    .where(and(eq(bomRevisions.id, revisionId), eq(projects.organizationId, orgId)))
+    .where(eq(bomRevisions.id, revisionId))
     .limit(1);
   if (!rev) throw new Error("REVISION_NOT_FOUND");
 
@@ -78,9 +77,9 @@ async function loadSide(revisionId: string, orgId: string) {
 }
 
 export async function getRevisionDiff(leftId: string, rightId: string): Promise<RevisionDiff> {
-  const orgId = await getCurrentOrgId();
-  const left = await loadSide(leftId, orgId);
-  const right = await loadSide(rightId, orgId);
+  await requireSession();
+  const left = await loadSide(leftId);
+  const right = await loadSide(rightId);
   if (left.rev.projectId !== right.rev.projectId) throw new Error("PROJECT_MISMATCH");
 
   const leftSecByKey = new Map(left.sections.map(s => [s.sectionKey, s]));
@@ -149,7 +148,7 @@ export async function getRevisionDiff(leftId: string, rightId: string): Promise<
 }
 
 export async function listRevisionsForProject(projectId: string) {
-  const orgId = await getCurrentOrgId();
+  await requireSession();
   return db
     .select({
       id: bomRevisions.id,
@@ -163,6 +162,5 @@ export async function listRevisionsForProject(projectId: string) {
       createdAt: bomRevisions.createdAt,
     })
     .from(bomRevisions)
-    .innerJoin(projects, eq(projects.id, bomRevisions.projectId))
-    .where(and(eq(bomRevisions.projectId, projectId), eq(projects.organizationId, orgId)));
+    .where(eq(bomRevisions.projectId, projectId));
 }

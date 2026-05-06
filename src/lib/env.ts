@@ -13,6 +13,9 @@ const Schema = z.object({
   S3_BUCKET: z.string().min(1),
   S3_FORCE_PATH_STYLE: z.string().optional(),
   EMAIL_FROM: z.string().email(),
+  ROOT_USER_EMAIL: z.string().email().default("t.shamugia@insta.ge"),
+  ROOT_USER_PASSWORD: z.string().min(8).default("Password123"),
+  ROOT_USER_NAME: z.string().default("Tengo Shamugia"),
 });
 
 const parsed = Schema.safeParse(process.env);

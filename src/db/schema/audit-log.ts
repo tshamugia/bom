@@ -1,6 +1,5 @@
 import { pgTable, text, timestamp, jsonb, pgEnum, index } from "drizzle-orm/pg-core";
 import { createId } from "@paralleldrive/cuid2";
-import { organizations } from "./organizations";
 import { user } from "./auth";
 
 export const auditKindEnum = pgEnum("audit_kind", [
@@ -21,13 +20,14 @@ export const auditKindEnum = pgEnum("audit_kind", [
   "bom.revision.committed",
   "bom.revision.branched",
   "bom.revision.discarded",
+  "user.created",
+  "user.disabled",
 ]);
 
 export const auditLog = pgTable(
   "audit_log",
   {
     id: text("id").primaryKey().$defaultFn(() => createId()),
-    organizationId: text("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
     actorId: text("actor_id").references(() => user.id, { onDelete: "set null" }),
     kind: auditKindEnum("kind").notNull(),
     refType: text("ref_type"),
@@ -37,6 +37,6 @@ export const auditLog = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   t => ({
-    orgCreatedIdx: index("audit_org_created_idx").on(t.organizationId, t.createdAt),
+    createdIdx: index("audit_created_idx").on(t.createdAt),
   }),
 );

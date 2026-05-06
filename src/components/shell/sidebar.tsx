@@ -5,44 +5,92 @@ import { usePathname } from "next/navigation";
 import { Icon } from "@/components/icons";
 import { NAV } from "./nav-config";
 
-export function Sidebar({ user }: { user: { name: string; role?: string } | null }) {
+export function Sidebar({ user }: { user: { name: string; role: "owner" | "admin" | "member" } | null }) {
   const path = usePathname();
+  const role = user?.role ?? "member";
   const initials = (user?.name ?? "?").split(" ").map(s => s[0]).join("").slice(0, 2).toUpperCase();
 
   return (
-    <aside className="sticky top-0 flex h-screen w-56 flex-col overflow-hidden border-r border-[var(--color-line)] bg-[var(--color-surface)]">
-      <div className="flex items-center gap-2.5 border-b border-[var(--color-line-soft)] px-4 py-3">
-        <div className="grid h-7 w-7 place-items-center rounded-md bg-[var(--color-accent)] text-xs font-bold text-white">B</div>
-        <div>
-          <div className="text-[13.5px] font-semibold leading-tight">BOM Studio</div>
-          <div className="text-[11px] text-[var(--color-text-3)]">Halcyon Robotics</div>
+    <aside
+      className="sticky top-0 flex h-screen w-56 flex-col overflow-hidden text-[var(--color-side-text)]"
+      style={{
+        background:
+          "linear-gradient(180deg, var(--color-side-bg-2) 0%, var(--color-side-bg) 100%)",
+        boxShadow: "var(--shadow-side)",
+      }}
+    >
+      {/* Brand */}
+      <div className="flex items-center gap-2.5 border-b border-[var(--color-side-line)] px-4 py-3.5">
+        <div
+          className="grid h-8 w-8 place-items-center rounded-lg text-[13px] font-bold text-white shadow-[0_2px_8px_rgba(79,70,229,0.45)]"
+          style={{
+            background:
+              "linear-gradient(135deg, var(--color-cat-indigo) 0%, var(--color-cat-violet) 100%)",
+          }}
+        >
+          B
+        </div>
+        <div className="min-w-0">
+          <div className="truncate text-[14px] font-semibold leading-tight tracking-tight text-[var(--color-side-active)]">
+            BOM Studio
+          </div>
+          <div className="truncate text-[11px] text-[var(--color-side-text-3)]">
+            Halcyon Robotics
+          </div>
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-2">
-        {NAV.map(g => (
-          <div key={g.group} className="px-2 py-2">
-            <div className="px-2.5 py-1.5 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[var(--color-text-4)]">
-              {g.group}
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto px-2 py-3">
+        {NAV.map((g) => {
+          const visibleItems = g.items.filter(it => !it.roles || it.roles.includes(role));
+          if (visibleItems.length === 0) return null;
+          return (
+          <div key={g.group} className="mb-3 last:mb-0">
+            <div className="flex items-center gap-1.5 px-3 pb-1.5 pt-1">
+              <span
+                className="h-1.5 w-1.5 rounded-full"
+                style={{ background: g.accent }}
+                aria-hidden
+              />
+              <div className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[var(--color-side-text-3)]">
+                {g.group}
+              </div>
             </div>
-            {g.items.map(it => {
+            {visibleItems.map((it) => {
               const active = path === it.href || path.startsWith(`${it.href}/`);
               const I = Icon[it.icon];
               return (
                 <Link
                   key={it.href}
                   href={it.href}
-                  className={`relative flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition-colors ${
+                  aria-current={active ? "page" : undefined}
+                  className={`group relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] leading-none transition-colors ${
                     active
-                      ? "bg-[var(--color-surface-2)] font-medium text-[var(--color-text)]"
-                      : "text-[var(--color-text-2)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]"
+                      ? "bg-[var(--color-side-active-bg)] font-semibold text-[var(--color-side-active)]"
+                      : "font-medium text-[var(--color-side-text-2)] hover:bg-[var(--color-side-hover-bg)] hover:text-[var(--color-side-active)]"
                   }`}
                 >
-                  {active && <span className="absolute -left-2 top-1.5 bottom-1.5 w-0.5 rounded-r bg-[var(--color-accent)]" />}
-                  <I size={16} className="opacity-85" />
-                  <span>{it.label}</span>
+                  {active && (
+                    <span
+                      className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r"
+                      style={{ background: g.accent }}
+                    />
+                  )}
+                  <I
+                    size={16}
+                    className="flex-shrink-0"
+                    style={{
+                      color: active ? g.accent : undefined,
+                      opacity: active ? 1 : 0.85,
+                    }}
+                  />
+                  <span className="truncate">{it.label}</span>
                   {it.badge && (
-                    <span className="ml-auto rounded-full bg-[var(--color-surface-3)] px-1.5 text-[10.5px] font-medium tabular-nums text-[var(--color-text-2)]">
+                    <span
+                      className="ml-auto rounded-full px-1.5 py-0.5 text-[10.5px] font-semibold tabular-nums text-white"
+                      style={{ background: g.accent }}
+                    >
                       {it.badge}
                     </span>
                   )}
@@ -50,20 +98,37 @@ export function Sidebar({ user }: { user: { name: string; role?: string } | null
               );
             })}
           </div>
-        ))}
+          );
+        })}
       </nav>
 
-      <div className="flex items-center gap-2.5 border-t border-[var(--color-line-soft)] p-3">
-        <div className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#6f78ec] to-[var(--color-accent)] text-[11.5px] font-semibold text-white">
-          {initials}
+      {/* User card */}
+      <div className="border-t border-[var(--color-side-line)] p-2.5">
+        <div className="flex items-center gap-2.5 rounded-lg bg-[var(--color-side-hover-bg)] px-2.5 py-2">
+          <div
+            className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full text-[12px] font-semibold text-white ring-2 ring-[var(--color-side-bg)]"
+            style={{
+              background:
+                "linear-gradient(135deg, var(--color-cat-indigo) 0%, var(--color-cat-violet) 100%)",
+            }}
+          >
+            {initials}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[12.5px] font-medium leading-tight text-[var(--color-side-active)]">
+              {user?.name ?? "Anonymous"}
+            </div>
+            <div className="truncate text-[11px] text-[var(--color-side-text-3)]">
+              {user?.role ?? ""}
+            </div>
+          </div>
+          <button
+            aria-label="Settings"
+            className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-md text-[var(--color-side-text-3)] transition-colors hover:bg-[var(--color-side-active-bg)] hover:text-[var(--color-side-active)]"
+          >
+            <Icon.Settings size={14} />
+          </button>
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-[12.5px] leading-tight">{user?.name ?? "Anonymous"}</div>
-          <div className="text-[11px] text-[var(--color-text-3)]">{user?.role ?? ""}</div>
-        </div>
-        <button className="grid h-7 w-7 place-items-center rounded-md text-[var(--color-text-3)] hover:bg-[var(--color-surface-2)]">
-          <Icon.Settings size={14} />
-        </button>
       </div>
     </aside>
   );

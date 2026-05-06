@@ -1,29 +1,28 @@
 "use server";
 
 import { z } from "zod";
-import { and, asc, count, desc, eq, sql } from "drizzle-orm";
+import { asc, count, desc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
-import { bomLines, bomRevisions, bomSections, projects } from "@/db/schema";
-import { getCurrentOrgId } from "../org";
+import { bomLines, bomRevisions, bomSections } from "@/db/schema";
+import { requireSession } from "../auth-context";
 import { audit } from "../audit";
 import { isRevisionImmutable } from "../lib/revision-status";
 
-async function ensureRevisionInOrg(revisionId: string) {
-  const orgId = await getCurrentOrgId();
+async function ensureRevisionWritable(revisionId: string) {
+  await requireSession();
   const [row] = await db
     .select({ id: bomRevisions.id, status: bomRevisions.status, projectId: bomRevisions.projectId })
     .from(bomRevisions)
-    .innerJoin(projects, eq(projects.id, bomRevisions.projectId))
-    .where(and(eq(bomRevisions.id, revisionId), eq(projects.organizationId, orgId)))
+    .where(eq(bomRevisions.id, revisionId))
     .limit(1);
   if (!row) throw new Error("REVISION_NOT_FOUND");
   if (isRevisionImmutable(row.status)) throw new Error("REVISION_LOCKED");
-  return { ...row, orgId };
+  return row;
 }
 
-async function ensureSectionAccess(sectionId: string) {
-  const orgId = await getCurrentOrgId();
+async function ensureSectionWritable(sectionId: string) {
+  await requireSession();
   const [row] = await db
     .select({
       id: bomSections.id,
@@ -33,19 +32,18 @@ async function ensureSectionAccess(sectionId: string) {
     })
     .from(bomSections)
     .innerJoin(bomRevisions, eq(bomRevisions.id, bomSections.revisionId))
-    .innerJoin(projects, eq(projects.id, bomRevisions.projectId))
-    .where(and(eq(bomSections.id, sectionId), eq(projects.organizationId, orgId)))
+    .where(eq(bomSections.id, sectionId))
     .limit(1);
   if (!row) throw new Error("SECTION_NOT_FOUND");
   if (isRevisionImmutable(row.status)) throw new Error("REVISION_LOCKED");
-  return { ...row, orgId };
+  return row;
 }
 
 export async function createSection(input: { revisionId: string; name: string }) {
   const { revisionId, name } = z
     .object({ revisionId: z.string(), name: z.string().trim().min(1).max(120) })
     .parse(input);
-  const rev = await ensureRevisionInOrg(revisionId);
+  const rev = await ensureRevisionWritable(revisionId);
 
   const [{ next }] = await db
     .select({ next: sql<number>`COALESCE(MAX(${bomSections.position}) + 1, 0)`.mapWith(Number) })
@@ -72,7 +70,7 @@ export async function renameSection(input: { id: string; name: string }) {
   const { id, name } = z
     .object({ id: z.string(), name: z.string().trim().min(1).max(120) })
     .parse(input);
-  const sec = await ensureSectionAccess(id);
+  const sec = await ensureSectionWritable(id);
 
   await db.update(bomSections).set({ name }).where(eq(bomSections.id, id));
 
@@ -90,7 +88,7 @@ export async function reorderSection(input: { id: string; position: number }) {
   const { id, position } = z
     .object({ id: z.string(), position: z.number().int().nonnegative() })
     .parse(input);
-  const sec = await ensureSectionAccess(id);
+  const sec = await ensureSectionWritable(id);
 
   await db.transaction(async tx => {
     const siblings = await tx
@@ -130,7 +128,7 @@ export async function deleteSection(input: {
       mode: z.enum(["moveToUncategorized", "deleteLines"]),
     })
     .parse(input);
-  const sec = await ensureSectionAccess(id);
+  const sec = await ensureSectionWritable(id);
 
   let removedLineCount = 0;
 
@@ -159,16 +157,13 @@ export async function deleteSection(input: {
 }
 
 export async function listSectionSuggestions(): Promise<string[]> {
-  const orgId = await getCurrentOrgId();
+  await requireSession();
   const rows = await db
     .select({
       name: bomSections.name,
       uses: count(bomSections.id).as("uses"),
     })
     .from(bomSections)
-    .innerJoin(bomRevisions, eq(bomRevisions.id, bomSections.revisionId))
-    .innerJoin(projects, eq(projects.id, bomRevisions.projectId))
-    .where(eq(projects.organizationId, orgId))
     .groupBy(bomSections.name)
     .orderBy(desc(sql`uses`), asc(bomSections.name))
     .limit(50);

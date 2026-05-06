@@ -1,30 +1,29 @@
 import { beforeEach, expect, test, vi } from "vitest";
-import { resetDb, ensureOrg } from "@/../tests/test-helpers/db";
+import { resetDb } from "@/../tests/test-helpers/db";
+import { mockSession } from "@/../tests/test-helpers/auth";
 import { db } from "@/db/client";
 import { projects, bomRevisions, items, vendors, categories, bomLines } from "@/db/schema";
-import { listProjects, getProject, getActiveRevision, getLines } from "@/server/queries/projects";
+import { listProjects, getProject, getLines } from "@/server/queries/projects";
 
-vi.mock("@/server/org", () => ({ getCurrentOrgId: vi.fn() }));
-import { getCurrentOrgId } from "@/server/org";
+vi.mock("@/server/auth-context", () => ({ requireSession: vi.fn(), requireRole: vi.fn() }));
 
 beforeEach(async () => { await resetDb(); });
 
 async function setup() {
-  const org = await ensureOrg();
-  vi.mocked(getCurrentOrgId).mockResolvedValue(org.id);
+  await mockSession();
 
-  const [v] = await db.insert(vendors).values({ name: "M", code: "M", country: "US", leadTime: "3d", rating: 4, status: "approved", organizationId: org.id }).returning();
-  const [c] = await db.insert(categories).values({ name: "C", organizationId: org.id }).returning();
+  const [v] = await db.insert(vendors).values({ name: "M", code: "M", country: "US", leadTime: "3d", rating: 4, status: "approved" }).returning();
+  const [c] = await db.insert(categories).values({ name: "C" }).returning();
   const [it] = await db.insert(items).values({
     sku: "X-1", description: "x", manufacturer: "Y", unit: "pcs",
-    vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id,
+    vendorId: v.id, categoryId: c.id, subcategoryId: null,
   }).returning();
 
-  const [p] = await db.insert(projects).values({ organizationId: org.id, code: "P-1", name: "Project One", status: "in-progress" }).returning();
+  const [p] = await db.insert(projects).values({ code: "P-1", name: "Project One", status: "in-progress" }).returning();
   const [r] = await db.insert(bomRevisions).values({ projectId: p.id, letter: "A", status: "in-progress" }).returning();
   await db.insert(bomLines).values({ revisionId: r.id, itemId: it.id, qty: 3, position: 0 });
 
-  return { orgId: org.id, projectId: p.id, revId: r.id };
+  return { projectId: p.id, revId: r.id };
 }
 
 test("listProjects returns the project with line count", async () => {

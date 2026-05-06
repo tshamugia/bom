@@ -1,18 +1,18 @@
 import { notFound } from "next/navigation";
-import { and, desc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { bomRevisions, projects, user } from "@/db/schema";
-import { getCurrentOrgId } from "@/server/org";
+import { requireSession } from "@/server/auth-context";
 import { HistoryTable, type HistoryRow } from "@/components/revisions/history-table";
 
 export default async function HistoryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const orgId = await getCurrentOrgId();
+  await requireSession();
 
   const [project] = await db
     .select({ id: projects.id, code: projects.code, name: projects.name })
     .from(projects)
-    .where(and(eq(projects.id, id), eq(projects.organizationId, orgId)))
+    .where(eq(projects.id, id))
     .limit(1);
   if (!project) notFound();
 

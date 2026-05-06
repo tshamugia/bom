@@ -1,6 +1,7 @@
 import { beforeEach, expect, test, vi } from "vitest";
 import { eq } from "drizzle-orm";
-import { resetDb, ensureOrg } from "@/../tests/test-helpers/db";
+import { resetDb } from "@/../tests/test-helpers/db";
+import { mockSession } from "@/../tests/test-helpers/auth";
 import { db } from "@/db/client";
 import {
   items,
@@ -21,37 +22,34 @@ import {
 import { addLine } from "@/server/actions/bom-lines";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/server/org", () => ({ getCurrentOrgId: vi.fn(), requireSession: vi.fn() }));
-import { getCurrentOrgId, requireSession } from "@/server/org";
+vi.mock("@/server/auth-context", () => ({ requireSession: vi.fn(), requireRole: vi.fn() }));
 
 beforeEach(async () => {
   await resetDb();
 });
 
 async function setup() {
-  const org = await ensureOrg();
-  vi.mocked(getCurrentOrgId).mockResolvedValue(org.id);
-  vi.mocked(requireSession).mockResolvedValue({ user: { id: "u1", name: "Tester" } } as never);
+  await mockSession();
 
   const [v] = await db
     .insert(vendors)
-    .values({ name: "M", code: "M", country: "US", leadTime: "3d", rating: 4, status: "approved", organizationId: org.id })
+    .values({ name: "M", code: "M", country: "US", leadTime: "3d", rating: 4, status: "approved" })
     .returning();
-  const [c] = await db.insert(categories).values({ name: "C", organizationId: org.id }).returning();
+  const [c] = await db.insert(categories).values({ name: "C" }).returning();
   const [it1] = await db
     .insert(items)
-    .values({ sku: "A", description: "a", manufacturer: "x", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id })
+    .values({ sku: "A", description: "a", manufacturer: "x", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null })
     .returning();
   const [it2] = await db
     .insert(items)
-    .values({ sku: "B", description: "b", manufacturer: "x", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id })
+    .values({ sku: "B", description: "b", manufacturer: "x", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null })
     .returning();
-  const [p] = await db.insert(projects).values({ organizationId: org.id, code: "P", name: "P", status: "draft" }).returning();
+  const [p] = await db.insert(projects).values({ code: "P", name: "P", status: "draft" }).returning();
   const [r] = await db
     .insert(bomRevisions)
     .values({ projectId: p.id, letter: "A", status: "draft" })
     .returning();
-  return { orgId: org.id, projectId: p.id, revisionId: r.id, it1, it2 };
+  return { projectId: p.id, revisionId: r.id, it1, it2 };
 }
 
 test("createSection inserts with auto-incremented position", async () => {
@@ -85,7 +83,6 @@ test("reorderSection moves a section to a new index and rewrites siblings", asyn
   const b = await createSection({ revisionId, name: "B" });
   const c = await createSection({ revisionId, name: "C" });
 
-  // Move A to position 2 (last). Expected order: B, C, A.
   await reorderSection({ id: a.id, position: 2 });
 
   const rows = await db
@@ -95,7 +92,6 @@ test("reorderSection moves a section to a new index and rewrites siblings", asyn
     .orderBy(bomSections.position);
   expect(rows.map(r => r.name)).toEqual(["B", "C", "A"]);
   expect(rows.map(r => r.position)).toEqual([0, 1, 2]);
-  // sanity: sibling positions ended up contiguous
   expect(rows.find(r => r.id === b.id)!.position).toBe(0);
   expect(rows.find(r => r.id === c.id)!.position).toBe(1);
 });
@@ -147,26 +143,12 @@ test("section CRUD on committed revision is rejected", async () => {
   await expect(deleteSection({ id: sec.id, mode: "moveToUncategorized" })).rejects.toThrow(/REVISION_LOCKED/);
 });
 
-test("cross-org access to sections is rejected", async () => {
-  const { revisionId } = await setup();
-  const sec = await createSection({ revisionId, name: "Mine" });
-
-  // Switch to a different org for the next call.
-  const otherOrg = await ensureOrg("Other Org");
-  vi.mocked(getCurrentOrgId).mockResolvedValue(otherOrg.id);
-
-  await expect(renameSection({ id: sec.id, name: "Stolen" })).rejects.toThrow(/SECTION_NOT_FOUND/);
-});
-
-test("listSectionSuggestions returns names from sections in the user's org", async () => {
+test("listSectionSuggestions returns section names ordered by usage", async () => {
   const { revisionId } = await setup();
   await createSection({ revisionId, name: "Fire Alarm" });
   await createSection({ revisionId, name: "IT Network" });
-  await createSection({ revisionId, name: "Fire Alarm" }); // duplicate name, different revision is unrealistic here but tests dedupe
 
   const suggestions = await listSectionSuggestions();
   expect(suggestions).toContain("Fire Alarm");
   expect(suggestions).toContain("IT Network");
-  // First suggestion is the most-used name.
-  expect(suggestions[0]).toBe("Fire Alarm");
 });

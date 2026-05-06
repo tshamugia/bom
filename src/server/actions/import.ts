@@ -2,7 +2,7 @@
 
 import ExcelJS from "exceljs";
 import { createId } from "@paralleldrive/cuid2";
-import { and, eq, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { items, vendors, categories, subcategories } from "@/db/schema";
 import { audit } from "@/server/audit";
@@ -14,7 +14,7 @@ import {
   errorsKey,
   getStagingBuffer,
 } from "@/lib/s3";
-import { getCurrentOrgId, requireSession } from "@/server/org";
+import { requireSession } from "@/server/auth-context";
 import { parseImportBuffer } from "@/server/lib/import-parser";
 import { validateRows } from "@/server/lib/import-validator";
 import { loadValidatorContext } from "@/server/lib/import-validator-context";
@@ -30,7 +30,6 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
 export async function prepareImport(formData: FormData): Promise<PrepareResult> {
   await requireSession();
-  const orgId = await getCurrentOrgId();
 
   const file = formData.get("file");
   if (!(file instanceof File)) return { ok: false, error: "unreadable" };
@@ -38,7 +37,7 @@ export async function prepareImport(formData: FormData): Promise<PrepareResult> 
 
   const buf = Buffer.from(await file.arrayBuffer());
   const importId = createId();
-  const key = stagingKey(orgId, importId);
+  const key = stagingKey(importId);
   await putObject(key, buf, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 
   const parsed = await parseImportBuffer(buf);
@@ -47,7 +46,7 @@ export async function prepareImport(formData: FormData): Promise<PrepareResult> 
   }
   if (!parsed.ok) return { ok: false, error: "unreadable" };
 
-  const ctx = await loadValidatorContext(orgId);
+  const ctx = await loadValidatorContext();
   const result = validateRows(
     { importId, fileName: file.name, rows: parsed.rows, parserErrors: parsed.rowErrors },
     ctx,
@@ -57,10 +56,9 @@ export async function prepareImport(formData: FormData): Promise<PrepareResult> 
 
 export async function commitImport(input: { importId: string; duplicates: DuplicatePolicy }): Promise<CommitResult> {
   await requireSession();
-  const orgId = await getCurrentOrgId();
   const policy = DuplicatePolicy.parse(input.duplicates);
 
-  const key = stagingKey(orgId, input.importId);
+  const key = stagingKey(input.importId);
   const buf = await getStagingBuffer(key);
   if (!buf) return { ok: false, error: "expired" };
 
@@ -68,7 +66,7 @@ export async function commitImport(input: { importId: string; duplicates: Duplic
   if (!parsed.ok && parsed.error === "header_mismatch") return { ok: false, error: "header_mismatch" };
   if (!parsed.ok) return { ok: false, error: "unreadable" };
 
-  const ctx = await loadValidatorContext(orgId);
+  const ctx = await loadValidatorContext();
   const dry = validateRows(
     { importId: input.importId, fileName: `${input.importId}.xlsx`, rows: parsed.rows, parserErrors: parsed.rowErrors },
     ctx,
@@ -84,12 +82,11 @@ export async function commitImport(input: { importId: string; duplicates: Duplic
   try {
     await db.transaction(async (tx) => {
       const vendorIdByCode = new Map<string, string>();
-      const existingVs = await tx.select({ id: vendors.id, code: vendors.code }).from(vendors).where(eq(vendors.organizationId, orgId));
+      const existingVs = await tx.select({ id: vendors.id, code: vendors.code }).from(vendors);
       for (const v of existingVs) vendorIdByCode.set(v.code, v.id);
 
       for (const code of dry.newVendors) {
         const [row] = await tx.insert(vendors).values({
-          organizationId: orgId,
           name: code,
           code,
           country: "",
@@ -102,11 +99,11 @@ export async function commitImport(input: { importId: string; duplicates: Duplic
       }
 
       const catIdByName = new Map<string, string>();
-      const existingCs = await tx.select({ id: categories.id, name: categories.name }).from(categories).where(eq(categories.organizationId, orgId));
+      const existingCs = await tx.select({ id: categories.id, name: categories.name }).from(categories);
       for (const c of existingCs) catIdByName.set(c.name, c.id);
 
       for (const name of dry.newCategories) {
-        const [row] = await tx.insert(categories).values({ organizationId: orgId, name }).returning({ id: categories.id, name: categories.name });
+        const [row] = await tx.insert(categories).values({ name }).returning({ id: categories.id, name: categories.name });
         catIdByName.set(row.name, row.id);
         categoriesCreated += 1;
       }
@@ -132,7 +129,7 @@ export async function commitImport(input: { importId: string; duplicates: Duplic
       }
 
       const skusInDb = new Set(
-        (await tx.select({ sku: items.sku }).from(items).where(eq(items.organizationId, orgId))).map(r => r.sku),
+        (await tx.select({ sku: items.sku }).from(items)).map(r => r.sku),
       );
 
       for (const r of parsed.rows) {
@@ -152,11 +149,10 @@ export async function commitImport(input: { importId: string; duplicates: Duplic
             categoryId,
             subcategoryId,
             updatedAt: new Date(),
-          }).where(and(eq(items.organizationId, orgId), eq(items.sku, r.sku)));
+          }).where(eq(items.sku, r.sku));
           updated += 1;
         } else {
           await tx.insert(items).values({
-            organizationId: orgId,
             sku: r.sku,
             description: r.description,
             manufacturer: r.manufacturer,
@@ -176,7 +172,7 @@ export async function commitImport(input: { importId: string; duplicates: Duplic
   let errorsFileUrl: string | null = null;
   if (dry.errorRows.length > 0) {
     const errBuf = await buildErrorsWorkbook(buf, dry.errorRows);
-    const eKey = errorsKey(orgId, input.importId);
+    const eKey = errorsKey(input.importId);
     await putObject(eKey, errBuf, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     errorsFileUrl = await presignDownload(eKey, 60 * 60);
   }

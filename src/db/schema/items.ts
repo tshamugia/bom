@@ -1,6 +1,5 @@
 import { pgTable, text, timestamp, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createId } from "@paralleldrive/cuid2";
-import { organizations } from "./organizations";
 import { vendors } from "./vendors";
 import { categories, subcategories } from "./categories";
 
@@ -8,7 +7,6 @@ export const items = pgTable(
   "item",
   {
     id: text("id").primaryKey().$defaultFn(() => createId()),
-    organizationId: text("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
     sku: text("sku").notNull(),
     description: text("description").notNull(),
     manufacturer: text("manufacturer").notNull(),
@@ -20,7 +18,7 @@ export const items = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   t => ({
-    orgSkuUnique: uniqueIndex("item_org_sku_uq").on(t.organizationId, t.sku),
+    skuUnique: uniqueIndex("item_sku_uq").on(t.sku),
     vendorIdx: index("item_vendor_idx").on(t.vendorId),
     catIdx: index("item_cat_idx").on(t.categoryId, t.subcategoryId),
   }),

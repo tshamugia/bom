@@ -1,22 +1,24 @@
 import { beforeEach, expect, test, vi } from "vitest";
-import { resetDb, ensureOrg } from "@/../tests/test-helpers/db";
+import { resetDb } from "@/../tests/test-helpers/db";
+import { mockSession } from "@/../tests/test-helpers/auth";
 import { db } from "@/db/client";
 import { categories, vendors } from "@/db/schema";
 import { listItems } from "@/server/queries/catalog";
 import { createItem, deleteItem } from "@/server/actions/items";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/server/org", () => ({ getCurrentOrgId: vi.fn() }));
-import { getCurrentOrgId } from "@/server/org";
+vi.mock("@/server/auth-context", () => ({
+  requireSession: vi.fn(),
+  requireRole: vi.fn(),
+}));
 
 beforeEach(async () => { await resetDb(); });
 
 async function setup() {
-  const org = await ensureOrg();
-  vi.mocked(getCurrentOrgId).mockResolvedValue(org.id);
-  const [v] = await db.insert(vendors).values({ name: "Mouser", code: "MSR", country: "US", leadTime: "3-5d", rating: 4.8, status: "preferred", organizationId: org.id }).returning();
-  const [c] = await db.insert(categories).values({ name: "Passive Components", organizationId: org.id }).returning();
-  return { orgId: org.id, vendorId: v.id, categoryId: c.id };
+  await mockSession();
+  const [v] = await db.insert(vendors).values({ name: "Mouser", code: "MSR", country: "US", leadTime: "3-5d", rating: 4.8, status: "preferred" }).returning();
+  const [c] = await db.insert(categories).values({ name: "Passive Components" }).returning();
+  return { vendorId: v.id, categoryId: c.id };
 }
 
 test("createItem persists and listItems returns it", async () => {

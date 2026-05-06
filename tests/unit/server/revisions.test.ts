@@ -1,41 +1,37 @@
 import { beforeEach, expect, test, vi } from "vitest";
 import { eq } from "drizzle-orm";
-import { resetDb, ensureOrg } from "@/../tests/test-helpers/db";
+import { resetDb } from "@/../tests/test-helpers/db";
+import { mockSession } from "@/../tests/test-helpers/auth";
 import { db } from "@/db/client";
-import { items, vendors, categories, projects, bomRevisions, user } from "@/db/schema";
+import { items, vendors, categories, projects, bomRevisions } from "@/db/schema";
 import { addLine } from "@/server/actions/bom-lines";
 import { commitRevision, branchRevision, discardDraft } from "@/server/actions/revisions";
 import { bomLines as bomLinesT, bomSections as bomSectionsT } from "@/db/schema";
 import { createSection } from "@/server/actions/bom-sections";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/server/org", () => ({ getCurrentOrgId: vi.fn(), requireSession: vi.fn() }));
-import { getCurrentOrgId, requireSession } from "@/server/org";
+vi.mock("@/server/auth-context", () => ({ requireSession: vi.fn(), requireRole: vi.fn() }));
 
 beforeEach(async () => { await resetDb(); });
 
 async function setup() {
-  const org = await ensureOrg();
-  vi.mocked(getCurrentOrgId).mockResolvedValue(org.id);
-  vi.mocked(requireSession).mockResolvedValue({ user: { id: "u1", name: "Tester" } } as never);
+  const { user: u } = await mockSession();
 
-  await db.insert(user).values({ id: "u1", name: "Tester", email: `u1-${org.id}@test.local` });
-
-  const [v] = await db.insert(vendors).values({ name: "V", code: "V", country: "US", leadTime: "3d", rating: 4, status: "approved", organizationId: org.id }).returning();
-  const [c] = await db.insert(categories).values({ name: "C", organizationId: org.id }).returning();
-  const [it] = await db.insert(items).values({ sku: "S", description: "d", manufacturer: "m", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id }).returning();
-  const [p] = await db.insert(projects).values({ organizationId: org.id, code: "P1", name: "P1", status: "draft" }).returning();
-  const [r] = await db.insert(bomRevisions).values({ projectId: p.id, letter: "A", status: "draft", ownerId: "u1" }).returning();
-  return { orgId: org.id, projectId: p.id, revisionId: r.id, it };
+  const [v] = await db.insert(vendors).values({ name: "V", code: "V", country: "US", leadTime: "3d", rating: 4, status: "approved" }).returning();
+  const [c] = await db.insert(categories).values({ name: "C" }).returning();
+  const [it] = await db.insert(items).values({ sku: "S", description: "d", manufacturer: "m", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null }).returning();
+  const [p] = await db.insert(projects).values({ code: "P1", name: "P1", status: "draft" }).returning();
+  const [r] = await db.insert(bomRevisions).values({ projectId: p.id, letter: "A", status: "draft", ownerId: u.id }).returning();
+  return { projectId: p.id, revisionId: r.id, it, userId: u.id };
 }
 
 test("commitRevision flips status to committed and stamps author + timestamp + message", async () => {
-  const { revisionId, it } = await setup();
+  const { revisionId, it, userId } = await setup();
   await addLine({ revisionId, itemId: it.id, qty: 1 });
   await commitRevision({ revisionId, commitMessage: "Initial release" });
   const [row] = await db.select().from(bomRevisions).where(eq(bomRevisions.id, revisionId));
   expect(row.status).toBe("committed");
-  expect(row.committedById).toBe("u1");
+  expect(row.committedById).toBe(userId);
   expect(row.committedAt).toBeInstanceOf(Date);
   expect(row.commitMessage).toBe("Initial release");
 });
@@ -53,7 +49,7 @@ test("commitRevision rejects non-draft revisions", async () => {
 });
 
 test("branchRevision creates next-letter draft and copies sections + lines", async () => {
-  const { revisionId, it } = await setup();
+  const { revisionId, it, userId } = await setup();
   const sec = await createSection({ revisionId, name: "Power" });
   await addLine({ revisionId, itemId: it.id, qty: 2, sectionId: sec.id });
   await commitRevision({ revisionId });
@@ -63,7 +59,7 @@ test("branchRevision creates next-letter draft and copies sections + lines", asy
   expect(child.letter).toBe("B");
   expect(child.status).toBe("draft");
   expect(child.parentRevisionId).toBe(revisionId);
-  expect(child.ownerId).toBe("u1");
+  expect(child.ownerId).toBe(userId);
 
   const childSections = await db.select().from(bomSectionsT).where(eq(bomSectionsT.revisionId, newId));
   expect(childSections).toHaveLength(1);

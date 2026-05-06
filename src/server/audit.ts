@@ -1,7 +1,7 @@
 import "server-only";
 import { db } from "@/db/client";
 import { auditLog } from "@/db/schema";
-import { getCurrentOrgId, requireSession } from "./org";
+import { requireSession } from "./auth-context";
 
 type AuditInput = {
   kind: typeof auditLog.$inferInsert["kind"];
@@ -13,7 +13,6 @@ type AuditInput = {
 
 export async function audit(input: AuditInput): Promise<void> {
   try {
-    const orgId = await getCurrentOrgId();
     let actorId: string | null = null;
     try {
       const session = await requireSession();
@@ -22,7 +21,6 @@ export async function audit(input: AuditInput): Promise<void> {
       // System actions can omit an actor.
     }
     await db.insert(auditLog).values({
-      organizationId: orgId,
       actorId,
       kind: input.kind,
       refType: input.refType,

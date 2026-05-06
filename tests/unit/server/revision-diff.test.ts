@@ -1,35 +1,32 @@
 import { beforeEach, expect, test, vi } from "vitest";
 import { eq } from "drizzle-orm";
-import { resetDb, ensureOrg } from "@/../tests/test-helpers/db";
+import { resetDb } from "@/../tests/test-helpers/db";
+import { mockSession } from "@/../tests/test-helpers/auth";
 import { db } from "@/db/client";
-import { items, vendors, categories, projects, bomRevisions, bomLines, bomSections, user } from "@/db/schema";
+import { items, vendors, categories, projects, bomRevisions, bomLines, bomSections } from "@/db/schema";
 import { createSection, renameSection } from "@/server/actions/bom-sections";
 import { addLine, updateLineQty, removeLine } from "@/server/actions/bom-lines";
 import { commitRevision, branchRevision } from "@/server/actions/revisions";
 import { getRevisionDiff } from "@/server/queries/revisions";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/server/org", () => ({ getCurrentOrgId: vi.fn(), requireSession: vi.fn() }));
-import { getCurrentOrgId, requireSession } from "@/server/org";
+vi.mock("@/server/auth-context", () => ({ requireSession: vi.fn(), requireRole: vi.fn() }));
 
 beforeEach(async () => { await resetDb(); });
 
 async function seed() {
-  const org = await ensureOrg();
-  vi.mocked(getCurrentOrgId).mockResolvedValue(org.id);
-  vi.mocked(requireSession).mockResolvedValue({ user: { id: "u1", name: "T" } } as never);
-  await db.insert(user).values({ id: "u1", name: "T", email: `u1-${org.id}@test.local` });
-  const [v1] = await db.insert(vendors).values({ name: "V1", code: "V1", country: "US", leadTime: "3d", rating: 4, status: "approved", organizationId: org.id }).returning();
-  const [v2] = await db.insert(vendors).values({ name: "V2", code: "V2", country: "US", leadTime: "3d", rating: 4, status: "approved", organizationId: org.id }).returning();
-  const [c] = await db.insert(categories).values({ name: "C", organizationId: org.id }).returning();
+  const { user: u } = await mockSession();
+  const [v1] = await db.insert(vendors).values({ name: "V1", code: "V1", country: "US", leadTime: "3d", rating: 4, status: "approved" }).returning();
+  const [v2] = await db.insert(vendors).values({ name: "V2", code: "V2", country: "US", leadTime: "3d", rating: 4, status: "approved" }).returning();
+  const [c] = await db.insert(categories).values({ name: "C" }).returning();
   const it = async (sku: string, vendorId: string) =>
-    (await db.insert(items).values({ sku, description: sku, manufacturer: "m", unit: "pcs", vendorId, categoryId: c.id, subcategoryId: null, organizationId: org.id }).returning())[0];
+    (await db.insert(items).values({ sku, description: sku, manufacturer: "m", unit: "pcs", vendorId, categoryId: c.id, subcategoryId: null }).returning())[0];
   const a = await it("A", v1.id);
   const b = await it("B", v1.id);
   const cItem = await it("C", v2.id);
-  const [p] = await db.insert(projects).values({ organizationId: org.id, code: "P", name: "P", status: "draft" }).returning();
-  const [r] = await db.insert(bomRevisions).values({ projectId: p.id, letter: "A", status: "draft", ownerId: "u1" }).returning();
-  return { orgId: org.id, projectId: p.id, leftId: r.id, a, b, c: cItem, v2 };
+  const [p] = await db.insert(projects).values({ code: "P", name: "P", status: "draft" }).returning();
+  const [r] = await db.insert(bomRevisions).values({ projectId: p.id, letter: "A", status: "draft", ownerId: u.id }).returning();
+  return { projectId: p.id, leftId: r.id, a, b, c: cItem, v2 };
 }
 
 test("diff: added line shows up under added", async () => {
@@ -87,4 +84,3 @@ test("diff: section rename detected via sectionKey", async () => {
   expect(diff.sections.added).toHaveLength(0);
   expect(diff.sections.removed).toHaveLength(0);
 });
-

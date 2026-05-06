@@ -1,6 +1,8 @@
 import { db } from "./client";
-import { organizations, vendors, categories, subcategories, items, projects, bomRevisions, bomLines } from "./schema";
-import { sql } from "drizzle-orm";
+import { vendors, categories, subcategories, items, projects, bomRevisions, bomLines, user } from "./schema";
+import { sql, eq } from "drizzle-orm";
+import { env } from "@/lib/env";
+import { createUserDirect, findUserByEmail } from "@/server/lib/create-user-direct";
 
 const VENDORS = [
   { name: "Mouser Components",     code: "MSR", country: "US", leadTime: "3-5d",  rating: 4.8, status: "preferred" as const, itemsCount: 412 },
@@ -59,20 +61,37 @@ const ITEMS = [
   { sku: "FER-BLM18-600",  desc: "Ferrite Bead 600Ω @ 100MHz 0603",    cat: "Passive Components", sub: "Ferrites",  vendor: "DigiSource Electronics", mfr: "Murata",       unit: "pcs" },
 ] as const;
 
-async function main() {
-  await db.execute(sql`TRUNCATE "bom_line", "bom_revision", "project", "item", "subcategory", "category", "vendor", "membership", "organization" RESTART IDENTITY CASCADE`);
+async function ensureRootUser() {
+  const existing = await findUserByEmail(env.ROOT_USER_EMAIL);
+  if (existing) {
+    await db.update(user).set({ role: "owner", disabled: false }).where(eq(user.id, existing.id));
+    console.log(`Root user already present: ${env.ROOT_USER_EMAIL}`);
+    return existing.id;
+  }
+  const { id } = await createUserDirect({
+    email: env.ROOT_USER_EMAIL,
+    password: env.ROOT_USER_PASSWORD,
+    name: env.ROOT_USER_NAME,
+    role: "owner",
+  });
+  console.log(`Created root user ${env.ROOT_USER_EMAIL}`);
+  return id;
+}
 
-  const [org] = await db.insert(organizations).values({ name: "Halcyon Robotics", slug: "halcyon" }).returning();
+async function main() {
+  await db.execute(sql`TRUNCATE "bom_line", "bom_revision", "project", "item", "subcategory", "category", "vendor" RESTART IDENTITY CASCADE`);
+
+  const rootUserId = await ensureRootUser();
 
   const insertedVendors = await db
     .insert(vendors)
-    .values(VENDORS.map(v => ({ ...v, organizationId: org.id })))
+    .values(VENDORS)
     .returning();
   const vByName = new Map(insertedVendors.map(v => [v.name, v.id]));
 
   const subByName = new Map<string, string>();
   for (const c of CATEGORIES) {
-    const [cat] = await db.insert(categories).values({ name: c.name, organizationId: org.id }).returning();
+    const [cat] = await db.insert(categories).values({ name: c.name }).returning();
     for (const sn of c.subs) {
       const [sub] = await db.insert(subcategories).values({ name: sn, categoryId: cat.id }).returning();
       subByName.set(`${c.name}::${sn}`, sub.id);
@@ -84,7 +103,6 @@ async function main() {
 
   await db.insert(items).values(
     ITEMS.map(it => ({
-      organizationId: org.id,
       sku: it.sku,
       description: it.desc,
       manufacturer: it.mfr,
@@ -95,18 +113,17 @@ async function main() {
     })),
   );
 
-  // Projects (subset of the design's PROJECTS for demo data)
   const inserted = await db.insert(projects).values([
-    { organizationId: org.id, code: "NB-2412",  name: "Northstar Beacon v3.2",      status: "in-progress", quantity: 50, targetDate: "2026-05-14" },
-    { organizationId: org.id, code: "GW-2411",  name: "Gateway Hub Rev B",          status: "review",      quantity: 25, targetDate: "2026-05-22" },
-    { organizationId: org.id, code: "SN-2410",  name: "Sensor Node — Industrial",   status: "approved",    quantity: 100, targetDate: "2026-04-30" },
-    { organizationId: org.id, code: "PWR-2410", name: "Power Module 24V/5A",        status: "in-progress", quantity: 40, targetDate: "2026-06-02" },
-    { organizationId: org.id, code: "DBG-2409", name: "Debug Probe Rev 1.4",        status: "approved",    quantity: 20, targetDate: "2026-04-12" },
-    { organizationId: org.id, code: "RIO-2409", name: "Remote I/O Card",            status: "draft",       quantity: 10, targetDate: "2026-07-18" },
+    { code: "NB-2412",  name: "Northstar Beacon v3.2",      ownerId: rootUserId, status: "in-progress", quantity: 50, targetDate: "2026-05-14" },
+    { code: "GW-2411",  name: "Gateway Hub Rev B",          ownerId: rootUserId, status: "review",      quantity: 25, targetDate: "2026-05-22" },
+    { code: "SN-2410",  name: "Sensor Node — Industrial",   ownerId: rootUserId, status: "approved",    quantity: 100, targetDate: "2026-04-30" },
+    { code: "PWR-2410", name: "Power Module 24V/5A",        ownerId: rootUserId, status: "in-progress", quantity: 40, targetDate: "2026-06-02" },
+    { code: "DBG-2409", name: "Debug Probe Rev 1.4",        ownerId: rootUserId, status: "approved",    quantity: 20, targetDate: "2026-04-12" },
+    { code: "RIO-2409", name: "Remote I/O Card",            ownerId: rootUserId, status: "draft",       quantity: 10, targetDate: "2026-07-18" },
   ]).returning();
 
   const beacon = inserted.find(p => p.code === "NB-2412")!;
-  const [revA] = await db.insert(bomRevisions).values({ projectId: beacon.id, letter: "A", status: "draft" }).returning();
+  const [revA] = await db.insert(bomRevisions).values({ projectId: beacon.id, letter: "A", status: "draft", ownerId: rootUserId }).returning();
 
   const initial: Array<[string, number]> = [
     ["MCU-STM32G0", 1], ["REG-AMS1117-5V", 2], ["CAP-0603-100N", 18], ["CAP-0805-10U", 6],
@@ -131,7 +148,7 @@ async function main() {
     }),
   );
 
-  console.log(`Seeded org=${org.id} with ${VENDORS.length} vendors, ${CATEGORIES.length} categories, ${ITEMS.length} items.`);
+  console.log(`Seeded ${VENDORS.length} vendors, ${CATEGORIES.length} categories, ${ITEMS.length} items.`);
   console.log(`Seeded ${inserted.length} projects and 1 active revision with ${initial.length} lines.`);
   process.exit(0);
 }

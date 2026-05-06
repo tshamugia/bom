@@ -1,11 +1,11 @@
 "use server";
 
 import { z } from "zod";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { bomExports, bomLines, bomRevisions, bomSections, projects, user } from "@/db/schema";
-import { getCurrentOrgId, requireSession } from "../org";
+import { requireSession } from "../auth-context";
 import { audit } from "../audit";
 import { buildBomWorkbook, type BomRow } from "@/lib/excel";
 import { putObject } from "@/lib/s3";
@@ -29,7 +29,6 @@ const Options = z.object({
 
 export async function generateExport(input: { revisionId: string; options: z.infer<typeof Options> }) {
   const options = Options.parse(input.options);
-  const orgId = await getCurrentOrgId();
   const session = await requireSession();
 
   const [rev] = await db
@@ -47,7 +46,7 @@ export async function generateExport(input: { revisionId: string; options: z.inf
     .from(bomRevisions)
     .innerJoin(projects, eq(projects.id, bomRevisions.projectId))
     .leftJoin(user, eq(user.id, projects.ownerId))
-    .where(and(eq(bomRevisions.id, input.revisionId), eq(projects.organizationId, orgId)))
+    .where(eq(bomRevisions.id, input.revisionId))
     .limit(1);
   if (!rev) throw new Error("REVISION_NOT_FOUND");
 
@@ -97,7 +96,7 @@ export async function generateExport(input: { revisionId: string; options: z.inf
   });
 
   const fileName = `BOM_${rev.projectCode}_Rev_${rev.letter}${draftSuffix}.xlsx`;
-  const fileKey = `${orgId}/exports/${rev.id}/${Date.now()}-${fileName}`;
+  const fileKey = `exports/${rev.id}/${Date.now()}-${fileName}`;
   await putObject(fileKey, buf, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 
   const [row] = await db.insert(bomExports).values({

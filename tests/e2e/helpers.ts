@@ -1,12 +1,16 @@
 import { type Page } from "@playwright/test";
 
-export async function signUpAndGo(page: Page, path: string) {
-  const email = `e2e_${Date.now()}@example.com`;
-  await page.goto("/sign-up");
-  await page.getByLabel("Name").fill("E2E");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel(/Password/).fill("password123");
-  await page.getByRole("button", { name: /create account/i }).click();
-  await page.waitForURL(/\/dashboard/);
-  await page.goto(path);
+const ROOT_EMAIL = process.env.ROOT_USER_EMAIL ?? "t.shamugia@insta.ge";
+const ROOT_PASSWORD = process.env.ROOT_USER_PASSWORD ?? "Password123";
+
+export async function signInAndGo(page: Page, path: string) {
+  await page.goto("/sign-in");
+  await page.getByLabel("Email").fill(ROOT_EMAIL);
+  await page.getByLabel("Password").fill(ROOT_PASSWORD);
+  await page.getByRole("button", { name: /sign in/i }).click();
+  await page.waitForURL(/\/dashboard/, { timeout: 10_000 });
+  if (path !== "/dashboard") await page.goto(path);
 }
+
+// Backwards-compatible alias used by older specs.
+export const signUpAndGo = signInAndGo;

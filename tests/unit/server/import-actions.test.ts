@@ -1,15 +1,16 @@
 import { beforeEach, expect, test, vi } from "vitest";
 import ExcelJS from "exceljs";
-import { resetDb, ensureOrg } from "@/../tests/test-helpers/db";
+import { resetDb } from "@/../tests/test-helpers/db";
+import { mockSession } from "@/../tests/test-helpers/auth";
 import { db } from "@/db/client";
-import { vendors, categories, subcategories, auditLog, items, user } from "@/db/schema";
+import { vendors, categories, subcategories, auditLog, items } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { TEMPLATE_COLUMNS } from "@/lib/schemas/import";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/server/org", () => ({
-  getCurrentOrgId: vi.fn(),
+vi.mock("@/server/auth-context", () => ({
   requireSession: vi.fn(),
+  requireRole: vi.fn(),
 }));
 vi.mock("@/lib/s3", async () => {
   const actual = await vi.importActual<typeof import("@/lib/s3")>("@/lib/s3");
@@ -24,7 +25,6 @@ vi.mock("@/lib/s3", async () => {
   };
 });
 
-import { getCurrentOrgId, requireSession } from "@/server/org";
 import { prepareImport, commitImport } from "@/server/actions/import";
 import { getDryRun } from "@/server/queries/import";
 
@@ -40,12 +40,10 @@ async function makeFile(rows: (string | number)[][], headers: string[] = [...TEM
 }
 
 test("prepareImport returns dry-run result with counts and auto-creates", async () => {
-  const org = await ensureOrg();
-  vi.mocked(getCurrentOrgId).mockResolvedValue(org.id);
-  vi.mocked(requireSession).mockResolvedValue({ user: { id: "u1" } } as never);
+  await mockSession();
 
-  await db.insert(vendors).values({ name: "Mouser", code: "MSR", country: "US", leadTime: "3-5d", rating: 4.8, status: "approved", organizationId: org.id });
-  const [cat] = await db.insert(categories).values({ name: "Passive", organizationId: org.id }).returning();
+  await db.insert(vendors).values({ name: "Mouser", code: "MSR", country: "US", leadTime: "3-5d", rating: 4.8, status: "approved" });
+  const [cat] = await db.insert(categories).values({ name: "Passive" }).returning();
   await db.insert(subcategories).values({ name: "Resistors", categoryId: cat.id });
 
   const fd = new FormData();
@@ -64,9 +62,7 @@ test("prepareImport returns dry-run result with counts and auto-creates", async 
 });
 
 test("prepareImport rejects header mismatch", async () => {
-  const org = await ensureOrg();
-  vi.mocked(getCurrentOrgId).mockResolvedValue(org.id);
-  vi.mocked(requireSession).mockResolvedValue({ user: { id: "u1" } } as never);
+  await mockSession();
 
   const fd = new FormData();
   fd.set("file", await makeFile([], ["sku", "qty"]));
@@ -77,11 +73,9 @@ test("prepareImport rejects header mismatch", async () => {
 });
 
 test("prepareImport rejects oversize file", async () => {
-  const org = await ensureOrg();
-  vi.mocked(getCurrentOrgId).mockResolvedValue(org.id);
-  vi.mocked(requireSession).mockResolvedValue({ user: { id: "u1" } } as never);
+  await mockSession();
 
-  const big = Buffer.alloc(11 * 1024 * 1024); // 11 MB
+  const big = Buffer.alloc(11 * 1024 * 1024);
   const fd = new FormData();
   fd.set("file", new File([big], "big.xlsx"));
   const r = await prepareImport(fd);
@@ -91,9 +85,7 @@ test("prepareImport rejects oversize file", async () => {
 });
 
 test("getDryRun re-derives the result from the staged S3 file", async () => {
-  const org = await ensureOrg();
-  vi.mocked(getCurrentOrgId).mockResolvedValue(org.id);
-  vi.mocked(requireSession).mockResolvedValue({ user: { id: "u1" } } as never);
+  await mockSession();
 
   const fd = new FormData();
   fd.set("file", await makeFile([
@@ -109,29 +101,18 @@ test("getDryRun re-derives the result from the staged S3 file", async () => {
 });
 
 test("getDryRun returns expired when file is gone", async () => {
-  const org = await ensureOrg();
-  vi.mocked(getCurrentOrgId).mockResolvedValue(org.id);
-  vi.mocked(requireSession).mockResolvedValue({ user: { id: "u1" } } as never);
+  await mockSession();
   const r = await getDryRun("nonexistent-id");
   expect(r.ok).toBe(false);
   if (r.ok) return;
   expect(r.error).toBe("expired");
 });
 
-async function setupOrgWithUser() {
-  const org = await ensureOrg();
-  const [u] = await db.insert(user).values({ id: `u-${org.id.slice(0, 6)}`, name: "U", email: `u-${org.id}@example.com`, emailVerified: true }).returning();
-  vi.mocked(getCurrentOrgId).mockResolvedValue(org.id);
-  vi.mocked(requireSession).mockResolvedValue({ user: { id: u.id, name: u.name, email: u.email } } as never);
-  return { org, user: u };
-}
-
 test("commitImport (skip duplicates): inserts new items, leaves existing untouched, creates vendors/categories", async () => {
-  const { org } = await setupOrgWithUser();
+  await mockSession();
 
-  const [v] = await db.insert(vendors).values({ name: "Mouser", code: "MSR", country: "US", leadTime: "3d", rating: 4, status: "approved", organizationId: org.id }).returning();
+  const [v] = await db.insert(vendors).values({ name: "Mouser", code: "MSR", country: "US", leadTime: "3d", rating: 4, status: "approved" }).returning();
   await db.insert(items).values({
-    organizationId: org.id,
     sku: "OLD-1", description: "old desc", manufacturer: "old mfr",
     unit: "pcs",
     vendorId: v.id, categoryId: null, subcategoryId: null,
@@ -162,10 +143,9 @@ test("commitImport (skip duplicates): inserts new items, leaves existing untouch
 });
 
 test("commitImport (update duplicates): overwrites existing item", async () => {
-  const { org } = await setupOrgWithUser();
+  await mockSession();
 
   await db.insert(items).values({
-    organizationId: org.id,
     sku: "OLD-1", description: "old desc", manufacturer: "old mfr",
     unit: "pcs",
     vendorId: null, categoryId: null, subcategoryId: null,
@@ -188,7 +168,7 @@ test("commitImport (update duplicates): overwrites existing item", async () => {
 });
 
 test("commitImport returns expired when staging file is gone", async () => {
-  await setupOrgWithUser();
+  await mockSession();
   const r = await commitImport({ importId: "missing", duplicates: "skip" });
   expect(r.ok).toBe(false);
   if (r.ok) return;
@@ -196,7 +176,7 @@ test("commitImport returns expired when staging file is gone", async () => {
 });
 
 test("commitImport produces errors.xlsx when there are error rows", async () => {
-  await setupOrgWithUser();
+  await mockSession();
 
   const fd = new FormData();
   fd.set("file", await makeFile([

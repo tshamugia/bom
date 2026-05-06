@@ -1,26 +1,23 @@
 import { beforeEach, expect, test, vi } from "vitest";
-import { resetDb, ensureOrg } from "@/../tests/test-helpers/db";
+import { resetDb } from "@/../tests/test-helpers/db";
+import { mockSession } from "@/../tests/test-helpers/auth";
 import { db } from "@/db/client";
 import { vendors } from "@/db/schema";
 import { listVendors, vendorStats } from "@/server/queries/vendors";
 import { createVendor, updateVendor, deleteVendor } from "@/server/actions/vendors";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-
-vi.mock("@/server/org", () => ({
-  getCurrentOrgId: vi.fn(),
+vi.mock("@/server/auth-context", () => ({
   requireSession: vi.fn(),
+  requireRole: vi.fn(),
 }));
-
-import { getCurrentOrgId } from "@/server/org";
 
 beforeEach(async () => {
   await resetDb();
 });
 
 test("createVendor / listVendors / vendorStats happy path", async () => {
-  const org = await ensureOrg();
-  vi.mocked(getCurrentOrgId).mockResolvedValue(org.id);
+  await mockSession();
 
   await createVendor({ name: "Mouser", code: "MSR", country: "US", leadTime: "3-5d", rating: 4.8, status: "preferred" });
   await createVendor({ name: "DigiSource", code: "DGS", country: "US", leadTime: "2-4d", rating: 4.7, status: "preferred" });
@@ -37,8 +34,7 @@ test("createVendor / listVendors / vendorStats happy path", async () => {
 });
 
 test("updateVendor changes the name", async () => {
-  const org = await ensureOrg();
-  vi.mocked(getCurrentOrgId).mockResolvedValue(org.id);
+  await mockSession();
 
   const v = await createVendor({ name: "Old", code: "OLD", country: "US", leadTime: "3d", rating: 4, status: "approved" });
   await updateVendor({ id: v.id, name: "New" });
@@ -47,8 +43,7 @@ test("updateVendor changes the name", async () => {
 });
 
 test("deleteVendor removes the row", async () => {
-  const org = await ensureOrg();
-  vi.mocked(getCurrentOrgId).mockResolvedValue(org.id);
+  await mockSession();
 
   const v = await createVendor({ name: "X", code: "X", country: "US", leadTime: "3d", rating: 4, status: "approved" });
   await deleteVendor({ id: v.id });

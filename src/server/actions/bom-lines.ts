@@ -4,22 +4,21 @@ import { z } from "zod";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
-import { bomLines, bomRevisions, bomSections, items, projects, vendors } from "@/db/schema";
-import { getCurrentOrgId } from "../org";
+import { bomLines, bomRevisions, bomSections, items, vendors } from "@/db/schema";
+import { requireSession } from "../auth-context";
 import { audit } from "../audit";
 import { isRevisionImmutable } from "../lib/revision-status";
 
-async function ensureRevisionInOrg(revisionId: string) {
-  const orgId = await getCurrentOrgId();
+async function ensureRevisionWritable(revisionId: string) {
+  await requireSession();
   const [row] = await db
     .select({ id: bomRevisions.id, status: bomRevisions.status, projectId: bomRevisions.projectId })
     .from(bomRevisions)
-    .innerJoin(projects, eq(projects.id, bomRevisions.projectId))
-    .where(and(eq(bomRevisions.id, revisionId), eq(projects.organizationId, orgId)))
+    .where(eq(bomRevisions.id, revisionId))
     .limit(1);
   if (!row) throw new Error("REVISION_NOT_FOUND");
   if (isRevisionImmutable(row.status)) throw new Error("REVISION_LOCKED");
-  return { ...row, orgId };
+  return row;
 }
 
 async function nextPositionInSection(revisionId: string, sectionId: string | null) {
@@ -42,9 +41,9 @@ export async function addLine(input: { revisionId: string; itemId: string; qty?:
       sectionId: z.string().nullable().optional(),
     })
     .parse(input);
-  const { orgId, ...rev } = await ensureRevisionInOrg(revisionId);
+  const rev = await ensureRevisionWritable(revisionId);
 
-  const [item] = await db.select().from(items).where(and(eq(items.id, itemId), eq(items.organizationId, orgId))).limit(1);
+  const [item] = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
   if (!item) throw new Error("ITEM_NOT_FOUND");
 
   const [vendorRow] = item.vendorId
@@ -90,13 +89,12 @@ export async function addLine(input: { revisionId: string; itemId: string; qty?:
 
 export async function updateLineQty(input: { id: string; qty: number }) {
   const { id, qty } = z.object({ id: z.string(), qty: z.number().int().nonnegative() }).parse(input);
-  const orgId = await getCurrentOrgId();
+  await requireSession();
   const [line] = await db
     .select({ id: bomLines.id, projectId: bomRevisions.projectId, status: bomRevisions.status })
     .from(bomLines)
     .innerJoin(bomRevisions, eq(bomRevisions.id, bomLines.revisionId))
-    .innerJoin(projects, eq(projects.id, bomRevisions.projectId))
-    .where(and(eq(bomLines.id, id), eq(projects.organizationId, orgId)))
+    .where(eq(bomLines.id, id))
     .limit(1);
   if (!line) throw new Error("LINE_NOT_FOUND");
   if (isRevisionImmutable(line.status)) throw new Error("REVISION_LOCKED");
@@ -105,13 +103,12 @@ export async function updateLineQty(input: { id: string; qty: number }) {
 }
 
 export async function removeLine(input: { id: string }) {
-  const orgId = await getCurrentOrgId();
+  await requireSession();
   const [line] = await db
     .select({ id: bomLines.id, projectId: bomRevisions.projectId, status: bomRevisions.status })
     .from(bomLines)
     .innerJoin(bomRevisions, eq(bomRevisions.id, bomLines.revisionId))
-    .innerJoin(projects, eq(projects.id, bomRevisions.projectId))
-    .where(and(eq(bomLines.id, input.id), eq(projects.organizationId, orgId)))
+    .where(eq(bomLines.id, input.id))
     .limit(1);
   if (!line) throw new Error("LINE_NOT_FOUND");
   if (isRevisionImmutable(line.status)) throw new Error("REVISION_LOCKED");
@@ -127,7 +124,7 @@ export async function moveLineToSection(input: { lineId: string; sectionId: stri
       position: z.number().int().nonnegative().optional(),
     })
     .parse(input);
-  const orgId = await getCurrentOrgId();
+  await requireSession();
 
   const [line] = await db
     .select({
@@ -140,8 +137,7 @@ export async function moveLineToSection(input: { lineId: string; sectionId: stri
     })
     .from(bomLines)
     .innerJoin(bomRevisions, eq(bomRevisions.id, bomLines.revisionId))
-    .innerJoin(projects, eq(projects.id, bomRevisions.projectId))
-    .where(and(eq(bomLines.id, lineId), eq(projects.organizationId, orgId)))
+    .where(eq(bomLines.id, lineId))
     .limit(1);
   if (!line) throw new Error("LINE_NOT_FOUND");
   if (isRevisionImmutable(line.status)) throw new Error("REVISION_LOCKED");
@@ -220,11 +216,11 @@ export async function moveLineToSection(input: { lineId: string; sectionId: stri
 
 const CsvRow = z.object({ sku: z.string().min(1), qty: z.coerce.number().int().positive() });
 export async function importCsv(input: { revisionId: string; rows: Array<{ sku: string; qty: number | string }> }) {
-  const { orgId, ...rev } = await ensureRevisionInOrg(input.revisionId);
+  const rev = await ensureRevisionWritable(input.revisionId);
   const parsed = input.rows.map(r => CsvRow.parse(r));
 
   const skuToItem = new Map(
-    (await db.select().from(items).where(eq(items.organizationId, orgId))).map(i => [i.sku, i]),
+    (await db.select().from(items)).map(i => [i.sku, i]),
   );
 
   let added = 0;

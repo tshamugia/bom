@@ -1,12 +1,12 @@
 "use server";
 
-import { and, asc, eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import {
   approvalWorkflows, approvalSteps, bomRevisions, projects,
 } from "@/db/schema";
-import { getCurrentOrgId, requireSession } from "../org";
+import { requireSession } from "../auth-context";
 import { audit } from "../audit";
 
 const DEFAULT_STAGES: Array<{ role: string }> = [
@@ -15,20 +15,19 @@ const DEFAULT_STAGES: Array<{ role: string }> = [
   { role: "Finance" },
 ];
 
-async function ensureRevisionInOrg(revisionId: string) {
-  const orgId = await getCurrentOrgId();
+async function loadRevision(revisionId: string) {
+  await requireSession();
   const [row] = await db
     .select({ id: bomRevisions.id, projectId: bomRevisions.projectId, status: bomRevisions.status })
     .from(bomRevisions)
-    .innerJoin(projects, eq(projects.id, bomRevisions.projectId))
-    .where(and(eq(bomRevisions.id, revisionId), eq(projects.organizationId, orgId)))
+    .where(eq(bomRevisions.id, revisionId))
     .limit(1);
   if (!row) throw new Error("REVISION_NOT_FOUND");
   return row;
 }
 
 export async function requestApproval(input: { revisionId: string }) {
-  const rev = await ensureRevisionInOrg(input.revisionId);
+  const rev = await loadRevision(input.revisionId);
   if (rev.status !== "committed") throw new Error("REVISION_NOT_COMMITTED");
   const session = await requireSession();
 
@@ -59,15 +58,13 @@ export async function requestApproval(input: { revisionId: string }) {
 }
 
 export async function approveStep(input: { workflowId: string; note?: string }) {
-  const orgId = await getCurrentOrgId();
   const session = await requireSession();
 
   const [w] = await db
     .select({ id: approvalWorkflows.id, currentStepIndex: approvalWorkflows.currentStepIndex, revisionId: approvalWorkflows.revisionId, projectId: bomRevisions.projectId, status: approvalWorkflows.status })
     .from(approvalWorkflows)
     .innerJoin(bomRevisions, eq(bomRevisions.id, approvalWorkflows.revisionId))
-    .innerJoin(projects, eq(projects.id, bomRevisions.projectId))
-    .where(and(eq(approvalWorkflows.id, input.workflowId), eq(projects.organizationId, orgId)))
+    .where(eq(approvalWorkflows.id, input.workflowId))
     .limit(1);
   if (!w) throw new Error("WORKFLOW_NOT_FOUND");
   if (w.status !== "pending") throw new Error("WORKFLOW_CLOSED");
@@ -110,15 +107,13 @@ export async function approveStep(input: { workflowId: string; note?: string }) 
 }
 
 export async function rejectStep(input: { workflowId: string; note?: string }) {
-  const orgId = await getCurrentOrgId();
   const session = await requireSession();
 
   const [w] = await db
     .select({ id: approvalWorkflows.id, currentStepIndex: approvalWorkflows.currentStepIndex, revisionId: approvalWorkflows.revisionId, projectId: bomRevisions.projectId, status: approvalWorkflows.status })
     .from(approvalWorkflows)
     .innerJoin(bomRevisions, eq(bomRevisions.id, approvalWorkflows.revisionId))
-    .innerJoin(projects, eq(projects.id, bomRevisions.projectId))
-    .where(and(eq(approvalWorkflows.id, input.workflowId), eq(projects.organizationId, orgId)))
+    .where(eq(approvalWorkflows.id, input.workflowId))
     .limit(1);
   if (!w) throw new Error("WORKFLOW_NOT_FOUND");
   if (w.status !== "pending") throw new Error("WORKFLOW_CLOSED");
@@ -143,13 +138,12 @@ export async function rejectStep(input: { workflowId: string; note?: string }) {
 }
 
 export async function cancelWorkflow(input: { workflowId: string }) {
-  const orgId = await getCurrentOrgId();
+  await requireSession();
   const [w] = await db
     .select({ id: approvalWorkflows.id, projectId: bomRevisions.projectId, revisionId: approvalWorkflows.revisionId })
     .from(approvalWorkflows)
     .innerJoin(bomRevisions, eq(bomRevisions.id, approvalWorkflows.revisionId))
-    .innerJoin(projects, eq(projects.id, bomRevisions.projectId))
-    .where(and(eq(approvalWorkflows.id, input.workflowId), eq(projects.organizationId, orgId)))
+    .where(eq(approvalWorkflows.id, input.workflowId))
     .limit(1);
   if (!w) throw new Error("WORKFLOW_NOT_FOUND");
 

@@ -25,12 +25,12 @@ export async function presignDownload(key: string, expiresIn = 60 * 5) {
 
 const STAGING_PREFIX = "imports";
 
-export function stagingKey(orgId: string, importId: string): string {
-  return `${STAGING_PREFIX}/${orgId}/${importId}.xlsx`;
+export function stagingKey(importId: string): string {
+  return `${STAGING_PREFIX}/${importId}.xlsx`;
 }
 
-export function errorsKey(orgId: string, importId: string): string {
-  return `${STAGING_PREFIX}/${orgId}/${importId}-errors.xlsx`;
+export function errorsKey(importId: string): string {
+  return `${STAGING_PREFIX}/${importId}-errors.xlsx`;
 }
 
 export async function getStagingBuffer(key: string): Promise<Buffer | null> {

@@ -4,7 +4,7 @@ import {
   CheckCircle2 as CheckCircle, FileText as Doc, Settings, Pencil as Edit, Send,
   Bell, Sparkles as Spark, Folder, Calendar, Copy, Star, ArrowRight, ArrowLeft,
   MoreHorizontal as More, Sheet, Printer as Print, Link as LinkIcon,
-  Activity, AlertTriangle,
+  Activity, AlertTriangle, LogOut, Users as UsersIcon,
 } from "lucide-react";
 
 export const Icon = {
@@ -12,7 +12,7 @@ export const Icon = {
   Filter, Download, Upload, Eye, Trash, Home, List, Box, Truck, History, CheckCircle,
   Doc, Settings, Edit, Send, Bell, Spark, Folder, Calendar, Copy, Star,
   ArrowRight, ArrowLeft, More, Sheet, Print, Link: LinkIcon,
-  Activity, AlertTriangle,
+  Activity, AlertTriangle, LogOut, Users: UsersIcon,
 } as const;
 
 export type IconName = keyof typeof Icon;

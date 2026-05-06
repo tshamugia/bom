@@ -4,13 +4,13 @@ import { z } from "zod";
 import { and, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
-import { bomLines, bomRevisions, bomSections, items, projects, vendors } from "@/db/schema";
-import { getCurrentOrgId, requireSession } from "../org";
+import { bomLines, bomRevisions, bomSections, items, vendors } from "@/db/schema";
+import { requireSession } from "../auth-context";
 import { audit } from "../audit";
 import { isRevisionImmutable } from "../lib/revision-status";
 
-async function loadRevisionInOrg(revisionId: string) {
-  const orgId = await getCurrentOrgId();
+async function loadRevision(revisionId: string) {
+  await requireSession();
   const [row] = await db
     .select({
       id: bomRevisions.id,
@@ -19,8 +19,7 @@ async function loadRevisionInOrg(revisionId: string) {
       projectId: bomRevisions.projectId,
     })
     .from(bomRevisions)
-    .innerJoin(projects, eq(projects.id, bomRevisions.projectId))
-    .where(and(eq(bomRevisions.id, revisionId), eq(projects.organizationId, orgId)))
+    .where(eq(bomRevisions.id, revisionId))
     .limit(1);
   if (!row) throw new Error("REVISION_NOT_FOUND");
   return row;
@@ -33,7 +32,7 @@ const CommitInput = z.object({
 
 export async function commitRevision(input: z.infer<typeof CommitInput>) {
   const { revisionId, commitMessage } = CommitInput.parse(input);
-  const rev = await loadRevisionInOrg(revisionId);
+  const rev = await loadRevision(revisionId);
   if (rev.status !== "draft") throw new Error("REVISION_NOT_DRAFT");
 
   const [{ n }] = await db
@@ -84,7 +83,7 @@ function nextLetter(existing: string[]): string {
 
 export async function branchRevision(input: z.infer<typeof BranchInput>): Promise<string> {
   const { parentRevisionId } = BranchInput.parse(input);
-  const parent = await loadRevisionInOrg(parentRevisionId);
+  const parent = await loadRevision(parentRevisionId);
   if (!isRevisionImmutable(parent.status) || parent.status === "draft") {
     throw new Error("PARENT_NOT_COMMITTED");
   }
@@ -183,7 +182,7 @@ const DiscardInput = z.object({ revisionId: z.string() });
 
 export async function discardDraft(input: z.infer<typeof DiscardInput>) {
   const { revisionId } = DiscardInput.parse(input);
-  const rev = await loadRevisionInOrg(revisionId);
+  const rev = await loadRevision(revisionId);
   if (rev.status !== "draft") throw new Error("REVISION_NOT_DRAFT");
 
   await db.delete(bomRevisions).where(eq(bomRevisions.id, revisionId));

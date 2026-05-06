@@ -21,3 +21,5 @@ export const revisionStatusEnum = pgEnum("revision_status", [
   "approved",
   "locked",
 ]);
+
+export const userRoleEnum = pgEnum("user_role", ["owner", "admin", "member"]);

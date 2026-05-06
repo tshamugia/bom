@@ -78,6 +78,13 @@
       "when": 1777929891585,
       "tag": "0010_small_titanium_man",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1778063854679,
+      "tag": "0011_cheerful_lyja",
+      "breakpoints": true
     }
   ]
 }

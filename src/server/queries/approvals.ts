@@ -1,8 +1,8 @@
 import "server-only";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { approvalWorkflows, approvalSteps, bomRevisions, projects, user } from "@/db/schema";
-import { getCurrentOrgId, requireSession } from "../org";
+import { approvalWorkflows, approvalSteps, bomRevisions, user } from "@/db/schema";
+import { requireSession } from "../auth-context";
 
 type Row = {
   workflowId: string;
@@ -21,7 +21,7 @@ type Row = {
 };
 
 async function baseList(filter: { status?: "pending" | "approved" | "rejected"; assigneeUserId?: string }) {
-  const orgId = await getCurrentOrgId();
+  await requireSession();
   const rows = await db.execute(sql/* sql */`
     SELECT
       w.id                   AS "workflowId",
@@ -42,7 +42,7 @@ async function baseList(filter: { status?: "pending" | "approved" | "rejected"; 
     INNER JOIN "bom_revision" r ON r.id = w.revision_id
     INNER JOIN "project" p ON p.id = r.project_id
     LEFT JOIN "user" u ON u.id = p.owner_id
-    WHERE p.organization_id = ${orgId}
+    WHERE 1=1
     ${filter.status ? sql`AND w.status = ${filter.status}` : sql``}
     ${filter.assigneeUserId
       ? sql`AND EXISTS (SELECT 1 FROM "approval_step" s2 WHERE s2.workflow_id = w.id AND s2.position = w.current_step_index AND (s2.assignee_id = ${filter.assigneeUserId} OR s2.assignee_id IS NULL))`
@@ -82,7 +82,7 @@ export async function listAllSent() {
 }
 
 export async function getForProject(projectId: string) {
-  const orgId = await getCurrentOrgId();
+  await requireSession();
   const [w] = await db
     .select({
       id: approvalWorkflows.id,
@@ -92,8 +92,7 @@ export async function getForProject(projectId: string) {
     })
     .from(approvalWorkflows)
     .innerJoin(bomRevisions, eq(bomRevisions.id, approvalWorkflows.revisionId))
-    .innerJoin(projects, eq(projects.id, bomRevisions.projectId))
-    .where(and(eq(projects.id, projectId), eq(projects.organizationId, orgId), sql`${approvalWorkflows.status} <> 'cancelled'`))
+    .where(and(eq(bomRevisions.projectId, projectId), sql`${approvalWorkflows.status} <> 'cancelled'`))
     .orderBy(desc(approvalWorkflows.requestedAt))
     .limit(1);
   if (!w) return null;

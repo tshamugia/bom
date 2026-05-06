@@ -1,19 +1,18 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { projects, bomRevisions } from "@/db/schema";
 import { ProjectInput, ProjectPatch, type ProjectInput as ProjectInputType, type ProjectPatch as ProjectPatchType } from "@/lib/schemas/project";
-import { getCurrentOrgId, requireSession } from "../org";
+import { requireSession } from "../auth-context";
 import { audit } from "../audit";
 
 export async function createProject(input: ProjectInputType) {
   const data = ProjectInput.parse(input);
   const session = await requireSession();
-  const orgId = await getCurrentOrgId();
   const project = await db.transaction(async tx => {
-    const [created] = await tx.insert(projects).values({ ...data, organizationId: orgId, ownerId: session.user.id, status: "draft" }).returning();
+    const [created] = await tx.insert(projects).values({ ...data, ownerId: session.user.id, status: "draft" }).returning();
     await tx.insert(bomRevisions).values({ projectId: created.id, letter: "A", status: "draft" });
     return created;
   });
@@ -25,8 +24,8 @@ export async function createProject(input: ProjectInputType) {
 
 export async function updateProject(input: ProjectPatchType) {
   const { id, ...rest } = ProjectPatch.parse(input);
-  const orgId = await getCurrentOrgId();
-  await db.update(projects).set({ ...rest, updatedAt: new Date() }).where(and(eq(projects.id, id), eq(projects.organizationId, orgId)));
+  await requireSession();
+  await db.update(projects).set({ ...rest, updatedAt: new Date() }).where(eq(projects.id, id));
   revalidatePath(`/builder/${id}`);
   revalidatePath("/dashboard");
 }

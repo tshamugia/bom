@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { signIn } from "@/lib/auth-client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -40,9 +39,6 @@ export default function SignInPage() {
       <Button type="submit" disabled={pending} className="w-full">
         {pending ? "Signing in…" : "Sign in"}
       </Button>
-      <div className="text-center text-xs text-[var(--color-text-3)]">
-        New here? <Link className="underline" href="/sign-up">Create an account</Link>
-      </div>
     </form>
   );
 }

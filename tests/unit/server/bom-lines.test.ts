@@ -1,28 +1,26 @@
 import { beforeEach, expect, test, vi } from "vitest";
 import { and, eq } from "drizzle-orm";
-import { resetDb, ensureOrg } from "@/../tests/test-helpers/db";
+import { resetDb } from "@/../tests/test-helpers/db";
+import { mockSession } from "@/../tests/test-helpers/auth";
 import { db } from "@/db/client";
 import { items, vendors, categories, projects, bomRevisions, bomLines, bomSections } from "@/db/schema";
 import { addLine, updateLineQty, removeLine, moveLineToSection } from "@/server/actions/bom-lines";
 import { createSection } from "@/server/actions/bom-sections";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/server/org", () => ({ getCurrentOrgId: vi.fn(), requireSession: vi.fn() }));
-import { getCurrentOrgId, requireSession } from "@/server/org";
+vi.mock("@/server/auth-context", () => ({ requireSession: vi.fn(), requireRole: vi.fn() }));
 
 beforeEach(async () => { await resetDb(); });
 
 async function setup() {
-  const org = await ensureOrg();
-  vi.mocked(getCurrentOrgId).mockResolvedValue(org.id);
-  vi.mocked(requireSession).mockResolvedValue({ user: { id: "u1", name: "Tester" } } as never);
-  const [v] = await db.insert(vendors).values({ name: "M", code: "M", country: "US", leadTime: "3d", rating: 4, status: "approved", organizationId: org.id }).returning();
-  const [c] = await db.insert(categories).values({ name: "C", organizationId: org.id }).returning();
-  const [it1] = await db.insert(items).values({ sku: "A", description: "a", manufacturer: "x", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id }).returning();
-  const [it2] = await db.insert(items).values({ sku: "B", description: "b", manufacturer: "x", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id }).returning();
-  const [p] = await db.insert(projects).values({ organizationId: org.id, code: "P", name: "P", status: "draft" }).returning();
+  await mockSession();
+  const [v] = await db.insert(vendors).values({ name: "M", code: "M", country: "US", leadTime: "3d", rating: 4, status: "approved" }).returning();
+  const [c] = await db.insert(categories).values({ name: "C" }).returning();
+  const [it1] = await db.insert(items).values({ sku: "A", description: "a", manufacturer: "x", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null }).returning();
+  const [it2] = await db.insert(items).values({ sku: "B", description: "b", manufacturer: "x", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null }).returning();
+  const [p] = await db.insert(projects).values({ code: "P", name: "P", status: "draft" }).returning();
   const [r] = await db.insert(bomRevisions).values({ projectId: p.id, letter: "A", status: "draft" }).returning();
-  return { orgId: org.id, revisionId: r.id, it1, it2 };
+  return { revisionId: r.id, it1, it2 };
 }
 
 test("addLine inserts a new line with qty=1 by default", async () => {
@@ -79,9 +77,7 @@ test("addLine with sectionId places the line in the section", async () => {
 
 test("addLine rejects a sectionId that belongs to a different revision", async () => {
   const { revisionId, it1 } = await setup();
-  // Create a second revision with its own section.
-  const orgId = (await getCurrentOrgId()) as string;
-  const [p2] = await db.insert(projects).values({ organizationId: orgId, code: "P2", name: "P2", status: "draft" }).returning();
+  const [p2] = await db.insert(projects).values({ code: "P2", name: "P2", status: "draft" }).returning();
   const [r2] = await db.insert(bomRevisions).values({ projectId: p2.id, letter: "A", status: "draft" }).returning();
   const otherSection = await createSection({ revisionId: r2.id, name: "Other-rev section" });
 
@@ -95,7 +91,6 @@ test("moveLineToSection moves a line and rewrites positions in both source and d
   const a = await createSection({ revisionId, name: "A" });
   const b = await createSection({ revisionId, name: "B" });
 
-  // Source has 2 items; we'll move item-1 into the empty B section.
   const line1 = await addLine({ revisionId, itemId: it1.id, sectionId: a.id });
   const line2 = await addLine({ revisionId, itemId: it2.id, sectionId: a.id });
   expect(line1.position).toBe(0);
@@ -103,7 +98,6 @@ test("moveLineToSection moves a line and rewrites positions in both source and d
 
   await moveLineToSection({ lineId: line1.id, sectionId: b.id });
 
-  // Source: only line2, position must be compacted to 0.
   const aLines = await db
     .select({ id: bomLines.id, position: bomLines.position })
     .from(bomLines)
@@ -113,7 +107,6 @@ test("moveLineToSection moves a line and rewrites positions in both source and d
   expect(aLines[0].id).toBe(line2.id);
   expect(aLines[0].position).toBe(0);
 
-  // Dest: line1 at position 0.
   const bLines = await db
     .select({ id: bomLines.id, position: bomLines.position })
     .from(bomLines)
@@ -168,9 +161,7 @@ test("moveLineToSection rejects a destination section from a different revision"
   const a = await createSection({ revisionId, name: "A" });
   const line = await addLine({ revisionId, itemId: it1.id, sectionId: a.id });
 
-  // Create another revision and a section in it.
-  const orgId = (await getCurrentOrgId()) as string;
-  const [p2] = await db.insert(projects).values({ organizationId: orgId, code: "P2", name: "P2", status: "draft" }).returning();
+  const [p2] = await db.insert(projects).values({ code: "P2", name: "P2", status: "draft" }).returning();
   const [r2] = await db.insert(bomRevisions).values({ projectId: p2.id, letter: "A", status: "draft" }).returning();
   const [otherSec] = await db.insert(bomSections).values({ revisionId: r2.id, name: "Other", position: 0 }).returning();
 

@@ -1,29 +1,26 @@
 import { beforeEach, expect, test, vi } from "vitest";
-import { resetDb, ensureOrg } from "@/../tests/test-helpers/db";
+import { resetDb } from "@/../tests/test-helpers/db";
+import { mockSession } from "@/../tests/test-helpers/auth";
 import { db } from "@/db/client";
 import { eq } from "drizzle-orm";
-import { items, vendors, categories, projects, bomRevisions, bomLines, user, approvalWorkflows, approvalSteps } from "@/db/schema";
+import { items, vendors, categories, projects, bomRevisions, bomLines, approvalWorkflows, approvalSteps } from "@/db/schema";
 import { requestApproval, approveStep, rejectStep } from "@/server/actions/approvals";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/server/org", () => ({ getCurrentOrgId: vi.fn(), requireSession: vi.fn() }));
-import { getCurrentOrgId, requireSession } from "@/server/org";
+vi.mock("@/server/auth-context", () => ({ requireSession: vi.fn(), requireRole: vi.fn() }));
 
 beforeEach(async () => { await resetDb(); });
 
 async function setup() {
-  const org = await ensureOrg();
-  vi.mocked(getCurrentOrgId).mockResolvedValue(org.id);
-  const [u] = await db.insert(user).values({ id: "u1", name: "U", email: "u@example.com", emailVerified: true }).returning();
-  vi.mocked(requireSession).mockResolvedValue({ user: { id: u.id, name: u.name, email: u.email } } as any);
+  const { user: u } = await mockSession();
 
-  const [v] = await db.insert(vendors).values({ name: "M", code: "M", country: "US", leadTime: "3d", rating: 4, status: "approved", organizationId: org.id }).returning();
-  const [c] = await db.insert(categories).values({ name: "C", organizationId: org.id }).returning();
-  const [it] = await db.insert(items).values({ sku: "X", description: "x", manufacturer: "Y", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null, organizationId: org.id }).returning();
-  const [p] = await db.insert(projects).values({ organizationId: org.id, code: "P", name: "P", status: "in-progress" }).returning();
+  const [v] = await db.insert(vendors).values({ name: "M", code: "M", country: "US", leadTime: "3d", rating: 4, status: "approved" }).returning();
+  const [c] = await db.insert(categories).values({ name: "C" }).returning();
+  const [it] = await db.insert(items).values({ sku: "X", description: "x", manufacturer: "Y", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null }).returning();
+  const [p] = await db.insert(projects).values({ code: "P", name: "P", status: "in-progress" }).returning();
   const [r] = await db.insert(bomRevisions).values({ projectId: p.id, letter: "A", status: "committed" }).returning();
   await db.insert(bomLines).values({ revisionId: r.id, itemId: it.id, qty: 1, position: 0 });
-  return { orgId: org.id, projectId: p.id, revisionId: r.id, userId: u.id };
+  return { projectId: p.id, revisionId: r.id, userId: u.id };
 }
 
 test("requestApproval creates a workflow with three default steps", async () => {

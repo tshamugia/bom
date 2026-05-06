@@ -1,5 +1,5 @@
 import "server-only";
-import { getCurrentOrgId } from "@/server/org";
+import { requireSession } from "@/server/auth-context";
 import { getStagingBuffer, stagingKey } from "@/lib/s3";
 import { parseImportBuffer } from "@/server/lib/import-parser";
 import { validateRows } from "@/server/lib/import-validator";
@@ -11,8 +11,8 @@ export type GetDryRunResult =
   | { ok: false; error: "expired" | "header_mismatch" | "unreadable" };
 
 export async function getDryRun(importId: string): Promise<GetDryRunResult> {
-  const orgId = await getCurrentOrgId();
-  const key = stagingKey(orgId, importId);
+  await requireSession();
+  const key = stagingKey(importId);
   const buf = await getStagingBuffer(key);
   if (!buf) return { ok: false, error: "expired" };
 
@@ -20,7 +20,7 @@ export async function getDryRun(importId: string): Promise<GetDryRunResult> {
   if (!parsed.ok && parsed.error === "header_mismatch") return { ok: false, error: "header_mismatch" };
   if (!parsed.ok) return { ok: false, error: "unreadable" };
 
-  const ctx = await loadValidatorContext(orgId);
+  const ctx = await loadValidatorContext();
   const result = validateRows(
     { importId, fileName: `${importId}.xlsx`, rows: parsed.rows, parserErrors: parsed.rowErrors },
     ctx,

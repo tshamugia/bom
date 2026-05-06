@@ -2,7 +2,7 @@ import "server-only";
 import { and, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db/client";
 import { items, categories, subcategories, vendors } from "@/db/schema";
-import { getCurrentOrgId } from "../org";
+import { requireSession } from "../auth-context";
 
 export type ItemFilter = {
   search?: string;
@@ -12,8 +12,8 @@ export type ItemFilter = {
 };
 
 export async function listItems(filter: ItemFilter) {
-  const orgId = await getCurrentOrgId();
-  const conds: SQL[] = [eq(items.organizationId, orgId)];
+  await requireSession();
+  const conds: SQL[] = [];
   if (filter.categoryId) conds.push(eq(items.categoryId, filter.categoryId));
   if (filter.subcategoryId) conds.push(eq(items.subcategoryId, filter.subcategoryId));
   if (filter.vendorId) conds.push(eq(items.vendorId, filter.vendorId));
@@ -22,7 +22,7 @@ export async function listItems(filter: ItemFilter) {
     conds.push(or(ilike(items.sku, q), ilike(items.description, q), ilike(items.manufacturer, q))!);
   }
 
-  return db
+  const query = db
     .select({
       id: items.id, sku: items.sku, description: items.description, manufacturer: items.manufacturer,
       unit: items.unit,
@@ -33,19 +33,18 @@ export async function listItems(filter: ItemFilter) {
     .from(items)
     .leftJoin(vendors, eq(vendors.id, items.vendorId))
     .leftJoin(categories, eq(categories.id, items.categoryId))
-    .leftJoin(subcategories, eq(subcategories.id, items.subcategoryId))
-    .where(and(...conds))
-    .orderBy(items.sku);
+    .leftJoin(subcategories, eq(subcategories.id, items.subcategoryId));
+
+  return (conds.length > 0 ? query.where(and(...conds)) : query).orderBy(items.sku);
 }
 
 export async function listCategories() {
-  const orgId = await getCurrentOrgId();
+  await requireSession();
   return db
     .select({
       id: categories.id, name: categories.name,
       itemCount: sql<number>`(SELECT COUNT(*) FROM ${items} WHERE ${items.categoryId} = ${categories.id})`.mapWith(Number),
     })
     .from(categories)
-    .where(eq(categories.organizationId, orgId))
     .orderBy(categories.name);
 }

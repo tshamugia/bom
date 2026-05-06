@@ -8,12 +8,16 @@ export function PageHead({
   actions?: React.ReactNode;
 }) {
   return (
-    <div className="mb-5 flex items-start justify-between gap-4">
-      <div>
-        <h1 className="text-[20px] font-semibold tracking-tight">{title}</h1>
-        <p className="text-[13px] text-[var(--color-text-3)]">{subtitle}</p>
+    <div className="mb-6 flex items-start justify-between gap-4 border-b border-[var(--color-line-soft)] pb-4">
+      <div className="min-w-0">
+        <h1 className="text-[22px] font-semibold leading-tight tracking-tight text-[var(--color-text)]">
+          {title}
+        </h1>
+        <p className="mt-1 text-[13.5px] leading-relaxed text-[var(--color-text-3)]">
+          {subtitle}
+        </p>
       </div>
-      {actions && <div className="flex items-center gap-2">{actions}</div>}
+      {actions && <div className="flex flex-shrink-0 items-center gap-2">{actions}</div>}
     </div>
   );
 }
