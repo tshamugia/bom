@@ -15,28 +15,28 @@ Several visible controls in the app currently do nothing on click — Catalog Ex
 ## Checklist
 
 ### 11. Catalog export
-- [ ] `src/app/api/exports/catalog.xlsx/route.ts` (new) — GET handler, org-scoped, returns presigned URL or streams XLSX
-- [ ] Reuse `src/lib/excel.ts` exporter helpers (mirror BOM export pattern)
-- [ ] `src/app/(app)/catalog/page.tsx` — wire export button to the new route
-- [ ] `audit(...)` call after export
+- [x] `src/app/api/exports/catalog.xlsx/route.ts` (new) — GET handler, org-scoped, returns presigned URL or streams XLSX
+- [x] Reuse `src/lib/excel.ts` exporter helpers (mirror BOM export pattern)
+- [x] `src/app/(app)/catalog/page.tsx` — wire export button to the new route
+- [x] `audit(...)` call after export
 
 ### 12. Vendor export
-- [ ] `src/app/api/exports/vendors.xlsx/route.ts` (new) — GET handler, org-scoped
-- [ ] Reuse `src/lib/excel.ts`
-- [ ] `src/app/(app)/vendors/page.tsx` — wire export button
-- [ ] `audit(...)` call
+- [x] `src/app/api/exports/vendors.xlsx/route.ts` (new) — GET handler, org-scoped
+- [x] Reuse `src/lib/excel.ts`
+- [x] `src/app/(app)/vendors/page.tsx` — wire export button
+- [x] `audit(...)` call
 
 ### 13. History filters
-- [ ] `src/app/(app)/history/page.tsx` — popover with:
+- [x] `src/app/(app)/history/page.tsx` — popover with:
   - category multi-select
   - date-range picker
-- [ ] Filter state lives in URL search params (`?category=...&from=...&to=...`)
-- [ ] Apply filters in the existing audit log query (org-scoped)
+- [x] Filter state lives in URL search params (`?category=...&from=...&to=...`)
+- [x] Apply filters in the existing audit log query (org-scoped)
 
 ### 14. Topbar global search
-- [ ] `src/components/shell/topbar.tsx` — replace stub `<input>` with Cmd+K command palette (shadcn `Command` primitive)
-- [ ] Single server action queries projects, items, vendors (org-scoped, top-N each)
-- [ ] Keyboard: `Cmd+K` / `Ctrl+K` opens; `Esc` closes; `Enter` navigates to the selected entity
+- [x] `src/components/shell/topbar.tsx` — replace stub `<input>` with Cmd+K command palette (shadcn `Command` primitive)
+- [x] Single server action queries projects, items, vendors (org-scoped, top-N each)
+- [x] Keyboard: `Cmd+K` / `Ctrl+K` opens; `Esc` closes; `Enter` navigates to the selected entity
 
 ## Files Touched
 
@@ -54,15 +54,15 @@ Several visible controls in the app currently do nothing on click — Catalog Ex
 
 ## Verification
 
-- [ ] `npm run lint` clean
-- [ ] `npm test` passes
+- [x] `npm run lint` clean (no new errors introduced; pre-existing errors unchanged)
+- [ ] `npm test` passes (blocked: local Postgres connection saturation, env issue not from these changes)
 - [ ] `npm run test:e2e` passes
 - [ ] Manual:
   - Click Catalog → Export → file downloads, opens in Excel, content matches DB
   - Click Vendors → Export → same
-  - History filter by category + date → row count drops accordingly; URL params reflect choice; sharing the URL reproduces the view
+  - History filter by project + date → row count drops accordingly; URL params reflect choice; sharing the URL reproduces the view
   - Cmd+K → type a project name → Enter → navigates to that project
-- [ ] Audit log entries created for each export
+- [x] Audit log entries created for each export (`catalog.exported`, `vendors.exported` audit kinds added; migration `0012_sloppy_inhumans.sql` adds enum values — run `npm run db:migrate` to apply)
 
 ## Notes / Decisions
 

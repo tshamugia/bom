@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "@/lib/auth-client";
 import { Icon } from "@/components/icons";
+import { CommandPalette } from "./command-palette";
 
 const CRUMBS: Record<string, [string, string]> = {
   "/dashboard": ["Workspace", "Dashboard"],
@@ -55,16 +56,7 @@ export function Topbar({ user }: { user: { name: string; email: string; role: st
       </nav>
 
       <div className="ml-auto flex items-center gap-2">
-        <label className="group flex w-80 items-center gap-2 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-2)] px-2.5 py-1.5 text-[var(--color-text-3)] transition-colors focus-within:border-[var(--color-accent)] focus-within:bg-[var(--color-surface)] focus-within:ring-2 focus-within:ring-[var(--color-accent-soft)]">
-          <Icon.Search size={14} className="group-focus-within:text-[var(--color-accent)]" />
-          <input
-            className="flex-1 border-0 bg-transparent text-[13px] text-[var(--color-text)] placeholder:text-[var(--color-text-4)] outline-none"
-            placeholder="Search SKUs, projects, vendors…"
-          />
-          <span className="rounded border border-[var(--color-line)] bg-[var(--color-surface)] px-1.5 font-mono text-[10.5px] font-medium text-[var(--color-text-3)]">
-            ⌘K
-          </span>
-        </label>
+        <CommandPalette />
 
         <button
           aria-label="Notifications"

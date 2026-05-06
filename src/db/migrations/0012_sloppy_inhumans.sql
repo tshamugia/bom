@@ -1,0 +1,2 @@
+ALTER TYPE "public"."audit_kind" ADD VALUE 'catalog.exported' BEFORE 'bom.revision.committed';--> statement-breakpoint
+ALTER TYPE "public"."audit_kind" ADD VALUE 'vendors.exported' BEFORE 'bom.revision.committed';

@@ -1,12 +1,25 @@
 import "server-only";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte, type SQL } from "drizzle-orm";
 import { db } from "@/db/client";
 import { bomExports, bomRevisions, projects, user } from "@/db/schema";
 import { requireSession } from "../auth-context";
 
-export async function listExports() {
+export type ExportsFilter = {
+  projectIds?: string[];
+  from?: Date;
+  to?: Date;
+};
+
+export async function listExports(filter: ExportsFilter = {}) {
   await requireSession();
-  return db
+  const conds: SQL[] = [];
+  if (filter.projectIds && filter.projectIds.length > 0) {
+    conds.push(inArray(bomRevisions.projectId, filter.projectIds));
+  }
+  if (filter.from) conds.push(gte(bomExports.generatedAt, filter.from));
+  if (filter.to) conds.push(lte(bomExports.generatedAt, filter.to));
+
+  const query = db
     .select({
       id: bomExports.id,
       fileName: bomExports.fileName,
@@ -17,14 +30,16 @@ export async function listExports() {
       generatedByName: user.name,
       status: bomExports.status,
       revisionLetter: bomRevisions.letter,
+      projectId: bomRevisions.projectId,
       projectCode: projects.code,
       projectName: projects.name,
     })
     .from(bomExports)
     .innerJoin(bomRevisions, eq(bomRevisions.id, bomExports.revisionId))
     .innerJoin(projects, eq(projects.id, bomRevisions.projectId))
-    .leftJoin(user, eq(user.id, bomExports.generatedById))
-    .orderBy(desc(bomExports.generatedAt));
+    .leftJoin(user, eq(user.id, bomExports.generatedById));
+
+  return (conds.length > 0 ? query.where(and(...conds)) : query).orderBy(desc(bomExports.generatedAt));
 }
 
 export async function getExport(id: string) {

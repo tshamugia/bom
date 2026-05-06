@@ -15,7 +15,9 @@ export default async function VendorsPage() {
         subtitle="Approved suppliers, performance metrics, and lead times."
         actions={
           <>
-            <Button variant="outline"><Icon.Download size={14} className="mr-1.5" /> Export</Button>
+            <a href="/api/exports/vendors.xlsx">
+              <Button variant="outline"><Icon.Download size={14} className="mr-1.5" /> Export</Button>
+            </a>
             <VendorDialog trigger={<Button><Icon.Plus size={14} className="mr-1.5" /> Add vendor</Button>} />
           </>
         }

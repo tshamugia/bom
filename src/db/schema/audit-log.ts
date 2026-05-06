@@ -17,6 +17,8 @@ export const auditKindEnum = pgEnum("audit_kind", [
   "vendor.created",
   "item.created",
   "catalog.imported",
+  "catalog.exported",
+  "vendors.exported",
   "bom.revision.committed",
   "bom.revision.branched",
   "bom.revision.discarded",

@@ -22,7 +22,9 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
         subtitle={`Master data for all components. ${results.length} results across ${cats.length} categories.`}
         actions={
           <>
-            <Button variant="outline"><Icon.Download size={14} className="mr-1.5" /> Export</Button>
+            <a href="/api/exports/catalog.xlsx">
+              <Button variant="outline"><Icon.Download size={14} className="mr-1.5" /> Export</Button>
+            </a>
             <Link href="/catalog/import">
               <Button variant="outline"><Icon.Upload size={14} className="mr-1.5" /> Import</Button>
             </Link>

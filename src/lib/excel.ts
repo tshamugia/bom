@@ -265,3 +265,96 @@ function colLetter(index: number): string {
   }
   return s;
 }
+
+export type CatalogExportRow = {
+  sku: string;
+  description: string;
+  manufacturer: string;
+  unit: string;
+  vendor: string | null;
+  category: string | null;
+  subcategory: string | null;
+};
+
+export async function buildCatalogWorkbook(rows: CatalogExportRow[]): Promise<Buffer> {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "BOM Studio";
+  wb.created = new Date();
+
+  const ws = wb.addWorksheet("Catalog");
+  const headers = ["SKU", "Description", "Manufacturer", "Unit", "Vendor", "Category", "Subcategory"];
+  const widths = [18, 40, 22, 8, 24, 22, 22];
+
+  const headerRow = ws.getRow(1);
+  headers.forEach((h, i) => {
+    const cell = headerRow.getCell(i + 1);
+    cell.value = h;
+    cell.font = { bold: true, color: { argb: "FF6B7180" }, size: 10 };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFECEEF2" } };
+    cell.border = { bottom: { style: "thin", color: { argb: "FFE4E6EB" } } };
+  });
+
+  rows.forEach((r, i) => {
+    const row = ws.getRow(2 + i);
+    row.getCell(1).value = r.sku;
+    row.getCell(2).value = r.description;
+    row.getCell(3).value = r.manufacturer;
+    row.getCell(4).value = r.unit;
+    row.getCell(5).value = r.vendor ?? "—";
+    row.getCell(6).value = r.category ?? "—";
+    row.getCell(7).value = r.subcategory ?? "—";
+  });
+
+  widths.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+  ws.views = [{ state: "frozen", ySplit: 1 }];
+
+  const out = await wb.xlsx.writeBuffer();
+  return Buffer.from(out);
+}
+
+export type VendorExportRow = {
+  name: string;
+  code: string;
+  country: string;
+  leadTime: string;
+  rating: number;
+  status: string;
+  itemsCount: number;
+};
+
+export async function buildVendorWorkbook(rows: VendorExportRow[]): Promise<Buffer> {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "BOM Studio";
+  wb.created = new Date();
+
+  const ws = wb.addWorksheet("Vendors");
+  const headers = ["Name", "Code", "Country", "Lead time", "Rating", "Status", "Items"];
+  const widths = [28, 14, 14, 14, 10, 14, 10];
+
+  const headerRow = ws.getRow(1);
+  headers.forEach((h, i) => {
+    const cell = headerRow.getCell(i + 1);
+    cell.value = h;
+    cell.font = { bold: true, color: { argb: "FF6B7180" }, size: 10 };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFECEEF2" } };
+    cell.border = { bottom: { style: "thin", color: { argb: "FFE4E6EB" } } };
+  });
+
+  rows.forEach((r, i) => {
+    const row = ws.getRow(2 + i);
+    row.getCell(1).value = r.name;
+    row.getCell(2).value = r.code;
+    row.getCell(3).value = r.country;
+    row.getCell(4).value = r.leadTime;
+    row.getCell(5).value = Number(r.rating);
+    row.getCell(5).numFmt = "0.0";
+    row.getCell(6).value = r.status;
+    row.getCell(7).value = r.itemsCount;
+  });
+
+  widths.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+  ws.views = [{ state: "frozen", ySplit: 1 }];
+
+  const out = await wb.xlsx.writeBuffer();
+  return Buffer.from(out);
+}
