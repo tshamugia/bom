@@ -16,6 +16,7 @@ async function setup() {
   const { user: u } = await mockSession();
 
   const [v] = await db.insert(vendors).values({ name: "M", code: "M", country: "US", leadTime: "3d", rating: 4, status: "approved" }).returning();
+  await db.insert(vendors).values({ name: "N", code: "N", country: "US", leadTime: "5-7d", rating: 4, status: "approved" });
   const [c] = await db.insert(categories).values({ name: "C" }).returning();
   const [it1] = await db.insert(items).values({ sku: "OK", description: "ok", manufacturer: "y", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null }).returning();
 
@@ -38,6 +39,13 @@ test("getStats returns counts", async () => {
   const s = await getStats();
   expect(s.activeBoms).toBe(1);
   expect(s.approvalsPending).toBe(1);
+});
+
+test("getStats computes avg lead time from vendor strings", async () => {
+  await setup();
+  const s = await getStats();
+  // vendors: "3d" -> 3, "5-7d" -> 6; mean = 4.5
+  expect(s.avgLeadTimeDays).toBe(4.5);
 });
 
 test("getRecentActivity returns latest first", async () => {

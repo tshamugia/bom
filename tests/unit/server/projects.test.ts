@@ -4,8 +4,10 @@ import { mockSession } from "@/../tests/test-helpers/auth";
 import { db } from "@/db/client";
 import { projects, bomRevisions, items, vendors, categories, bomLines } from "@/db/schema";
 import { listProjects, getProject, getLines } from "@/server/queries/projects";
+import { softDeleteProject, restoreProject } from "@/server/actions/projects";
 
 vi.mock("@/server/auth-context", () => ({ requireSession: vi.fn(), requireRole: vi.fn() }));
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 beforeEach(async () => { await resetDb(); });
 
@@ -48,4 +50,16 @@ test("getLines returns lines joined with item details", async () => {
   expect(lines[0].sku).toBe("X-1");
   expect(lines[0].qty).toBe(3);
   expect(lines[0].vendorName).toBe("M");
+});
+
+test("softDeleteProject hides project from listings; restoreProject brings it back", async () => {
+  const { projectId } = await setup();
+  await softDeleteProject({ id: projectId });
+  expect(await listProjects()).toHaveLength(0);
+  expect(await getProject(projectId)).toBeNull();
+
+  await restoreProject({ id: projectId });
+  const list = await listProjects();
+  expect(list).toHaveLength(1);
+  expect(list[0].id).toBe(projectId);
 });

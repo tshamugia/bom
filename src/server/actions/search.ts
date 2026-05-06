@@ -1,6 +1,6 @@
 "use server";
 
-import { ilike, or } from "drizzle-orm";
+import { and, ilike, isNull, or } from "drizzle-orm";
 import { db } from "@/db/client";
 import { projects, items, vendors } from "@/db/schema";
 import { requireSession } from "../auth-context";
@@ -21,7 +21,10 @@ export async function globalSearch(query: string): Promise<SearchHit[]> {
     db
       .select({ id: projects.id, code: projects.code, name: projects.name })
       .from(projects)
-      .where(or(ilike(projects.name, like), ilike(projects.code, like))!)
+      .where(and(
+        isNull(projects.deletedAt),
+        or(ilike(projects.name, like), ilike(projects.code, like))!,
+      ))
       .limit(limit),
     db
       .select({ id: items.id, sku: items.sku, description: items.description, manufacturer: items.manufacturer })

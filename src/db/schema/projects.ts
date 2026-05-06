@@ -13,10 +13,12 @@ export const projects = pgTable(
     status: projectStatusEnum("status").notNull().default("draft"),
     targetDate: date("target_date"),
     quantity: integer("quantity").notNull().default(1),
+    deletedAt: timestamp("deleted_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   t => ({
     codeIdx: index("project_code_idx").on(t.code),
+    deletedAtIdx: index("project_deleted_at_idx").on(t.deletedAt),
   }),
 );

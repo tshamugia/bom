@@ -1,9 +1,30 @@
 import "server-only";
 import { aliasedTable } from "drizzle-orm";
-import { and, asc, count, desc, eq, ne, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNotNull, ne, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { projects, bomRevisions, bomLines, bomSections, items, vendors, categories, subcategories, user } from "@/db/schema";
 import { requireSession } from "../auth-context";
+
+export async function listOwnerCandidates() {
+  await requireSession();
+  return db
+    .select({ id: user.id, name: user.name, email: user.email })
+    .from(user)
+    .where(eq(user.disabled, false))
+    .orderBy(asc(user.name));
+}
+
+export async function listArchivedProjects() {
+  await requireSession();
+  return db
+    .select({
+      id: projects.id, code: projects.code, name: projects.name,
+      deletedAt: projects.deletedAt,
+    })
+    .from(projects)
+    .where(isNotNull(projects.deletedAt))
+    .orderBy(desc(projects.deletedAt));
+}
 
 export async function listProjects() {
   await requireSession();
@@ -33,6 +54,7 @@ export async function listProjects() {
       WHERE r2.project_id = p.id AND w.status <> 'cancelled'
       ORDER BY w.requested_at DESC LIMIT 1
     ) wf ON TRUE
+    WHERE p.deleted_at IS NULL
     ORDER BY p.updated_at DESC
   `).then(r => r as unknown as Array<{
     id: string; code: string; name: string; status: string;
@@ -46,7 +68,9 @@ export async function listProjects() {
 
 export async function getProject(id: string) {
   await requireSession();
-  const [p] = await db.select().from(projects).where(eq(projects.id, id)).limit(1);
+  const [p] = await db.select().from(projects)
+    .where(and(eq(projects.id, id), sql`${projects.deletedAt} IS NULL`))
+    .limit(1);
   if (!p) return null;
   const [rev] = await db
     .select({ id: bomRevisions.id, letter: bomRevisions.letter, status: bomRevisions.status })

@@ -16,35 +16,36 @@ The dashboard reports a hardcoded `avgLeadTimeDays = 5.8` (`src/server/queries/d
 ## Checklist
 
 ### 15. Dashboard avg lead time
-- [ ] `src/server/queries/dashboard.ts:23` — replace hardcoded value with computed avg of `vendors.leadTimeDays` (org-scoped)
-- [ ] Decide weighting: simple mean vs. weighted by line count (start with simple mean; document the choice)
-- [ ] Update unit test if one exists; add one if not
+- [x] `src/server/queries/dashboard.ts:23` — replace hardcoded value with computed avg of `vendors.leadTimeDays` (org-scoped)
+- [x] Decide weighting: simple mean vs. weighted by line count (start with simple mean; document the choice)
+- [x] Update unit test if one exists; add one if not
 
 ### 16. Soft-delete projects
-- [ ] `src/db/schema/projects.ts` — add `deletedAt timestamp` (nullable)
-- [ ] `npm run db:generate` → review migration → `npm run db:migrate`
-- [ ] `src/server/actions/projects.ts` — add `softDeleteProject(id)` and `restoreProject(id)`; both org-scoped + audited
-- [ ] Update list/detail queries to filter `deletedAt IS NULL` by default
-- [ ] Verify cascade behavior: revisions, exports, approvals continue to reference the project (no FK breakage)
-- [ ] **Never hard-delete** (suggestion §6.6) — even an admin "purge" stays as a soft-delete
+- [x] `src/db/schema/projects.ts` — add `deletedAt timestamp` (nullable)
+- [x] `npm run db:generate` → review migration → `npm run db:migrate`
+- [x] `src/server/actions/projects.ts` — add `softDeleteProject(id)` and `restoreProject(id)`; both org-scoped + audited
+- [x] Update list/detail queries to filter `deletedAt IS NULL` by default
+- [x] Verify cascade behavior: revisions, exports, approvals continue to reference the project (no FK breakage)
+- [x] **Never hard-delete** (suggestion §6.6) — even an admin "purge" stays as a soft-delete
 
 ### 17. Clone revision
-- [ ] `src/server/actions/revisions.ts` (or `bom-lines.ts`) — `cloneRevision(sourceRevisionId)`:
+- [x] `src/server/actions/revisions.ts` (or `bom-lines.ts`) — `cloneRevision(sourceRevisionId)`:
   - Verify source is in caller's org (`ensureRevisionInOrg` pattern)
   - Allocate next revision letter
   - Copy `bomSections` and `bomLines` into the new revision
   - Status starts as `draft`
   - Audit
-- [ ] Add Clone button on `/projects/[id]/history` (or wherever the revision list lives)
-- [ ] E2E: clone → new draft appears; lines match source by content
+  - _Existing `branchRevision` already implements this; reused via UI button_
+- [x] Add Clone button on `/projects/[id]/history` (or wherever the revision list lives)
+- [ ] E2E: clone → new draft appears; lines match source by content _(unit coverage in `revisions.test.ts`)_
 
 ### 18. Owner & due date
-- [ ] `src/db/schema/projects.ts` — add `ownerId uuid references users.id` and `dueAt timestamp` (both nullable)
-- [ ] Migration via `npm run db:generate`
-- [ ] `src/server/actions/projects.ts` — accept `ownerId`, `dueAt` on create/update
-- [ ] `src/app/(app)/projects/page.tsx` (list) — show Owner + Due columns
-- [ ] `src/app/(app)/dashboard/page.tsx` — surface upcoming-deadline tile
-- [ ] `src/app/(app)/projects/[id]/page.tsx` — owner picker (member dropdown) + due-date picker on edit form
+- [x] `src/db/schema/projects.ts` — add `ownerId uuid references users.id` and `dueAt timestamp` (both nullable) _(already present as `ownerId` + `targetDate`)_
+- [x] Migration via `npm run db:generate`
+- [x] `src/server/actions/projects.ts` — accept `ownerId`, `dueAt` on create/update
+- [x] `src/app/(app)/projects/page.tsx` (list) — show Owner + Due columns
+- [x] `src/app/(app)/dashboard/page.tsx` — surface upcoming-deadline tile
+- [x] `src/app/(app)/projects/[id]/page.tsx` — owner picker (member dropdown) + due-date picker on edit form
 
 ## Files Touched
 
@@ -64,15 +65,15 @@ The dashboard reports a hardcoded `avgLeadTimeDays = 5.8` (`src/server/queries/d
 
 ## Verification
 
-- [ ] `npm run lint` clean
-- [ ] `npm test` passes
+- [x] `npm run lint` clean _(no new errors introduced; pre-existing failures unchanged)_
+- [x] `npm test` passes _(99/99)_
 - [ ] `npm run test:e2e` passes
 - [ ] Manual:
   - Dashboard avg lead time changes when a vendor's `leadTimeDays` changes
   - Soft-delete a project → disappears from `/projects` but row still exists in DB; audit log keeps the reference
   - Clone an approved revision → new draft appears with identical sections/lines; status `draft`
   - Create project with owner + due date → both visible in list and dashboard
-- [ ] Spot-check that no query forgot to filter `deletedAt IS NULL` (especially in builder, preview, approvals paths)
+- [x] Spot-check that no query forgot to filter `deletedAt IS NULL` (especially in builder, preview, approvals paths) _(`getProject`, `listProjects`, `globalSearch` filtered; preview/builder/approvals enter via `getProject`)_
 
 ## Notes / Decisions
 

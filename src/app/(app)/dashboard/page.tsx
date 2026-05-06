@@ -31,10 +31,17 @@ export default async function DashboardPage() {
         }
       />
 
-      <div className="mb-5 grid grid-cols-3 gap-3">
+      <div className="mb-5 grid grid-cols-4 gap-3">
         <StatTile tone="accent"  label="Active BOMs"       value={stats.activeBoms} />
-        <StatTile tone="info"    label="Avg. lead time"    value={`${stats.avgLeadTimeDays}d`} delta="±0.0d" deltaTone="neutral" />
+        <StatTile tone="info"    label="Avg. lead time"    value={`${stats.avgLeadTimeDays}d`} />
         <StatTile tone="warning" label="Approvals pending" value={stats.approvalsPending} delta={stats.approvalsPending > 0 ? "needs action" : ""} deltaTone={stats.approvalsPending > 0 ? "down" : "neutral"} />
+        <StatTile
+          tone={stats.overdueDeadlines > 0 ? "warning" : "success"}
+          label="Upcoming deadlines"
+          value={stats.upcomingDeadlines}
+          delta={stats.overdueDeadlines > 0 ? `${stats.overdueDeadlines} overdue` : "next 14d"}
+          deltaTone={stats.overdueDeadlines > 0 ? "down" : "neutral"}
+        />
       </div>
 
       <div className="grid grid-cols-[1fr_320px] gap-4">
