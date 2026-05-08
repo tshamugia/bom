@@ -1,7 +1,7 @@
 import "server-only";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { bomLines, bomRevisions, bomSections } from "@/db/schema";
+import { boms, bomLines, bomRevisions, bomSections } from "@/db/schema";
 import { requireSession } from "../auth-context";
 
 export type LineSnapshot = {
@@ -47,9 +47,11 @@ async function loadSide(revisionId: string) {
       id: bomRevisions.id,
       letter: bomRevisions.letter,
       status: bomRevisions.status,
-      projectId: bomRevisions.projectId,
+      bomId: bomRevisions.bomId,
+      projectId: boms.projectId,
     })
     .from(bomRevisions)
+    .innerJoin(boms, eq(boms.id, bomRevisions.bomId))
     .where(eq(bomRevisions.id, revisionId))
     .limit(1);
   if (!rev) throw new Error("REVISION_NOT_FOUND");
@@ -80,7 +82,7 @@ export async function getRevisionDiff(leftId: string, rightId: string): Promise<
   await requireSession();
   const left = await loadSide(leftId);
   const right = await loadSide(rightId);
-  if (left.rev.projectId !== right.rev.projectId) throw new Error("PROJECT_MISMATCH");
+  if (left.rev.bomId !== right.rev.bomId) throw new Error("BOM_MISMATCH");
 
   const leftSecByKey = new Map(left.sections.map(s => [s.sectionKey, s]));
   const rightSecByKey = new Map(right.sections.map(s => [s.sectionKey, s]));
@@ -147,7 +149,7 @@ export async function getRevisionDiff(leftId: string, rightId: string): Promise<
   };
 }
 
-export async function listRevisionsForProject(projectId: string) {
+export async function listRevisionsForBom(bomId: string) {
   await requireSession();
   return db
     .select({
@@ -162,5 +164,26 @@ export async function listRevisionsForProject(projectId: string) {
       createdAt: bomRevisions.createdAt,
     })
     .from(bomRevisions)
-    .where(eq(bomRevisions.projectId, projectId));
+    .where(eq(bomRevisions.bomId, bomId));
+}
+
+export async function listRevisionsForProject(projectId: string) {
+  await requireSession();
+  return db
+    .select({
+      id: bomRevisions.id,
+      letter: bomRevisions.letter,
+      status: bomRevisions.status,
+      committedAt: bomRevisions.committedAt,
+      committedById: bomRevisions.committedById,
+      commitMessage: bomRevisions.commitMessage,
+      parentRevisionId: bomRevisions.parentRevisionId,
+      ownerId: bomRevisions.ownerId,
+      createdAt: bomRevisions.createdAt,
+      bomId: boms.id,
+      bomName: boms.name,
+    })
+    .from(bomRevisions)
+    .innerJoin(boms, eq(boms.id, bomRevisions.bomId))
+    .where(eq(boms.projectId, projectId));
 }

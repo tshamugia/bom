@@ -26,6 +26,9 @@ export const auditKindEnum = pgEnum("audit_kind", [
   "user.disabled",
   "project.deleted",
   "project.restored",
+  "bom.renamed",
+  "bom.deleted",
+  "bom.duplicated",
 ]);
 
 export const auditLog = pgTable(

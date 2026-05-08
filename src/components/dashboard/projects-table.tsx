@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 
@@ -7,14 +6,12 @@ type Row = {
   id: string;
   code: string;
   name: string;
-  status: string;
   updatedAt: Date;
   targetDate: string | null;
   ownerName: string | null;
   revLetter: string | null;
+  bomCount: number;
   lineCount: number;
-  workflowStatus: "pending" | "approved" | "rejected" | null;
-  workflowActiveRole: string | null;
 };
 
 export function ProjectsTable({ rows }: { rows: Row[] }) {
@@ -29,9 +26,8 @@ export function ProjectsTable({ rows }: { rows: Row[] }) {
           <tr className="bg-[var(--color-surface-2)] text-[11px] uppercase tracking-wider text-[var(--color-text-3)]">
             <th className="px-4 py-2.5 text-left font-medium">Project</th>
             <th className="px-4 py-2.5 text-left font-medium">Owner</th>
-            <th className="px-4 py-2.5 text-left font-medium">Rev</th>
+            <th className="px-4 py-2.5 text-right font-medium">BOMs</th>
             <th className="px-4 py-2.5 text-right font-medium">Lines</th>
-            <th className="px-4 py-2.5 text-left font-medium">Status</th>
             <th className="px-4 py-2.5 text-left font-medium">Updated</th>
             <th className="px-4 py-2.5 text-left font-medium">Deadline</th>
             <th />
@@ -41,7 +37,7 @@ export function ProjectsTable({ rows }: { rows: Row[] }) {
           {rows.map(p => (
             <tr key={p.id} className="cursor-pointer border-b border-[var(--color-line-soft)] last:border-0 hover:bg-[var(--color-surface-2)]">
               <td className="px-4 py-2.5">
-                <Link href={`/builder/${p.id}`} className="flex items-center gap-2.5">
+                <Link href={`/projects/${p.id}`} className="flex items-center gap-2.5">
                   <Icon.Folder size={14} className="text-[var(--color-text-3)]" />
                   <div>
                     <div className="font-medium">{p.name}</div>
@@ -50,19 +46,12 @@ export function ProjectsTable({ rows }: { rows: Row[] }) {
                 </Link>
               </td>
               <td className="px-4 py-2.5">{p.ownerName ?? "—"}</td>
-              <td className="px-4 py-2.5 font-mono text-[11px] text-[var(--color-text-3)]">{p.revLetter ? `Rev ${p.revLetter}` : "—"}</td>
+              <td className="px-4 py-2.5 text-right tabular-nums">{p.bomCount}</td>
               <td className="px-4 py-2.5 text-right tabular-nums">{p.lineCount}</td>
-              <td className="px-4 py-2.5">
-                {p.workflowStatus
-                  ? <Badge tone="success">Sent to procurement</Badge>
-                  : p.status === "in-progress"
-                    ? <Badge tone="warning">In progress</Badge>
-                    : <Badge tone="gray">{p.status}</Badge>}
-              </td>
               <td className="px-4 py-2.5 text-[var(--color-text-3)]">{relativeTime(p.updatedAt)}</td>
               <td className="px-4 py-2.5 text-[var(--color-text-3)]">{p.targetDate ?? "—"}</td>
               <td className="px-4 py-2.5 text-right">
-                <Link href={`/builder/${p.id}`}><Button variant="ghost" size="sm"><Icon.Chevron size={14} /></Button></Link>
+                <Link href={`/projects/${p.id}`}><Button variant="ghost" size="sm"><Icon.Chevron size={14} /></Button></Link>
               </td>
             </tr>
           ))}

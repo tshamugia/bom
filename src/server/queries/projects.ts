@@ -2,7 +2,7 @@ import "server-only";
 import { aliasedTable } from "drizzle-orm";
 import { and, asc, count, desc, eq, isNotNull, ne, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { projects, bomRevisions, bomLines, bomSections, items, vendors, categories, subcategories, user } from "@/db/schema";
+import { projects, boms, bomRevisions, bomLines, bomSections, items, vendors, categories, subcategories, user } from "@/db/schema";
 import { requireSession } from "../auth-context";
 
 export async function listOwnerCandidates() {
@@ -30,39 +30,41 @@ export async function listProjects() {
   await requireSession();
   return db.execute(sql/* sql */`
     SELECT
-      p.id, p.code, p.name, p.status, p.updated_at AS "updatedAt", p.target_date AS "targetDate",
+      p.id, p.code, p.name, p.updated_at AS "updatedAt", p.target_date AS "targetDate",
       u.name AS "ownerName",
-      stats.letter AS "revLetter",
-      COALESCE(stats.line_count, 0)::int AS "lineCount",
-      wf.status AS "workflowStatus",
-      wf.active_role AS "workflowActiveRole"
+      COALESCE(bom_stats.bom_count, 0)::int AS "bomCount",
+      COALESCE(line_stats.line_count, 0)::int AS "lineCount",
+      latest.letter AS "revLetter"
     FROM "project" p
     LEFT JOIN "user" u ON u.id = p.owner_id
     LEFT JOIN LATERAL (
-      SELECT r.id, r.letter, COUNT(l.*) AS line_count
-      FROM "bom_revision" r
-      LEFT JOIN "bom_line" l ON l.revision_id = r.id
-      WHERE r.project_id = p.id AND r.status <> 'locked'
-      GROUP BY r.id
-      ORDER BY r.created_at DESC LIMIT 1
-    ) stats ON TRUE
+      SELECT COUNT(*) AS bom_count
+      FROM "bom" b
+      WHERE b.project_id = p.id AND b.deleted_at IS NULL
+    ) bom_stats ON TRUE
     LEFT JOIN LATERAL (
-      SELECT w.status,
-        (SELECT s.role FROM "approval_step" s WHERE s.workflow_id = w.id AND s.position = w.current_step_index LIMIT 1) AS active_role
-      FROM "approval_workflow" w
-      INNER JOIN "bom_revision" r2 ON r2.id = w.revision_id
-      WHERE r2.project_id = p.id AND w.status <> 'cancelled'
-      ORDER BY w.requested_at DESC LIMIT 1
-    ) wf ON TRUE
+      SELECT COUNT(l.*) AS line_count
+      FROM "bom" b
+      INNER JOIN "bom_revision" r ON r.bom_id = b.id
+      LEFT JOIN "bom_line" l ON l.revision_id = r.id
+      WHERE b.project_id = p.id AND b.deleted_at IS NULL AND r.status <> 'locked'
+    ) line_stats ON TRUE
+    LEFT JOIN LATERAL (
+      SELECT r.letter
+      FROM "bom" b
+      INNER JOIN "bom_revision" r ON r.bom_id = b.id
+      WHERE b.project_id = p.id AND b.deleted_at IS NULL AND r.status <> 'locked'
+      ORDER BY r.created_at DESC LIMIT 1
+    ) latest ON TRUE
     WHERE p.deleted_at IS NULL
     ORDER BY p.updated_at DESC
   `).then(r => r as unknown as Array<{
-    id: string; code: string; name: string; status: string;
+    id: string; code: string; name: string;
     updatedAt: Date; targetDate: string | null;
-    ownerName: string | null; revLetter: string | null;
+    ownerName: string | null;
+    bomCount: number;
     lineCount: number;
-    workflowStatus: "pending" | "approved" | "rejected" | null;
-    workflowActiveRole: string | null;
+    revLetter: string | null;
   }>);
 }
 
@@ -72,13 +74,7 @@ export async function getProject(id: string) {
     .where(and(eq(projects.id, id), sql`${projects.deletedAt} IS NULL`))
     .limit(1);
   if (!p) return null;
-  const [rev] = await db
-    .select({ id: bomRevisions.id, letter: bomRevisions.letter, status: bomRevisions.status })
-    .from(bomRevisions)
-    .where(and(eq(bomRevisions.projectId, p.id), sql`${bomRevisions.status} <> 'locked'`))
-    .orderBy(desc(bomRevisions.createdAt))
-    .limit(1);
-  return { ...p, activeRevisionId: rev?.id ?? null, activeRevisionLetter: rev?.letter ?? null };
+  return p;
 }
 
 export type ActiveRevision = {
@@ -95,7 +91,7 @@ export type ActiveRevision = {
   parentLetter: string | null;
 };
 
-export async function getActiveRevision(projectId: string): Promise<ActiveRevision | null> {
+export async function getActiveRevision(bomId: string): Promise<ActiveRevision | null> {
   await requireSession();
   const ownerUser = aliasedTable(user, "owner_user");
   const committedByUser = aliasedTable(user, "committed_by_user");
@@ -115,17 +111,16 @@ export async function getActiveRevision(projectId: string): Promise<ActiveRevisi
       parentLetter: parent.letter,
     })
     .from(bomRevisions)
-    .innerJoin(projects, eq(projects.id, bomRevisions.projectId))
     .leftJoin(ownerUser, eq(ownerUser.id, bomRevisions.ownerId))
     .leftJoin(committedByUser, eq(committedByUser.id, bomRevisions.committedById))
     .leftJoin(parent, eq(parent.id, bomRevisions.parentRevisionId))
-    .where(and(eq(projects.id, projectId), sql`${bomRevisions.status} <> 'locked'`))
+    .where(and(eq(bomRevisions.bomId, bomId), sql`${bomRevisions.status} <> 'locked'`))
     .orderBy(desc(bomRevisions.createdAt))
     .limit(1);
   return (row as ActiveRevision | undefined) ?? null;
 }
 
-export async function getLatestProcurementRevision(projectId: string) {
+export async function getLatestProcurementRevision(bomId: string) {
   await requireSession();
   const [row] = await db
     .select({
@@ -135,7 +130,7 @@ export async function getLatestProcurementRevision(projectId: string) {
     })
     .from(bomRevisions)
     .where(and(
-      eq(bomRevisions.projectId, projectId),
+      eq(bomRevisions.bomId, bomId),
       ne(bomRevisions.status, "draft"),
     ))
     .orderBy(desc(bomRevisions.createdAt))
@@ -143,16 +138,16 @@ export async function getLatestProcurementRevision(projectId: string) {
   return row ?? null;
 }
 
-export async function hasOpenDraftForProject(projectId: string, excludeRevisionId?: string) {
+export async function hasOpenDraftForBom(bomId: string, excludeRevisionId?: string) {
   await requireSession();
   const where = excludeRevisionId
     ? and(
-        eq(bomRevisions.projectId, projectId),
+        eq(bomRevisions.bomId, bomId),
         eq(bomRevisions.status, "draft"),
         ne(bomRevisions.id, excludeRevisionId),
       )
     : and(
-        eq(bomRevisions.projectId, projectId),
+        eq(bomRevisions.bomId, bomId),
         eq(bomRevisions.status, "draft"),
       );
   const [{ n }] = await db
@@ -195,4 +190,36 @@ export async function getSections(revisionId: string) {
     .from(bomSections)
     .where(eq(bomSections.revisionId, revisionId))
     .orderBy(asc(bomSections.position));
+}
+
+// Compatibility wrapper for any callers that still pass projectId.
+// Returns the most-recently-updated active revision across all of the project's BOMs.
+export async function getActiveRevisionForProject(projectId: string): Promise<ActiveRevision | null> {
+  await requireSession();
+  const ownerUser = aliasedTable(user, "owner_user");
+  const committedByUser = aliasedTable(user, "committed_by_user");
+  const parent = aliasedTable(bomRevisions, "parent_rev");
+  const [row] = await db
+    .select({
+      id: bomRevisions.id,
+      letter: bomRevisions.letter,
+      status: bomRevisions.status,
+      ownerId: bomRevisions.ownerId,
+      ownerName: ownerUser.name,
+      committedById: bomRevisions.committedById,
+      committedByName: committedByUser.name,
+      committedAt: bomRevisions.committedAt,
+      commitMessage: bomRevisions.commitMessage,
+      parentRevisionId: bomRevisions.parentRevisionId,
+      parentLetter: parent.letter,
+    })
+    .from(bomRevisions)
+    .innerJoin(boms, eq(boms.id, bomRevisions.bomId))
+    .leftJoin(ownerUser, eq(ownerUser.id, bomRevisions.ownerId))
+    .leftJoin(committedByUser, eq(committedByUser.id, bomRevisions.committedById))
+    .leftJoin(parent, eq(parent.id, bomRevisions.parentRevisionId))
+    .where(and(eq(boms.projectId, projectId), sql`${boms.deletedAt} IS NULL`, sql`${bomRevisions.status} <> 'locked'`))
+    .orderBy(desc(bomRevisions.createdAt))
+    .limit(1);
+  return (row as ActiveRevision | undefined) ?? null;
 }

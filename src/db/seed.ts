@@ -1,5 +1,5 @@
 import { db } from "./client";
-import { vendors, categories, subcategories, items, projects, bomRevisions, bomLines, user } from "./schema";
+import { vendors, categories, subcategories, items, projects, boms, bomRevisions, bomLines, user } from "./schema";
 import { sql, eq } from "drizzle-orm";
 import { env } from "@/lib/env";
 import { createUserDirect, findUserByEmail } from "@/server/lib/create-user-direct";
@@ -79,7 +79,7 @@ async function ensureRootUser() {
 }
 
 async function main() {
-  await db.execute(sql`TRUNCATE "bom_line", "bom_revision", "project", "item", "subcategory", "category", "vendor" RESTART IDENTITY CASCADE`);
+  await db.execute(sql`TRUNCATE "bom_line", "bom_revision", "bom", "project", "item", "subcategory", "category", "vendor" RESTART IDENTITY CASCADE`);
 
   const rootUserId = await ensureRootUser();
 
@@ -114,16 +114,17 @@ async function main() {
   );
 
   const inserted = await db.insert(projects).values([
-    { code: "NB-2412",  name: "Northstar Beacon v3.2",      ownerId: rootUserId, status: "in-progress", quantity: 50, targetDate: "2026-05-14" },
-    { code: "GW-2411",  name: "Gateway Hub Rev B",          ownerId: rootUserId, status: "review",      quantity: 25, targetDate: "2026-05-22" },
-    { code: "SN-2410",  name: "Sensor Node — Industrial",   ownerId: rootUserId, status: "approved",    quantity: 100, targetDate: "2026-04-30" },
-    { code: "PWR-2410", name: "Power Module 24V/5A",        ownerId: rootUserId, status: "in-progress", quantity: 40, targetDate: "2026-06-02" },
-    { code: "DBG-2409", name: "Debug Probe Rev 1.4",        ownerId: rootUserId, status: "approved",    quantity: 20, targetDate: "2026-04-12" },
-    { code: "RIO-2409", name: "Remote I/O Card",            ownerId: rootUserId, status: "draft",       quantity: 10, targetDate: "2026-07-18" },
+    { code: "NB-2412",  name: "Northstar Beacon v3.2",      ownerId: rootUserId, quantity: 50,  targetDate: "2026-05-14" },
+    { code: "GW-2411",  name: "Gateway Hub Rev B",          ownerId: rootUserId, quantity: 25,  targetDate: "2026-05-22" },
+    { code: "SN-2410",  name: "Sensor Node — Industrial",   ownerId: rootUserId, quantity: 100, targetDate: "2026-04-30" },
+    { code: "PWR-2410", name: "Power Module 24V/5A",        ownerId: rootUserId, quantity: 40,  targetDate: "2026-06-02" },
+    { code: "DBG-2409", name: "Debug Probe Rev 1.4",        ownerId: rootUserId, quantity: 20,  targetDate: "2026-04-12" },
+    { code: "RIO-2409", name: "Remote I/O Card",            ownerId: rootUserId, quantity: 10,  targetDate: "2026-07-18" },
   ]).returning();
 
   const beacon = inserted.find(p => p.code === "NB-2412")!;
-  const [revA] = await db.insert(bomRevisions).values({ projectId: beacon.id, letter: "A", status: "draft", ownerId: rootUserId }).returning();
+  const [beaconBom] = await db.insert(boms).values({ projectId: beacon.id, name: "Main BOM", ownerId: rootUserId }).returning();
+  const [revA] = await db.insert(bomRevisions).values({ bomId: beaconBom.id, letter: "A", status: "draft", ownerId: rootUserId }).returning();
 
   const initial: Array<[string, number]> = [
     ["MCU-STM32G0", 1], ["REG-AMS1117-5V", 2], ["CAP-0603-100N", 18], ["CAP-0805-10U", 6],

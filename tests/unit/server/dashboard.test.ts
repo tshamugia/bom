@@ -3,7 +3,7 @@ import { resetDb } from "@/../tests/test-helpers/db";
 import { mockSession } from "@/../tests/test-helpers/auth";
 import { db } from "@/db/client";
 import {
-  vendors, categories, items, projects, bomRevisions, bomLines,
+  vendors, categories, items, projects, boms, bomRevisions, bomLines,
   approvalWorkflows, approvalSteps, auditLog,
 } from "@/db/schema";
 import { getStats, getRecentActivity } from "@/server/queries/dashboard";
@@ -20,9 +20,10 @@ async function setup() {
   const [c] = await db.insert(categories).values({ name: "C" }).returning();
   const [it1] = await db.insert(items).values({ sku: "OK", description: "ok", manufacturer: "y", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null }).returning();
 
-  const [p1] = await db.insert(projects).values({ code: "A", name: "A", status: "in-progress" }).returning();
-  await db.insert(projects).values({ code: "B", name: "B", status: "approved" }).returning();
-  const [r1] = await db.insert(bomRevisions).values({ projectId: p1.id, letter: "A", status: "in-progress" }).returning();
+  const [p1] = await db.insert(projects).values({ code: "A", name: "A" }).returning();
+  await db.insert(projects).values({ code: "B", name: "B" }).returning();
+  const [b1] = await db.insert(boms).values({ projectId: p1.id, name: "Main BOM" }).returning();
+  const [r1] = await db.insert(bomRevisions).values({ bomId: b1.id, letter: "A", status: "in-progress" }).returning();
   await db.insert(bomLines).values({ revisionId: r1.id, itemId: it1.id, qty: 5, position: 0 });
 
   const [wf] = await db.insert(approvalWorkflows).values({ revisionId: r1.id, status: "pending", currentStepIndex: 0 }).returning();

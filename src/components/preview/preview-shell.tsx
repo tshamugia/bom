@@ -21,6 +21,8 @@ type Props = {
   projectOwner: string;
   projectTarget: string;
   projectQuantity: number;
+  bomId: string;
+  bomName: string;
   revisionId: string;
   revisionLetter: string;
   procurementRevision: { id: string; letter: string } | null;
@@ -54,11 +56,13 @@ export function PreviewShell(p: Props) {
     <>
       <div className="mb-5 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-[20px] font-semibold tracking-tight">Preview &amp; Generate</h1>
-          <p className="text-[13px] text-[var(--color-text-3)]">Review the generated document, then export to Excel for procurement.</p>
+          <h1 className="text-[20px] font-semibold tracking-tight">{p.bomName}</h1>
+          <p className="text-[13px] text-[var(--color-text-3)]">
+            {p.projectCode} · Preview &amp; export the latest revision.
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => router.push(`/builder/${p.projectId}`)}>
+          <Button variant="outline" onClick={() => router.push(`/builder/${p.projectId}/${p.bomId}`)}>
             <Icon.ArrowLeft size={14} className="mr-1.5" /> Back to builder
           </Button>
           <Button variant="outline" onClick={() => window.print()}>

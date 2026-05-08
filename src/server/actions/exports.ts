@@ -4,7 +4,7 @@ import { z } from "zod";
 import { asc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
-import { bomExports, bomLines, bomRevisions, bomSections, projects, user } from "@/db/schema";
+import { bomExports, bomLines, bomRevisions, bomSections, boms, projects, user } from "@/db/schema";
 import { requireSession } from "../auth-context";
 import { audit } from "../audit";
 import { buildBomWorkbook, type BomRow } from "@/lib/excel";
@@ -36,7 +36,9 @@ export async function generateExport(input: { revisionId: string; options: z.inf
       id: bomRevisions.id,
       letter: bomRevisions.letter,
       status: bomRevisions.status,
-      projectId: bomRevisions.projectId,
+      bomId: bomRevisions.bomId,
+      bomName: boms.name,
+      projectId: boms.projectId,
       projectCode: projects.code,
       projectName: projects.name,
       projectQty: projects.quantity,
@@ -44,7 +46,8 @@ export async function generateExport(input: { revisionId: string; options: z.inf
       ownerName: user.name,
     })
     .from(bomRevisions)
-    .innerJoin(projects, eq(projects.id, bomRevisions.projectId))
+    .innerJoin(boms, eq(boms.id, bomRevisions.bomId))
+    .innerJoin(projects, eq(projects.id, boms.projectId))
     .leftJoin(user, eq(user.id, projects.ownerId))
     .where(eq(bomRevisions.id, input.revisionId))
     .limit(1);
@@ -112,7 +115,7 @@ export async function generateExport(input: { revisionId: string; options: z.inf
   }).returning();
 
   revalidatePath("/history");
-  revalidatePath(`/preview/${rev.projectId}`);
+  revalidatePath(`/preview/${rev.projectId}/${rev.bomId}`);
   await audit({
     kind: "bom.export.generated",
     refType: "export", refId: row.id,

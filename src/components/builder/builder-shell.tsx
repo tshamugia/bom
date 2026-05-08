@@ -11,7 +11,9 @@ import { SummaryBar } from "./summary-bar";
 import { ColumnsMenu } from "./columns-menu";
 import { LayoutToggle } from "./layout-toggle";
 import { CsvImportDialog } from "./csv-import-dialog";
+import { DuplicateDialog } from "./duplicate-dialog";
 import { RevisionHeader } from "@/components/revisions/revision-header";
+import type { SwitcherBom } from "./bom-switcher";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
 import type { SectionInfo } from "./section-row";
@@ -22,6 +24,8 @@ type Props = {
   projectId: string;
   projectCode: string;
   projectName: string;
+  bomId: string;
+  bomName: string;
   revisionId: string;
   revision: {
     id: string;
@@ -41,6 +45,8 @@ type Props = {
   categoryCounts: Record<string, number>;
   lines: Line[];
   sections: SectionInfo[];
+  projectsForDuplicate: { id: string; code: string; name: string }[];
+  bomsInProject: SwitcherBom[];
 };
 
 export function BuilderShell(p: Props) {
@@ -56,12 +62,10 @@ export function BuilderShell(p: Props) {
     }
   });
 
-  // Derive: if the persisted/selected section no longer exists, ignore it.
   const activeSectionId = rawActiveSectionId && p.sections.some(s => s.id === rawActiveSectionId)
     ? rawActiveSectionId
     : null;
 
-  // Persist whenever the effective active section changes.
   useEffect(() => {
     try {
       if (activeSectionId) window.sessionStorage.setItem(storageKey, activeSectionId);
@@ -69,8 +73,6 @@ export function BuilderShell(p: Props) {
     } catch {}
   }, [storageKey, activeSectionId]);
 
-  // Map BOM lines back to catalog item ids via SKU lookup, so SearchAddCombo
-  // can mark them as "In BOM".
   const lineCatalogIds = useMemo(() => {
     const skuSet = new Set(p.lines.map(l => l.sku));
     return new Set(p.catalog.filter(c => skuSet.has(c.sku)).map(c => c.id));
@@ -86,6 +88,8 @@ export function BuilderShell(p: Props) {
         projectId={p.projectId}
         projectCode={p.projectCode}
         projectName={p.projectName}
+        bomId={p.bomId}
+        bomName={p.bomName}
         revision={p.revision}
         preflight={{
           lineCount: p.lines.length,
@@ -93,11 +97,20 @@ export function BuilderShell(p: Props) {
           hasZeroQty: p.lines.some(l => l.qty === 0),
         }}
         hasOpenDraft={p.hasOpenDraft}
+        bomsInProject={p.bomsInProject}
       />
       <div className="mb-5 flex items-center justify-end gap-2">
         <LayoutToggle />
-        <Button variant="outline"><Icon.Copy size={14} className="mr-1.5" /> Duplicate</Button>
-        <Button onClick={() => router.push(`/preview/${p.projectId}`)}><Icon.Eye size={14} className="mr-1.5" /> Preview</Button>
+        <DuplicateDialog
+          sourceBomId={p.bomId}
+          sourceBomName={p.bomName}
+          sourceProjectId={p.projectId}
+          sourceRevisionId={p.revisionId}
+          projects={p.projectsForDuplicate}
+        />
+        <Button onClick={() => router.push(`/preview/${p.projectId}/${p.bomId}`)}>
+          <Icon.Eye size={14} className="mr-1.5" /> Preview
+        </Button>
       </div>
 
       <div className={layout === "stacked" ? "block" : "grid grid-cols-[248px_1fr] items-start gap-4"}>

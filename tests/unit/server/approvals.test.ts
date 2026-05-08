@@ -3,7 +3,7 @@ import { resetDb } from "@/../tests/test-helpers/db";
 import { mockSession } from "@/../tests/test-helpers/auth";
 import { db } from "@/db/client";
 import { eq } from "drizzle-orm";
-import { items, vendors, categories, projects, bomRevisions, bomLines, approvalWorkflows, approvalSteps } from "@/db/schema";
+import { items, vendors, categories, projects, boms, bomRevisions, bomLines, approvalWorkflows, approvalSteps } from "@/db/schema";
 import { requestApproval, approveStep, rejectStep } from "@/server/actions/approvals";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -17,10 +17,11 @@ async function setup() {
   const [v] = await db.insert(vendors).values({ name: "M", code: "M", country: "US", leadTime: "3d", rating: 4, status: "approved" }).returning();
   const [c] = await db.insert(categories).values({ name: "C" }).returning();
   const [it] = await db.insert(items).values({ sku: "X", description: "x", manufacturer: "Y", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null }).returning();
-  const [p] = await db.insert(projects).values({ code: "P", name: "P", status: "in-progress" }).returning();
-  const [r] = await db.insert(bomRevisions).values({ projectId: p.id, letter: "A", status: "committed" }).returning();
+  const [p] = await db.insert(projects).values({ code: "P", name: "P" }).returning();
+  const [b] = await db.insert(boms).values({ projectId: p.id, name: "Main BOM" }).returning();
+  const [r] = await db.insert(bomRevisions).values({ bomId: b.id, letter: "A", status: "committed" }).returning();
   await db.insert(bomLines).values({ revisionId: r.id, itemId: it.id, qty: 1, position: 0 });
-  return { projectId: p.id, revisionId: r.id, userId: u.id };
+  return { projectId: p.id, bomId: b.id, revisionId: r.id, userId: u.id };
 }
 
 test("requestApproval creates a workflow with three default steps", async () => {
@@ -33,8 +34,8 @@ test("requestApproval creates a workflow with three default steps", async () => 
   expect(active.status).toBe("active");
 });
 
-test("approveStep advances the workflow and the last step approves the project", async () => {
-  const { revisionId, projectId } = await setup();
+test("approveStep advances the workflow and the last step locks the revision", async () => {
+  const { revisionId } = await setup();
   const w = await requestApproval({ revisionId });
 
   await approveStep({ workflowId: w.id });
@@ -46,9 +47,6 @@ test("approveStep advances the workflow and the last step approves the project",
   await approveStep({ workflowId: w.id });
   updated = (await db.select().from(approvalWorkflows).where(eq(approvalWorkflows.id, w.id)))[0];
   expect(updated.status).toBe("approved");
-
-  const [proj] = await db.select().from(projects).where(eq(projects.id, projectId));
-  expect(proj.status).toBe("approved");
 
   const [rev] = await db.select().from(bomRevisions).where(eq(bomRevisions.id, revisionId));
   expect(rev.status).toBe("locked");
@@ -67,14 +65,14 @@ test("requestApproval rejects a locked revision", async () => {
   await expect(requestApproval({ revisionId })).rejects.toThrow(/NOT_COMMITTED/);
 });
 
-test("rejectStep ends the workflow and sets project back to in-progress", async () => {
-  const { revisionId, projectId } = await setup();
+test("rejectStep ends the workflow and sets revision back to in-progress", async () => {
+  const { revisionId } = await setup();
   const w = await requestApproval({ revisionId });
   await rejectStep({ workflowId: w.id, note: "needs work" });
 
   const [updated] = await db.select().from(approvalWorkflows).where(eq(approvalWorkflows.id, w.id));
   expect(updated.status).toBe("rejected");
 
-  const [proj] = await db.select().from(projects).where(eq(projects.id, projectId));
-  expect(proj.status).toBe("in-progress");
+  const [rev] = await db.select().from(bomRevisions).where(eq(bomRevisions.id, revisionId));
+  expect(rev.status).toBe("in-progress");
 });

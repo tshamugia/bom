@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { signOut } from "@/lib/auth-client";
+import { usePathname } from "next/navigation";
 import { Icon } from "@/components/icons";
 import { CommandPalette } from "./command-palette";
 
 const CRUMBS: Record<string, [string, string]> = {
   "/dashboard": ["Workspace", "Dashboard"],
+  "/projects": ["Workspace", "Projects"],
   "/builder": ["Workspace", "BOM Builder"],
   "/preview": ["Workspace", "Preview & Generate"],
   "/history": ["Workspace", "History"],
@@ -15,34 +14,13 @@ const CRUMBS: Record<string, [string, string]> = {
   "/vendors": ["Master Data", "Vendors"],
   "/approvals": ["Process", "Approvals"],
   "/users": ["Admin", "Users"],
+  "/settings": ["Account", "Settings"],
 };
 
-export function Topbar({ user }: { user: { name: string; email: string; role: string } }) {
+export function Topbar() {
   const path = usePathname();
-  const router = useRouter();
-  const key = Object.keys(CRUMBS).find(k => path === k || path.startsWith(`${k}/`)) ?? "/dashboard";
+  const key = Object.keys(CRUMBS).find(k => path === k || path.startsWith(`${k}/`)) ?? "/projects";
   const [section, here] = CRUMBS[key];
-
-  const [open, setOpen] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function onClick(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    if (open) document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, [open]);
-
-  async function handleSignOut() {
-    setSigningOut(true);
-    await signOut();
-    router.push("/sign-in");
-    router.refresh();
-  }
-
-  const initials = user.name.split(" ").map(s => s[0]).join("").slice(0, 2).toUpperCase();
 
   return (
     <header
@@ -68,42 +46,6 @@ export function Topbar({ user }: { user: { name: string; email: string; role: st
             style={{ background: "var(--color-danger)" }}
           />
         </button>
-
-        <div className="relative" ref={menuRef}>
-          <button
-            aria-label="User menu"
-            aria-haspopup="menu"
-            aria-expanded={open}
-            onClick={() => setOpen(o => !o)}
-            className="grid h-8 w-8 place-items-center rounded-full text-[12px] font-semibold text-white"
-            style={{ background: "linear-gradient(135deg, var(--color-cat-indigo) 0%, var(--color-cat-violet) 100%)" }}
-          >
-            {initials}
-          </button>
-          {open && (
-            <div
-              role="menu"
-              className="absolute right-0 top-9 z-30 w-56 overflow-hidden rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]"
-            >
-              <div className="border-b border-[var(--color-line)] px-3 py-2.5">
-                <div className="truncate text-[13px] font-semibold text-[var(--color-text)]">{user.name}</div>
-                <div className="truncate text-[11.5px] text-[var(--color-text-3)]">{user.email}</div>
-                <div className="mt-1 inline-block rounded bg-[var(--color-surface-2)] px-1.5 py-0.5 text-[10.5px] font-medium uppercase tracking-wide text-[var(--color-text-2)]">
-                  {user.role}
-                </div>
-              </div>
-              <button
-                role="menuitem"
-                onClick={handleSignOut}
-                disabled={signingOut}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-[var(--color-text)] hover:bg-[var(--color-surface-2)] disabled:opacity-50"
-              >
-                <Icon.LogOut size={14} />
-                {signingOut ? "Signing out…" : "Sign out"}
-              </button>
-            </div>
-          )}
-        </div>
       </div>
     </header>
   );

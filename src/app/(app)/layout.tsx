@@ -13,9 +13,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="grid min-h-screen grid-cols-[224px_1fr] bg-[var(--color-bg)]">
-      <Sidebar user={{ name: session.user.name, role }} />
+      <Sidebar user={{ name: session.user.name, email: session.user.email, role }} />
       <div className="flex min-h-screen min-w-0 flex-col">
-        <Topbar user={{ name: session.user.name, email: session.user.email, role }} />
+        <Topbar />
         <div className="min-w-0 flex-1 p-6">{children}</div>
       </div>
       <Toaster />

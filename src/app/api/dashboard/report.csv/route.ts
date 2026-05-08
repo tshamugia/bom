@@ -13,14 +13,21 @@ export async function GET() {
   lines.push(`Approvals pending,${stats.approvalsPending}`);
   lines.push(`Avg. lead time (days),${stats.avgLeadTimeDays}`);
   lines.push("");
-  lines.push("Project code,Project name,Lines,Status,Updated,Target");
-  for (const p of projects as any[]) {
+  lines.push("Project code,Project name,BOMs,Lines,Updated,Target");
+  for (const p of projects as Array<{
+    code: string;
+    name: string;
+    bomCount: number;
+    lineCount: number;
+    updatedAt: Date | string;
+    targetDate: string | null;
+  }>) {
     const safe = (s: string | null | undefined) => `"${(s ?? "").replace(/"/g, '""')}"`;
     lines.push([
       safe(p.code),
       safe(p.name),
+      p.bomCount,
       p.lineCount,
-      safe(p.status),
       safe(new Date(p.updatedAt).toISOString()),
       safe(p.targetDate),
     ].join(","));

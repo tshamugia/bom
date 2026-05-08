@@ -6,13 +6,6 @@ export const vendorStatusEnum = pgEnum("vendor_status", [
   "review",
 ]);
 
-export const projectStatusEnum = pgEnum("project_status", [
-  "draft",
-  "in-progress",
-  "review",
-  "approved",
-]);
-
 export const revisionStatusEnum = pgEnum("revision_status", [
   "draft",
   "committed",

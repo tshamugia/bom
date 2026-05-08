@@ -9,8 +9,12 @@ export async function getStats() {
   await requireSession();
   const [stats] = await db.execute(sql/* sql */`
     SELECT
-      (SELECT COUNT(*)::int FROM "bom_revision" r
-       WHERE r.status NOT IN ('locked'))
+      (SELECT COUNT(*)::int FROM "bom" b
+       WHERE b.deleted_at IS NULL
+         AND EXISTS (
+           SELECT 1 FROM "bom_revision" r
+           WHERE r.bom_id = b.id AND r.status <> 'locked'
+         ))
         AS "activeBoms",
       (SELECT COUNT(*)::int FROM "approval_workflow" w
        WHERE w.status = 'pending')
@@ -28,12 +32,10 @@ export async function getStats() {
       COUNT(*) FILTER (
         WHERE p.target_date IS NOT NULL
           AND p.target_date <= (CURRENT_DATE + INTERVAL '14 days')
-          AND p.status <> 'approved'
       )::int AS "upcoming",
       COUNT(*) FILTER (
         WHERE p.target_date IS NOT NULL
           AND p.target_date < CURRENT_DATE
-          AND p.status <> 'approved'
       )::int AS "overdue"
     FROM "project" p
     WHERE p.deleted_at IS NULL
@@ -51,18 +53,17 @@ export async function getStats() {
 export async function getUpcomingDeadlines(limit = 5) {
   await requireSession();
   return db.execute(sql/* sql */`
-    SELECT p.id, p.code, p.name, p.target_date AS "targetDate", p.status,
+    SELECT p.id, p.code, p.name, p.target_date AS "targetDate",
       u.name AS "ownerName"
     FROM "project" p
     LEFT JOIN "user" u ON u.id = p.owner_id
     WHERE p.deleted_at IS NULL
       AND p.target_date IS NOT NULL
-      AND p.status <> 'approved'
     ORDER BY p.target_date ASC
     LIMIT ${limit}
   `).then(r => r as unknown as Array<{
     id: string; code: string; name: string;
-    targetDate: string; status: string; ownerName: string | null;
+    targetDate: string; ownerName: string | null;
   }>);
 }
 

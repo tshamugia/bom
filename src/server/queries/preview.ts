@@ -2,23 +2,26 @@ import "server-only";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { user } from "@/db/schema";
-import { listProjects, getProject, getActiveRevision, getLines } from "./projects";
+import { getProject, getActiveRevision, getLines } from "./projects";
+import { getBom, listBomsByProject, listProjectsForPicker } from "./boms";
 import { getForProject } from "./approvals";
 
-export type PreviewProject = { id: string; code: string; name: string };
+export type PreviewProjectOption = { id: string; code: string; name: string };
+export type PreviewBomOption = { id: string; name: string };
 
-export async function loadPreview(projectId?: string) {
-  const projects = await listProjects();
-  if (projects.length === 0) return { kind: "no-projects" as const };
-
-  const target = projectId ? projects.find(p => p.id === projectId) : projects[0];
-  if (!target) return { kind: "not-found" as const };
-
-  const project = await getProject(target.id);
+export async function loadPreviewForBom(projectId: string, bomId: string) {
+  const project = await getProject(projectId);
   if (!project) return { kind: "not-found" as const };
 
-  const rev = await getActiveRevision(project.id);
-  const switcher: PreviewProject[] = projects.map(p => ({ id: p.id, code: p.code, name: p.name }));
+  const bom = await getBom(bomId);
+  if (!bom || bom.projectId !== project.id) return { kind: "not-found" as const };
+
+  const rev = await getActiveRevision(bom.id);
+
+  const [projectsList, bomsList] = await Promise.all([
+    listProjectsForPicker(),
+    listBomsByProject(project.id),
+  ]);
 
   let ownerName = "—";
   if (project.ownerId) {
@@ -26,14 +29,21 @@ export async function loadPreview(projectId?: string) {
     ownerName = owner?.name ?? "—";
   }
 
-  if (!rev) return { kind: "no-revision" as const, project, projects: switcher, ownerName };
+  const projectOptions: PreviewProjectOption[] = projectsList.map(p => ({ id: p.id, code: p.code, name: p.name }));
+  const bomOptions: PreviewBomOption[] = bomsList.map(b => ({ id: b.id, name: b.name }));
+
+  if (!rev) {
+    return { kind: "no-revision" as const, project, bom, projects: projectOptions, boms: bomOptions, ownerName };
+  }
 
   const [lines, workflow] = await Promise.all([getLines(rev.id), getForProject(project.id)]);
 
   return {
     kind: "ok" as const,
     project,
-    projects: switcher,
+    bom,
+    projects: projectOptions,
+    boms: bomOptions,
     rev,
     lines,
     workflow,

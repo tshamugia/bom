@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { resetDb } from "@/../tests/test-helpers/db";
 import { mockSession } from "@/../tests/test-helpers/auth";
 import { db } from "@/db/client";
-import { items, vendors, categories, projects, bomRevisions, bomLines } from "@/db/schema";
+import { items, vendors, categories, projects, boms, bomRevisions, bomLines } from "@/db/schema";
 import { generateExport } from "@/server/actions/exports";
 import { listExports } from "@/server/queries/exports";
 
@@ -28,8 +28,9 @@ async function setup() {
   const [c] = await db.insert(categories).values({ name: "C" }).returning();
   const [it] = await db.insert(items).values({ sku: "X-1", description: "x", manufacturer: "Y", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null }).returning();
 
-  const [p] = await db.insert(projects).values({ code: "TST", name: "Test", status: "in-progress", quantity: 5 }).returning();
-  const [r] = await db.insert(bomRevisions).values({ projectId: p.id, letter: "A", status: "in-progress" }).returning();
+  const [p] = await db.insert(projects).values({ code: "TST", name: "Test", quantity: 5 }).returning();
+  const [b] = await db.insert(boms).values({ projectId: p.id, name: "Main BOM" }).returning();
+  const [r] = await db.insert(bomRevisions).values({ bomId: b.id, letter: "A", status: "in-progress" }).returning();
   await db.insert(bomLines).values({
     revisionId: r.id,
     itemId: it.id,

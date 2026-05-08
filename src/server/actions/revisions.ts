@@ -4,10 +4,11 @@ import { z } from "zod";
 import { and, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
-import { bomLines, bomRevisions, bomSections, items, vendors } from "@/db/schema";
+import { boms, bomRevisions, bomLines } from "@/db/schema";
 import { requireSession } from "../auth-context";
 import { audit } from "../audit";
 import { isRevisionImmutable } from "../lib/revision-status";
+import { copyRevisionContentRefreshed } from "../lib/copy-revision";
 
 async function loadRevision(revisionId: string) {
   await requireSession();
@@ -16,9 +17,11 @@ async function loadRevision(revisionId: string) {
       id: bomRevisions.id,
       status: bomRevisions.status,
       letter: bomRevisions.letter,
-      projectId: bomRevisions.projectId,
+      bomId: bomRevisions.bomId,
+      projectId: boms.projectId,
     })
     .from(bomRevisions)
+    .innerJoin(boms, eq(boms.id, bomRevisions.bomId))
     .where(eq(bomRevisions.id, revisionId))
     .limit(1);
   if (!row) throw new Error("REVISION_NOT_FOUND");
@@ -53,15 +56,16 @@ export async function commitRevision(input: z.infer<typeof CommitInput>) {
     })
     .where(eq(bomRevisions.id, revisionId));
 
-  revalidatePath(`/builder/${rev.projectId}`);
+  revalidatePath(`/builder/${rev.projectId}/${rev.bomId}`);
   revalidatePath(`/projects/${rev.projectId}/history`);
+  revalidatePath(`/projects/${rev.projectId}`);
   revalidatePath("/dashboard");
   await audit({
     kind: "bom.revision.committed",
-    refType: "project",
-    refId: rev.projectId,
+    refType: "bom",
+    refId: rev.bomId,
     summary: `Rev ${rev.letter} committed`,
-    payload: { revisionId, letter: rev.letter, commitMessage: commitMessage ?? null },
+    payload: { revisionId, letter: rev.letter, projectId: rev.projectId, commitMessage: commitMessage ?? null },
   });
 }
 
@@ -91,89 +95,39 @@ export async function branchRevision(input: z.infer<typeof BranchInput>): Promis
   const [{ draftCount }] = await db
     .select({ draftCount: count() })
     .from(bomRevisions)
-    .where(and(eq(bomRevisions.projectId, parent.projectId), eq(bomRevisions.status, "draft")));
+    .where(and(eq(bomRevisions.bomId, parent.bomId), eq(bomRevisions.status, "draft")));
   if (draftCount > 0) throw new Error("DRAFT_ALREADY_EXISTS");
 
   const session = await requireSession();
   const existing = await db
     .select({ letter: bomRevisions.letter })
     .from(bomRevisions)
-    .where(eq(bomRevisions.projectId, parent.projectId));
+    .where(eq(bomRevisions.bomId, parent.bomId));
   const letter = nextLetter(existing.map(e => e.letter));
 
   const newId = await db.transaction(async tx => {
     const [child] = await tx.insert(bomRevisions).values({
-      projectId: parent.projectId,
+      bomId: parent.bomId,
       parentRevisionId: parent.id,
       letter,
       status: "draft",
       ownerId: session.user.id,
     }).returning();
 
-    const parentSections = await tx
-      .select()
-      .from(bomSections)
-      .where(eq(bomSections.revisionId, parent.id));
-
-    const sectionIdMap = new Map<string, string>();
-    for (const s of parentSections) {
-      const [created] = await tx.insert(bomSections).values({
-        revisionId: child.id,
-        sectionKey: s.sectionKey,
-        name: s.name,
-        position: s.position,
-      }).returning();
-      sectionIdMap.set(s.id, created.id);
-    }
-
-    const parentLines = await tx
-      .select({
-        sectionId: bomLines.sectionId,
-        itemId: bomLines.itemId,
-        qty: bomLines.qty,
-        position: bomLines.position,
-      })
-      .from(bomLines)
-      .where(eq(bomLines.revisionId, parent.id));
-
-    for (const l of parentLines) {
-      const [item] = await tx
-        .select({
-          sku: items.sku, description: items.description,
-          manufacturer: items.manufacturer, unit: items.unit, vendorId: items.vendorId,
-        })
-        .from(items)
-        .where(eq(items.id, l.itemId))
-        .limit(1);
-      if (!item) continue;
-      const [vendor] = item.vendorId
-        ? await tx.select({ name: vendors.name }).from(vendors).where(eq(vendors.id, item.vendorId)).limit(1)
-        : [];
-      await tx.insert(bomLines).values({
-        revisionId: child.id,
-        sectionId: l.sectionId ? sectionIdMap.get(l.sectionId) ?? null : null,
-        itemId: l.itemId,
-        qty: l.qty,
-        skuSnapshot: item.sku,
-        descriptionSnapshot: item.description,
-        manufacturerSnapshot: item.manufacturer,
-        unitSnapshot: item.unit,
-        vendorNameSnapshot: vendor?.name ?? null,
-        position: l.position,
-      });
-    }
+    await copyRevisionContentRefreshed(tx, parent.id, child.id);
     return child.id;
   });
 
-  revalidatePath(`/builder/${parent.projectId}`);
+  revalidatePath(`/builder/${parent.projectId}/${parent.bomId}`);
   revalidatePath(`/projects/${parent.projectId}/history`);
+  revalidatePath(`/projects/${parent.projectId}`);
   revalidatePath("/dashboard");
   await audit({
     kind: "bom.revision.branched",
-    refType: "project",
-    refId: parent.projectId,
+    refType: "bom",
+    refId: parent.bomId,
     summary: `Rev ${letter} branched from Rev ${parent.letter}`,
-    payload: { parentRevisionId: parent.id, newRevisionId: newId, letter },
+    payload: { parentRevisionId: parent.id, newRevisionId: newId, letter, projectId: parent.projectId },
   });
   return newId;
 }
@@ -187,14 +141,15 @@ export async function discardDraft(input: z.infer<typeof DiscardInput>) {
 
   await db.delete(bomRevisions).where(eq(bomRevisions.id, revisionId));
 
-  revalidatePath(`/builder/${rev.projectId}`);
+  revalidatePath(`/builder/${rev.projectId}/${rev.bomId}`);
   revalidatePath(`/projects/${rev.projectId}/history`);
+  revalidatePath(`/projects/${rev.projectId}`);
   revalidatePath("/dashboard");
   await audit({
     kind: "bom.revision.discarded",
-    refType: "project",
-    refId: rev.projectId,
+    refType: "bom",
+    refId: rev.bomId,
     summary: `Rev ${rev.letter} draft discarded`,
-    payload: { revisionId, letter: rev.letter },
+    payload: { revisionId, letter: rev.letter, projectId: rev.projectId },
   });
 }

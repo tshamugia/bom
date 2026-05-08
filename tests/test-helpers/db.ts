@@ -4,7 +4,7 @@ import { user } from "@/db/schema";
 import { createId } from "@paralleldrive/cuid2";
 
 export async function resetDb() {
-  await db.execute(sql`TRUNCATE "bom_line", "bom_section", "bom_revision", "project", "item", "subcategory", "category", "vendor", "audit_log", "session", "account", "verification", "user" RESTART IDENTITY CASCADE`);
+  await db.execute(sql`TRUNCATE "bom_line", "bom_section", "bom_revision", "bom", "project", "item", "subcategory", "category", "vendor", "audit_log", "session", "account", "verification", "user" RESTART IDENTITY CASCADE`);
 }
 
 export async function ensureUser(role: "owner" | "admin" | "member" = "owner") {

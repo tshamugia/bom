@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { resetDb } from "@/../tests/test-helpers/db";
 import { mockSession } from "@/../tests/test-helpers/auth";
 import { db } from "@/db/client";
-import { items, vendors, categories, projects, bomRevisions } from "@/db/schema";
+import { items, vendors, categories, projects, boms, bomRevisions } from "@/db/schema";
 import { addLine } from "@/server/actions/bom-lines";
 import { commitRevision, branchRevision, discardDraft } from "@/server/actions/revisions";
 import { bomLines as bomLinesT, bomSections as bomSectionsT } from "@/db/schema";
@@ -20,9 +20,10 @@ async function setup() {
   const [v] = await db.insert(vendors).values({ name: "V", code: "V", country: "US", leadTime: "3d", rating: 4, status: "approved" }).returning();
   const [c] = await db.insert(categories).values({ name: "C" }).returning();
   const [it] = await db.insert(items).values({ sku: "S", description: "d", manufacturer: "m", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null }).returning();
-  const [p] = await db.insert(projects).values({ code: "P1", name: "P1", status: "draft" }).returning();
-  const [r] = await db.insert(bomRevisions).values({ projectId: p.id, letter: "A", status: "draft", ownerId: u.id }).returning();
-  return { projectId: p.id, revisionId: r.id, it, userId: u.id };
+  const [p] = await db.insert(projects).values({ code: "P1", name: "P1" }).returning();
+  const [b] = await db.insert(boms).values({ projectId: p.id, name: "Main BOM" }).returning();
+  const [r] = await db.insert(bomRevisions).values({ bomId: b.id, letter: "A", status: "draft", ownerId: u.id }).returning();
+  return { projectId: p.id, bomId: b.id, revisionId: r.id, it, userId: u.id };
 }
 
 test("commitRevision flips status to committed and stamps author + timestamp + message", async () => {

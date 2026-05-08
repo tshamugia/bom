@@ -12,6 +12,7 @@ type Row = {
   status: "exported" | "archived" | "failed";
   projectCode: string;
   projectName: string;
+  bomName?: string | null;
   revisionLetter: string;
 };
 
@@ -31,10 +32,20 @@ export function HistoryTable({ rows }: { rows: Row[] }) {
           </tr>
         </thead>
         <tbody>
+          {rows.length === 0 && (
+            <tr>
+              <td colSpan={7} className="px-4 py-12 text-center text-[var(--color-text-3)]">
+                <div className="text-[13px]">No exports yet</div>
+                <div className="mt-1 text-[12px]">
+                  Generate an Excel BOM from the Preview page to see it listed here.
+                </div>
+              </td>
+            </tr>
+          )}
           {rows.map(r => (
             <tr key={r.id} className="border-b border-[var(--color-line-soft)] last:border-0 hover:bg-[var(--color-surface-2)]">
               <td className="px-4 py-2.5">
-                <div className="font-medium">{r.projectName}</div>
+                <div className="font-medium">{r.bomName ?? r.projectName}</div>
                 <div className="font-mono text-[11px] text-[var(--color-text-3)]">{r.projectCode} · Rev. {r.revisionLetter}</div>
               </td>
               <td className="px-4 py-2.5 text-[var(--color-text-3)]">{new Date(r.generatedAt).toLocaleString()}</td>

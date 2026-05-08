@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { resetDb } from "@/../tests/test-helpers/db";
 import { mockSession } from "@/../tests/test-helpers/auth";
 import { db } from "@/db/client";
-import { items, vendors, categories, projects, bomRevisions, bomLines, bomSections } from "@/db/schema";
+import { items, vendors, categories, projects, boms, bomRevisions, bomLines, bomSections } from "@/db/schema";
 import { createSection, renameSection } from "@/server/actions/bom-sections";
 import { addLine, updateLineQty, removeLine } from "@/server/actions/bom-lines";
 import { commitRevision, branchRevision } from "@/server/actions/revisions";
@@ -24,9 +24,10 @@ async function seed() {
   const a = await it("A", v1.id);
   const b = await it("B", v1.id);
   const cItem = await it("C", v2.id);
-  const [p] = await db.insert(projects).values({ code: "P", name: "P", status: "draft" }).returning();
-  const [r] = await db.insert(bomRevisions).values({ projectId: p.id, letter: "A", status: "draft", ownerId: u.id }).returning();
-  return { projectId: p.id, leftId: r.id, a, b, c: cItem, v2 };
+  const [p] = await db.insert(projects).values({ code: "P", name: "P" }).returning();
+  const [bom] = await db.insert(boms).values({ projectId: p.id, name: "Main BOM" }).returning();
+  const [r] = await db.insert(bomRevisions).values({ bomId: bom.id, letter: "A", status: "draft", ownerId: u.id }).returning();
+  return { projectId: p.id, bomId: bom.id, leftId: r.id, a, b, c: cItem, v2 };
 }
 
 test("diff: added line shows up under added", async () => {

@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { listProjects } from "@/server/queries/projects";
 import { PageHead } from "@/components/master/page-head";
-import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/icons";
-import { Badge } from "@/components/ui/badge";
 import { ProjectRowActions } from "@/components/projects/project-row-actions";
+import { NewProjectDialog } from "@/components/projects/new-project-dialog";
 
 export default async function ProjectsListPage() {
   const list = await listProjects();
@@ -12,12 +10,8 @@ export default async function ProjectsListPage() {
     <>
       <PageHead
         title="Projects"
-        subtitle="Owner, deadlines, and lifecycle."
-        actions={
-          <Link href="/builder">
-            <Button><Icon.Plus size={14} className="mr-1.5" /> New BOM</Button>
-          </Link>
-        }
+        subtitle="Owner, deadlines, and BOMs."
+        actions={<NewProjectDialog />}
       />
       <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
         <table className="w-full text-[12.5px]">
@@ -25,7 +19,7 @@ export default async function ProjectsListPage() {
             <tr className="bg-[var(--color-surface-2)] text-[11px] uppercase tracking-wider text-[var(--color-text-3)]">
               <th className="px-4 py-2.5 text-left font-medium">Project</th>
               <th className="px-4 py-2.5 text-left font-medium">Owner</th>
-              <th className="px-4 py-2.5 text-left font-medium">Status</th>
+              <th className="px-4 py-2.5 text-right font-medium">BOMs</th>
               <th className="px-4 py-2.5 text-left font-medium">Due</th>
               <th className="px-4 py-2.5 text-right font-medium">Lines</th>
               <th />
@@ -48,13 +42,7 @@ export default async function ProjectsListPage() {
                     </Link>
                   </td>
                   <td className="px-4 py-2.5">{p.ownerName ?? "—"}</td>
-                  <td className="px-4 py-2.5">
-                    {p.workflowStatus
-                      ? <Badge tone="success">Sent to procurement</Badge>
-                      : p.status === "in-progress"
-                        ? <Badge tone="warning">In progress</Badge>
-                        : <Badge tone="gray">{p.status}</Badge>}
-                  </td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">{p.bomCount}</td>
                   <td className="px-4 py-2.5 text-[var(--color-text-3)]">{p.targetDate ?? "—"}</td>
                   <td className="px-4 py-2.5 text-right tabular-nums">{p.lineCount}</td>
                   <td className="px-4 py-2.5 text-right">

@@ -17,7 +17,6 @@ export const ProjectPatch = z.object({
   quantity: z.number().int().positive().optional(),
   targetDate: z.string().nullable().optional(),
   ownerId: z.string().min(1).nullable().optional(),
-  status: z.enum(["draft", "in-progress", "review", "approved"]).optional(),
 });
 
 export type ProjectPatch = z.infer<typeof ProjectPatch>;

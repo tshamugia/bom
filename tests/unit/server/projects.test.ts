@@ -2,7 +2,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { resetDb } from "@/../tests/test-helpers/db";
 import { mockSession } from "@/../tests/test-helpers/auth";
 import { db } from "@/db/client";
-import { projects, bomRevisions, items, vendors, categories, bomLines } from "@/db/schema";
+import { projects, boms, bomRevisions, items, vendors, categories, bomLines } from "@/db/schema";
 import { listProjects, getProject, getLines } from "@/server/queries/projects";
 import { softDeleteProject, restoreProject } from "@/server/actions/projects";
 
@@ -21,26 +21,28 @@ async function setup() {
     vendorId: v.id, categoryId: c.id, subcategoryId: null,
   }).returning();
 
-  const [p] = await db.insert(projects).values({ code: "P-1", name: "Project One", status: "in-progress" }).returning();
-  const [r] = await db.insert(bomRevisions).values({ projectId: p.id, letter: "A", status: "in-progress" }).returning();
+  const [p] = await db.insert(projects).values({ code: "P-1", name: "Project One" }).returning();
+  const [b] = await db.insert(boms).values({ projectId: p.id, name: "Main BOM" }).returning();
+  const [r] = await db.insert(bomRevisions).values({ bomId: b.id, letter: "A", status: "in-progress" }).returning();
   await db.insert(bomLines).values({ revisionId: r.id, itemId: it.id, qty: 3, position: 0 });
 
-  return { projectId: p.id, revId: r.id };
+  return { projectId: p.id, bomId: b.id, revId: r.id };
 }
 
-test("listProjects returns the project with line count", async () => {
+test("listProjects returns the project with line count and bom count", async () => {
   const { projectId } = await setup();
   const list = await listProjects();
   expect(list).toHaveLength(1);
   expect(list[0].id).toBe(projectId);
   expect(list[0].lineCount).toBe(1);
+  expect(list[0].bomCount).toBe(1);
 });
 
-test("getProject hydrates project + active revision id", async () => {
-  const { projectId, revId } = await setup();
+test("getProject hydrates the project record", async () => {
+  const { projectId } = await setup();
   const p = await getProject(projectId);
   expect(p).not.toBeNull();
-  expect(p!.activeRevisionId).toBe(revId);
+  expect(p!.id).toBe(projectId);
 });
 
 test("getLines returns lines joined with item details", async () => {

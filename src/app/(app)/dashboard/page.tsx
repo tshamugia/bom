@@ -5,6 +5,7 @@ import { Icon } from "@/components/icons";
 import { StatTile } from "@/components/dashboard/stat-tile";
 import { ProjectsTable } from "@/components/dashboard/projects-table";
 import { ActivityTimeline } from "@/components/dashboard/activity-timeline";
+import { NewProjectDialog } from "@/components/projects/new-project-dialog";
 import Link from "next/link";
 
 export default async function DashboardPage() {
@@ -24,9 +25,7 @@ export default async function DashboardPage() {
             <Link href="/api/dashboard/report.csv">
               <Button variant="outline"><Icon.Download size={14} className="mr-1.5" /> Export report</Button>
             </Link>
-            <Link href="/builder">
-              <Button><Icon.Plus size={14} className="mr-1.5" /> New BOM</Button>
-            </Link>
+            <NewProjectDialog />
           </>
         }
       />

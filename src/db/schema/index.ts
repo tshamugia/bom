@@ -4,6 +4,7 @@ export * from "./categories";
 export * from "./items";
 export * from "./enums";
 export * from "./projects";
+export * from "./boms";
 export * from "./bom-revisions";
 export * from "./bom-sections";
 export * from "./bom-lines";

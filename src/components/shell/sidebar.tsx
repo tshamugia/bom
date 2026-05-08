@@ -4,11 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/icons";
 import { NAV } from "./nav-config";
+import { UserMenu } from "./user-menu";
 
-export function Sidebar({ user }: { user: { name: string; role: "owner" | "admin" | "member" } | null }) {
+export function Sidebar({ user }: { user: { name: string; email: string; role: "owner" | "admin" | "member" } | null }) {
   const path = usePathname();
   const role = user?.role ?? "member";
-  const initials = (user?.name ?? "?").split(" ").map(s => s[0]).join("").slice(0, 2).toUpperCase();
 
   return (
     <aside
@@ -102,33 +102,9 @@ export function Sidebar({ user }: { user: { name: string; role: "owner" | "admin
         })}
       </nav>
 
-      {/* User card */}
+      {/* User menu */}
       <div className="border-t border-[var(--color-side-line)] p-2.5">
-        <div className="flex items-center gap-2.5 rounded-lg bg-[var(--color-side-hover-bg)] px-2.5 py-2">
-          <div
-            className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full text-[12px] font-semibold text-white ring-2 ring-[var(--color-side-bg)]"
-            style={{
-              background:
-                "linear-gradient(135deg, var(--color-cat-indigo) 0%, var(--color-cat-violet) 100%)",
-            }}
-          >
-            {initials}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[12.5px] font-medium leading-tight text-[var(--color-side-active)]">
-              {user?.name ?? "Anonymous"}
-            </div>
-            <div className="truncate text-[11px] text-[var(--color-side-text-3)]">
-              {user?.role ?? ""}
-            </div>
-          </div>
-          <button
-            aria-label="Settings"
-            className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-md text-[var(--color-side-text-3)] transition-colors hover:bg-[var(--color-side-active-bg)] hover:text-[var(--color-side-active)]"
-          >
-            <Icon.Settings size={14} />
-          </button>
-        </div>
+        <UserMenu user={user} />
       </div>
     </aside>
   );

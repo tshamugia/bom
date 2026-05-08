@@ -4,7 +4,7 @@ import { z } from "zod";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
-import { bomLines, bomRevisions, bomSections, items, vendors } from "@/db/schema";
+import { boms, bomLines, bomRevisions, bomSections, items, vendors } from "@/db/schema";
 import { requireSession } from "../auth-context";
 import { audit } from "../audit";
 import { isRevisionImmutable } from "../lib/revision-status";
@@ -12,8 +12,14 @@ import { isRevisionImmutable } from "../lib/revision-status";
 async function ensureRevisionWritable(revisionId: string) {
   await requireSession();
   const [row] = await db
-    .select({ id: bomRevisions.id, status: bomRevisions.status, projectId: bomRevisions.projectId })
+    .select({
+      id: bomRevisions.id,
+      status: bomRevisions.status,
+      bomId: bomRevisions.bomId,
+      projectId: boms.projectId,
+    })
     .from(bomRevisions)
+    .innerJoin(boms, eq(boms.id, bomRevisions.bomId))
     .where(eq(bomRevisions.id, revisionId))
     .limit(1);
   if (!row) throw new Error("REVISION_NOT_FOUND");
@@ -50,7 +56,6 @@ export async function addLine(input: { revisionId: string; itemId: string; qty?:
     ? await db.select({ name: vendors.name }).from(vendors).where(eq(vendors.id, item.vendorId)).limit(1)
     : [];
 
-  // Validate section belongs to this revision (defense-in-depth).
   if (sectionId) {
     const [section] = await db
       .select({ id: bomSections.id })
@@ -64,7 +69,7 @@ export async function addLine(input: { revisionId: string; itemId: string; qty?:
   if (existing[0]) {
     const next = existing[0].qty + (input.qty ?? 1);
     const [updated] = await db.update(bomLines).set({ qty: next }).where(eq(bomLines.id, existing[0].id)).returning();
-    revalidatePath(`/builder/${rev.projectId}`);
+    revalidatePath(`/builder/${rev.projectId}/${rev.bomId}`);
     return updated;
   }
 
@@ -82,38 +87,47 @@ export async function addLine(input: { revisionId: string; itemId: string; qty?:
     vendorNameSnapshot: vendorRow?.name ?? null,
     position: next,
   }).returning();
-  revalidatePath(`/builder/${rev.projectId}`);
-  await audit({ kind: "bom.line.added", refType: "project", refId: rev.projectId, summary: `Added ${item.sku} to a BOM` });
+  revalidatePath(`/builder/${rev.projectId}/${rev.bomId}`);
+  await audit({ kind: "bom.line.added", refType: "bom", refId: rev.bomId, summary: `Added ${item.sku} to a BOM` });
   return inserted;
+}
+
+async function loadLineRevision(lineId: string) {
+  const [row] = await db
+    .select({
+      id: bomLines.id,
+      revisionId: bomLines.revisionId,
+      sectionId: bomLines.sectionId,
+      position: bomLines.position,
+      bomId: bomRevisions.bomId,
+      projectId: boms.projectId,
+      status: bomRevisions.status,
+    })
+    .from(bomLines)
+    .innerJoin(bomRevisions, eq(bomRevisions.id, bomLines.revisionId))
+    .innerJoin(boms, eq(boms.id, bomRevisions.bomId))
+    .where(eq(bomLines.id, lineId))
+    .limit(1);
+  return row ?? null;
 }
 
 export async function updateLineQty(input: { id: string; qty: number }) {
   const { id, qty } = z.object({ id: z.string(), qty: z.number().int().nonnegative() }).parse(input);
   await requireSession();
-  const [line] = await db
-    .select({ id: bomLines.id, projectId: bomRevisions.projectId, status: bomRevisions.status })
-    .from(bomLines)
-    .innerJoin(bomRevisions, eq(bomRevisions.id, bomLines.revisionId))
-    .where(eq(bomLines.id, id))
-    .limit(1);
+  const line = await loadLineRevision(id);
   if (!line) throw new Error("LINE_NOT_FOUND");
   if (isRevisionImmutable(line.status)) throw new Error("REVISION_LOCKED");
   await db.update(bomLines).set({ qty }).where(eq(bomLines.id, id));
-  revalidatePath(`/builder/${line.projectId}`);
+  revalidatePath(`/builder/${line.projectId}/${line.bomId}`);
 }
 
 export async function removeLine(input: { id: string }) {
   await requireSession();
-  const [line] = await db
-    .select({ id: bomLines.id, projectId: bomRevisions.projectId, status: bomRevisions.status })
-    .from(bomLines)
-    .innerJoin(bomRevisions, eq(bomRevisions.id, bomLines.revisionId))
-    .where(eq(bomLines.id, input.id))
-    .limit(1);
+  const line = await loadLineRevision(input.id);
   if (!line) throw new Error("LINE_NOT_FOUND");
   if (isRevisionImmutable(line.status)) throw new Error("REVISION_LOCKED");
   await db.delete(bomLines).where(eq(bomLines.id, input.id));
-  revalidatePath(`/builder/${line.projectId}`);
+  revalidatePath(`/builder/${line.projectId}/${line.bomId}`);
 }
 
 export async function moveLineToSection(input: { lineId: string; sectionId: string | null; position?: number }) {
@@ -126,23 +140,10 @@ export async function moveLineToSection(input: { lineId: string; sectionId: stri
     .parse(input);
   await requireSession();
 
-  const [line] = await db
-    .select({
-      id: bomLines.id,
-      revisionId: bomLines.revisionId,
-      sectionId: bomLines.sectionId,
-      position: bomLines.position,
-      projectId: bomRevisions.projectId,
-      status: bomRevisions.status,
-    })
-    .from(bomLines)
-    .innerJoin(bomRevisions, eq(bomRevisions.id, bomLines.revisionId))
-    .where(eq(bomLines.id, lineId))
-    .limit(1);
+  const line = await loadLineRevision(lineId);
   if (!line) throw new Error("LINE_NOT_FOUND");
   if (isRevisionImmutable(line.status)) throw new Error("REVISION_LOCKED");
 
-  // Validate destination section belongs to the same revision.
   if (sectionId) {
     const [section] = await db
       .select({ id: bomSections.id })
@@ -183,7 +184,6 @@ export async function moveLineToSection(input: { lineId: string; sectionId: stri
     }
 
     if (!sameSection) {
-      // Compact the source section so positions stay contiguous.
       const sourceWhere = sourceSectionId === null
         ? and(eq(bomLines.revisionId, line.revisionId), isNull(bomLines.sectionId))
         : and(eq(bomLines.revisionId, line.revisionId), eq(bomLines.sectionId, sourceSectionId));
@@ -202,12 +202,12 @@ export async function moveLineToSection(input: { lineId: string; sectionId: stri
     }
   });
 
-  revalidatePath(`/builder/${line.projectId}`);
+  revalidatePath(`/builder/${line.projectId}/${line.bomId}`);
   if (!sameSection) {
     await audit({
       kind: "bom.line.moved",
-      refType: "project",
-      refId: line.projectId,
+      refType: "bom",
+      refId: line.bomId,
       summary: "Line moved between sections",
       payload: { lineId, fromSectionId: sourceSectionId, toSectionId: sectionId },
     });

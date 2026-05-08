@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { discardDraft } from "@/server/actions/revisions";
 
-export function DiscardDraftButton({ revisionId, projectId }: { revisionId: string; projectId: string }) {
+export function DiscardDraftButton({ revisionId, projectId, bomId }: { revisionId: string; projectId: string; bomId: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   return (
@@ -19,7 +19,7 @@ export function DiscardDraftButton({ revisionId, projectId }: { revisionId: stri
           try {
             await discardDraft({ revisionId });
             toast.success("Draft discarded");
-            router.push(`/projects/${projectId}/history`);
+            router.push(`/projects/${projectId}/history#bom-${bomId}`);
           } catch (e) {
             toast.error(e instanceof Error ? e.message : "Discard failed");
           }

@@ -12,7 +12,7 @@ export type HistoryRow = {
   parentRevisionId: string | null;
 };
 
-export function HistoryTable({ projectId, rows }: { projectId: string; rows: HistoryRow[] }) {
+export function HistoryTable({ projectId, bomId, rows }: { projectId: string; bomId: string; rows: HistoryRow[] }) {
   const hasOpenDraft = rows.some(r => r.status === "draft");
   return (
     <div className="overflow-hidden rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)]">
@@ -45,6 +45,7 @@ export function HistoryTable({ projectId, rows }: { projectId: string; rows: His
                       revisionId={r.id}
                       letter={r.letter}
                       projectId={projectId}
+                      bomId={bomId}
                       hasOpenDraft={hasOpenDraft}
                     />
                   ) : null}

@@ -23,7 +23,7 @@ export function ProjectCreateButton({ owners = [] }: { owners?: OwnerCandidate[]
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button><Icon.Plus size={14} className="mr-1.5" /> New BOM</Button>} />
+      <DialogTrigger render={<Button><Icon.Plus size={14} className="mr-1.5" /> New project</Button>} />
       <DialogContent>
         <DialogHeader><DialogTitle>New project</DialogTitle></DialogHeader>
         <div className="space-y-3">
@@ -59,7 +59,8 @@ export function ProjectCreateButton({ owners = [] }: { owners?: OwnerCandidate[]
                 ownerId: ownerId || undefined,
               });
               setOpen(false);
-              router.push(`/builder/${p.id}`);
+              router.push(`/projects/${p.id}`);
+              router.refresh();
             })}
           >
             {pending ? "Creating…" : "Create"}

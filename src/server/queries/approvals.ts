@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { approvalWorkflows, approvalSteps, bomRevisions, user } from "@/db/schema";
+import { approvalWorkflows, approvalSteps, boms, bomRevisions, user } from "@/db/schema";
 import { requireSession } from "../auth-context";
 
 type Row = {
@@ -40,7 +40,8 @@ async function baseList(filter: { status?: "pending" | "approved" | "rejected"; 
       (SELECT e.file_name FROM "bom_export" e WHERE e.revision_id = w.revision_id AND e.status = 'exported' ORDER BY e.generated_at DESC LIMIT 1) AS "latestExportFileName"
     FROM "approval_workflow" w
     INNER JOIN "bom_revision" r ON r.id = w.revision_id
-    INNER JOIN "project" p ON p.id = r.project_id
+    INNER JOIN "bom" b ON b.id = r.bom_id
+    INNER JOIN "project" p ON p.id = b.project_id
     LEFT JOIN "user" u ON u.id = p.owner_id
     WHERE 1=1
     ${filter.status ? sql`AND w.status = ${filter.status}` : sql``}
@@ -92,7 +93,8 @@ export async function getForProject(projectId: string) {
     })
     .from(approvalWorkflows)
     .innerJoin(bomRevisions, eq(bomRevisions.id, approvalWorkflows.revisionId))
-    .where(and(eq(bomRevisions.projectId, projectId), sql`${approvalWorkflows.status} <> 'cancelled'`))
+    .innerJoin(boms, eq(boms.id, bomRevisions.bomId))
+    .where(and(eq(boms.projectId, projectId), sql`${approvalWorkflows.status} <> 'cancelled'`))
     .orderBy(desc(approvalWorkflows.requestedAt))
     .limit(1);
   if (!w) return null;

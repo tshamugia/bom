@@ -8,6 +8,7 @@ import {
   vendors,
   categories,
   projects,
+  boms,
   bomRevisions,
   bomSections,
   bomLines,
@@ -44,12 +45,13 @@ async function setup() {
     .insert(items)
     .values({ sku: "B", description: "b", manufacturer: "x", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null })
     .returning();
-  const [p] = await db.insert(projects).values({ code: "P", name: "P", status: "draft" }).returning();
+  const [p] = await db.insert(projects).values({ code: "P", name: "P" }).returning();
+  const [b] = await db.insert(boms).values({ projectId: p.id, name: "Main BOM" }).returning();
   const [r] = await db
     .insert(bomRevisions)
-    .values({ projectId: p.id, letter: "A", status: "draft" })
+    .values({ bomId: b.id, letter: "A", status: "draft" })
     .returning();
-  return { projectId: p.id, revisionId: r.id, it1, it2 };
+  return { projectId: p.id, bomId: b.id, revisionId: r.id, it1, it2 };
 }
 
 test("createSection inserts with auto-incremented position", async () => {

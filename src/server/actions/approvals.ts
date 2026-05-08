@@ -4,7 +4,7 @@ import { asc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import {
-  approvalWorkflows, approvalSteps, bomRevisions, projects,
+  approvalWorkflows, approvalSteps, boms, bomRevisions,
 } from "@/db/schema";
 import { requireSession } from "../auth-context";
 import { audit } from "../audit";
@@ -18,12 +18,36 @@ const DEFAULT_STAGES: Array<{ role: string }> = [
 async function loadRevision(revisionId: string) {
   await requireSession();
   const [row] = await db
-    .select({ id: bomRevisions.id, projectId: bomRevisions.projectId, status: bomRevisions.status })
+    .select({
+      id: bomRevisions.id,
+      bomId: bomRevisions.bomId,
+      projectId: boms.projectId,
+      status: bomRevisions.status,
+    })
     .from(bomRevisions)
+    .innerJoin(boms, eq(boms.id, bomRevisions.bomId))
     .where(eq(bomRevisions.id, revisionId))
     .limit(1);
   if (!row) throw new Error("REVISION_NOT_FOUND");
   return row;
+}
+
+async function loadWorkflow(workflowId: string) {
+  const [w] = await db
+    .select({
+      id: approvalWorkflows.id,
+      currentStepIndex: approvalWorkflows.currentStepIndex,
+      revisionId: approvalWorkflows.revisionId,
+      bomId: bomRevisions.bomId,
+      projectId: boms.projectId,
+      status: approvalWorkflows.status,
+    })
+    .from(approvalWorkflows)
+    .innerJoin(bomRevisions, eq(bomRevisions.id, approvalWorkflows.revisionId))
+    .innerJoin(boms, eq(boms.id, bomRevisions.bomId))
+    .where(eq(approvalWorkflows.id, workflowId))
+    .limit(1);
+  return w ?? null;
 }
 
 export async function requestApproval(input: { revisionId: string }) {
@@ -47,25 +71,19 @@ export async function requestApproval(input: { revisionId: string }) {
     })),
   );
 
-  await db.update(projects).set({ status: "review", updatedAt: new Date() }).where(eq(projects.id, rev.projectId));
   await db.update(bomRevisions).set({ status: "review", updatedAt: new Date() }).where(eq(bomRevisions.id, rev.id));
 
   revalidatePath("/approvals");
   revalidatePath("/dashboard");
-  revalidatePath(`/preview/${rev.projectId}`);
-  await audit({ kind: "approval.requested", refType: "workflow", refId: workflow.id, summary: `${rev.projectId} sent for review` });
+  revalidatePath(`/preview/${rev.projectId}/${rev.bomId}`);
+  await audit({ kind: "approval.requested", refType: "workflow", refId: workflow.id, summary: `Rev sent for review` });
   return workflow;
 }
 
 export async function approveStep(input: { workflowId: string; note?: string }) {
   const session = await requireSession();
 
-  const [w] = await db
-    .select({ id: approvalWorkflows.id, currentStepIndex: approvalWorkflows.currentStepIndex, revisionId: approvalWorkflows.revisionId, projectId: bomRevisions.projectId, status: approvalWorkflows.status })
-    .from(approvalWorkflows)
-    .innerJoin(bomRevisions, eq(bomRevisions.id, approvalWorkflows.revisionId))
-    .where(eq(approvalWorkflows.id, input.workflowId))
-    .limit(1);
+  const w = await loadWorkflow(input.workflowId);
   if (!w) throw new Error("WORKFLOW_NOT_FOUND");
   if (w.status !== "pending") throw new Error("WORKFLOW_CLOSED");
 
@@ -89,7 +107,6 @@ export async function approveStep(input: { workflowId: string; note?: string }) 
 
   if (isLast) {
     await db.update(approvalWorkflows).set({ status: "approved", closedAt: new Date() }).where(eq(approvalWorkflows.id, w.id));
-    await db.update(projects).set({ status: "approved", updatedAt: new Date() }).where(eq(projects.id, w.projectId));
     await db.update(bomRevisions).set({ status: "locked", lockedAt: new Date(), updatedAt: new Date() }).where(eq(bomRevisions.id, w.revisionId));
   } else {
     await db.update(approvalWorkflows).set({ currentStepIndex: nextIdx }).where(eq(approvalWorkflows.id, w.id));
@@ -98,7 +115,7 @@ export async function approveStep(input: { workflowId: string; note?: string }) 
 
   revalidatePath("/approvals");
   revalidatePath("/dashboard");
-  revalidatePath(`/preview/${w.projectId}`);
+  revalidatePath(`/preview/${w.projectId}/${w.bomId}`);
   await audit({
     kind: "approval.approved",
     refType: "workflow", refId: w.id,
@@ -109,12 +126,7 @@ export async function approveStep(input: { workflowId: string; note?: string }) 
 export async function rejectStep(input: { workflowId: string; note?: string }) {
   const session = await requireSession();
 
-  const [w] = await db
-    .select({ id: approvalWorkflows.id, currentStepIndex: approvalWorkflows.currentStepIndex, revisionId: approvalWorkflows.revisionId, projectId: bomRevisions.projectId, status: approvalWorkflows.status })
-    .from(approvalWorkflows)
-    .innerJoin(bomRevisions, eq(bomRevisions.id, approvalWorkflows.revisionId))
-    .where(eq(approvalWorkflows.id, input.workflowId))
-    .limit(1);
+  const w = await loadWorkflow(input.workflowId);
   if (!w) throw new Error("WORKFLOW_NOT_FOUND");
   if (w.status !== "pending") throw new Error("WORKFLOW_CLOSED");
 
@@ -128,27 +140,20 @@ export async function rejectStep(input: { workflowId: string; note?: string }) {
     decisionNote: input.note,
   }).where(eq(approvalSteps.id, active.id));
   await db.update(approvalWorkflows).set({ status: "rejected", closedAt: new Date() }).where(eq(approvalWorkflows.id, w.id));
-  await db.update(projects).set({ status: "in-progress", updatedAt: new Date() }).where(eq(projects.id, w.projectId));
   await db.update(bomRevisions).set({ status: "in-progress", updatedAt: new Date() }).where(eq(bomRevisions.id, w.revisionId));
 
   revalidatePath("/approvals");
   revalidatePath("/dashboard");
-  revalidatePath(`/preview/${w.projectId}`);
+  revalidatePath(`/preview/${w.projectId}/${w.bomId}`);
   await audit({ kind: "approval.rejected", refType: "workflow", refId: w.id, summary: `${active.role} rejected${input.note ? `: ${input.note}` : ""}` });
 }
 
 export async function cancelWorkflow(input: { workflowId: string }) {
   await requireSession();
-  const [w] = await db
-    .select({ id: approvalWorkflows.id, projectId: bomRevisions.projectId, revisionId: approvalWorkflows.revisionId })
-    .from(approvalWorkflows)
-    .innerJoin(bomRevisions, eq(bomRevisions.id, approvalWorkflows.revisionId))
-    .where(eq(approvalWorkflows.id, input.workflowId))
-    .limit(1);
+  const w = await loadWorkflow(input.workflowId);
   if (!w) throw new Error("WORKFLOW_NOT_FOUND");
 
   await db.update(approvalWorkflows).set({ status: "cancelled", closedAt: new Date() }).where(eq(approvalWorkflows.id, w.id));
-  await db.update(projects).set({ status: "in-progress" }).where(eq(projects.id, w.projectId));
   await db.update(bomRevisions).set({ status: "in-progress" }).where(eq(bomRevisions.id, w.revisionId));
   revalidatePath("/approvals");
   revalidatePath("/dashboard");

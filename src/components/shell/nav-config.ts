@@ -20,6 +20,7 @@ export const NAV: NavGroup[] = [
     group: "Workspace",
     accent: "var(--color-cat-indigo)",
     items: [
+      { href: "/projects", label: "Projects", icon: "Folder" },
       { href: "/dashboard", label: "Dashboard", icon: "Home" },
       { href: "/builder", label: "BOM Builder", icon: "List" },
       { href: "/preview", label: "Preview & Generate", icon: "Doc" },

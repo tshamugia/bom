@@ -4,7 +4,7 @@ import { z } from "zod";
 import { asc, count, desc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
-import { bomLines, bomRevisions, bomSections } from "@/db/schema";
+import { boms, bomLines, bomRevisions, bomSections } from "@/db/schema";
 import { requireSession } from "../auth-context";
 import { audit } from "../audit";
 import { isRevisionImmutable } from "../lib/revision-status";
@@ -12,8 +12,14 @@ import { isRevisionImmutable } from "../lib/revision-status";
 async function ensureRevisionWritable(revisionId: string) {
   await requireSession();
   const [row] = await db
-    .select({ id: bomRevisions.id, status: bomRevisions.status, projectId: bomRevisions.projectId })
+    .select({
+      id: bomRevisions.id,
+      status: bomRevisions.status,
+      bomId: bomRevisions.bomId,
+      projectId: boms.projectId,
+    })
     .from(bomRevisions)
+    .innerJoin(boms, eq(boms.id, bomRevisions.bomId))
     .where(eq(bomRevisions.id, revisionId))
     .limit(1);
   if (!row) throw new Error("REVISION_NOT_FOUND");
@@ -27,11 +33,13 @@ async function ensureSectionWritable(sectionId: string) {
     .select({
       id: bomSections.id,
       revisionId: bomSections.revisionId,
-      projectId: bomRevisions.projectId,
+      bomId: bomRevisions.bomId,
+      projectId: boms.projectId,
       status: bomRevisions.status,
     })
     .from(bomSections)
     .innerJoin(bomRevisions, eq(bomRevisions.id, bomSections.revisionId))
+    .innerJoin(boms, eq(boms.id, bomRevisions.bomId))
     .where(eq(bomSections.id, sectionId))
     .limit(1);
   if (!row) throw new Error("SECTION_NOT_FOUND");
@@ -55,11 +63,11 @@ export async function createSection(input: { revisionId: string; name: string })
     .values({ revisionId, name, position: next })
     .returning();
 
-  revalidatePath(`/builder/${rev.projectId}`);
+  revalidatePath(`/builder/${rev.projectId}/${rev.bomId}`);
   await audit({
     kind: "bom.section.created",
-    refType: "project",
-    refId: rev.projectId,
+    refType: "bom",
+    refId: rev.bomId,
     summary: `Section "${name}" added`,
     payload: { revisionId, sectionId: inserted.id },
   });
@@ -74,11 +82,11 @@ export async function renameSection(input: { id: string; name: string }) {
 
   await db.update(bomSections).set({ name }).where(eq(bomSections.id, id));
 
-  revalidatePath(`/builder/${sec.projectId}`);
+  revalidatePath(`/builder/${sec.projectId}/${sec.bomId}`);
   await audit({
     kind: "bom.section.renamed",
-    refType: "project",
-    refId: sec.projectId,
+    refType: "bom",
+    refId: sec.bomId,
     summary: `Section renamed to "${name}"`,
     payload: { sectionId: id },
   });
@@ -108,11 +116,11 @@ export async function reorderSection(input: { id: string; position: number }) {
     }
   });
 
-  revalidatePath(`/builder/${sec.projectId}`);
+  revalidatePath(`/builder/${sec.projectId}/${sec.bomId}`);
   await audit({
     kind: "bom.section.reordered",
-    refType: "project",
-    refId: sec.projectId,
+    refType: "bom",
+    refId: sec.bomId,
     summary: `Section reordered`,
     payload: { sectionId: id, position },
   });
@@ -143,11 +151,11 @@ export async function deleteSection(input: {
     await tx.delete(bomSections).where(eq(bomSections.id, id));
   });
 
-  revalidatePath(`/builder/${sec.projectId}`);
+  revalidatePath(`/builder/${sec.projectId}/${sec.bomId}`);
   await audit({
     kind: "bom.section.deleted",
-    refType: "project",
-    refId: sec.projectId,
+    refType: "bom",
+    refId: sec.bomId,
     summary:
       mode === "deleteLines"
         ? `Section deleted with ${removedLineCount} line(s)`
