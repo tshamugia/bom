@@ -21,7 +21,7 @@ function allColumns(overrides: Partial<ExportColumns> = {}): ExportColumns {
 
 test("buildBomWorkbook produces a workbook with header and rows", async () => {
   const buf = await buildBomWorkbook({
-    project: { code: "TEST-1", name: "Test Project", quantity: 50, owner: "M. Chen", target: "May 14, 2026" },
+    project: { code: "TEST-1", name: "Test Project", owner: "M. Chen", target: "May 14, 2026" },
     revisionLetter: "A",
     rows: ROWS,
     options: { columns: allColumns(), groupByVendor: false, includeCoverPage: false },
@@ -41,7 +41,7 @@ test("buildBomWorkbook produces a workbook with header and rows", async () => {
 
 test("groupByVendor=true creates per-vendor sheets", async () => {
   const buf = await buildBomWorkbook({
-    project: { code: "T", name: "T", quantity: 1, owner: "X", target: "—" },
+    project: { code: "T", name: "T", owner: "X", target: "—" },
     revisionLetter: "A",
     rows: ROWS,
     options: { columns: allColumns(), groupByVendor: true, includeCoverPage: false },
@@ -61,7 +61,7 @@ test("buildBomWorkbook renders section heading rows", async () => {
   ];
 
   const buf = await buildBomWorkbook({
-    project: { code: "T", name: "T", quantity: 1, owner: "X", target: "—" },
+    project: { code: "T", name: "T", owner: "X", target: "—" },
     revisionLetter: "A",
     rows: SECTIONED,
     options: { columns: allColumns(), groupByVendor: false, includeCoverPage: false },
@@ -83,7 +83,7 @@ test("buildBomWorkbook renders section heading rows", async () => {
 
 test("draft workbook embeds DRAFT — NOT FOR PROCUREMENT band on cover", async () => {
   const buf = await buildBomWorkbook({
-    project: { code: "P", name: "P", quantity: 1, owner: "T", target: "—" },
+    project: { code: "P", name: "P", owner: "T", target: "—" },
     revisionLetter: "A",
     rows: [{ sku: "S", description: "d", manufacturer: "m", vendor: "V", unit: "pcs", qty: 1, sectionName: null, sectionPosition: null }],
     options: {
@@ -106,7 +106,7 @@ test("draft workbook embeds DRAFT — NOT FOR PROCUREMENT band on cover", async 
 
 test("buildBomWorkbook with only Uncategorized lines stays flat (no heading row)", async () => {
   const buf = await buildBomWorkbook({
-    project: { code: "T", name: "T", quantity: 1, owner: "X", target: "—" },
+    project: { code: "T", name: "T", owner: "X", target: "—" },
     revisionLetter: "A",
     rows: ROWS,
     options: { columns: allColumns(), groupByVendor: false, includeCoverPage: false },
@@ -120,7 +120,7 @@ test("buildBomWorkbook with only Uncategorized lines stays flat (no heading row)
 
 test("hidden columns are omitted from the header row", async () => {
   const buf = await buildBomWorkbook({
-    project: { code: "T", name: "T", quantity: 1, owner: "X", target: "—" },
+    project: { code: "T", name: "T", owner: "X", target: "—" },
     revisionLetter: "A",
     rows: ROWS,
     options: {

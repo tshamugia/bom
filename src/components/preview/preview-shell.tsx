@@ -20,7 +20,6 @@ type Props = {
   projectName: string;
   projectOwner: string;
   projectTarget: string;
-  projectQuantity: number;
   bomId: string;
   bomName: string;
   revisionId: string;
@@ -94,7 +93,7 @@ export function PreviewShell(p: Props) {
         <DocumentPreview
           project={{
             code: p.projectCode, name: p.projectName, owner: p.projectOwner,
-            target: p.projectTarget, quantity: p.projectQuantity,
+            target: p.projectTarget,
           }}
           revisionLetter={p.revisionLetter}
           lines={p.lines}

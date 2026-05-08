@@ -31,7 +31,6 @@ export function NewProjectDialog() {
         const project = await createProject({
           code: code.trim(),
           name: name.trim(),
-          quantity: 1,
         });
         toast.success("Project created");
         setOpen(false);

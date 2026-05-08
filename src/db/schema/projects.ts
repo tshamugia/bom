@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer, date, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, date, index } from "drizzle-orm/pg-core";
 import { createId } from "@paralleldrive/cuid2";
 import { user } from "./auth";
 
@@ -10,7 +10,6 @@ export const projects = pgTable(
     name: text("name").notNull(),
     ownerId: text("owner_id").references(() => user.id, { onDelete: "set null" }),
     targetDate: date("target_date"),
-    quantity: integer("quantity").notNull().default(1),
     deletedAt: timestamp("deleted_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),

@@ -28,7 +28,7 @@ export type BuildOptions = {
 };
 
 export type BuildInput = {
-  project: { code: string; name: string; quantity: number; owner: string; target: string };
+  project: { code: string; name: string; owner: string; target: string };
   revisionLetter: string;
   rows: BomRow[];
   options: BuildOptions;
@@ -126,14 +126,14 @@ function buildCoverSheet(wb: ExcelJS.Workbook, input: BuildInput) {
     ws.getCell("A2").value = "Bill of Materials";
     ws.getCell("A2").font = { bold: true, size: 22 };
     ws.getCell("A4").value = `${input.project.code} — ${input.project.name}`;
-    ws.getCell("A5").value = `Revision ${input.revisionLetter} · Build qty ${input.project.quantity}`;
+    ws.getCell("A5").value = `Revision ${input.revisionLetter}`;
     ws.getCell("A6").value = `Owner: ${input.project.owner}`;
     ws.getCell("A7").value = `Target: ${input.project.target}`;
   } else {
     ws.getCell("A1").value = "Bill of Materials";
     ws.getCell("A1").font = { bold: true, size: 22 };
     ws.getCell("A3").value = `${input.project.code} — ${input.project.name}`;
-    ws.getCell("A4").value = `Revision ${input.revisionLetter} · Build qty ${input.project.quantity}`;
+    ws.getCell("A4").value = `Revision ${input.revisionLetter}`;
     ws.getCell("A5").value = `Owner: ${input.project.owner}`;
     ws.getCell("A6").value = `Target: ${input.project.target}`;
   }
@@ -183,7 +183,7 @@ function buildMainSheet(wb: ExcelJS.Workbook, input: BuildInput, name = "BOM") {
   ws.getCell("A2").font = { color: { argb: "FF6B7180" }, size: 11 };
 
   ws.mergeCells(`A3:${lastColLetter}3`);
-  ws.getCell("A3").value = `Owner: ${input.project.owner}   Target: ${input.project.target}   Build qty: ${input.project.quantity}`;
+  ws.getCell("A3").value = `Owner: ${input.project.owner}   Target: ${input.project.target}`;
   ws.getCell("A3").font = { color: { argb: "FF6B7180" }, size: 10 };
 
   const headerRow = ws.getRow(5);

@@ -16,7 +16,6 @@ export function ProjectCreateButton({ owners = [] }: { owners?: OwnerCandidate[]
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
-  const [qty, setQty] = useState(1);
   const [deadline, setDeadline] = useState("");
   const [ownerId, setOwnerId] = useState("");
   const [pending, start] = useTransition();
@@ -29,7 +28,6 @@ export function ProjectCreateButton({ owners = [] }: { owners?: OwnerCandidate[]
         <div className="space-y-3">
           <div className="space-y-1.5"><Label htmlFor="project-code">Code</Label><Input id="project-code" value={code} onChange={e => setCode(e.target.value)} placeholder="NB-2412" /></div>
           <div className="space-y-1.5"><Label htmlFor="project-name">Name</Label><Input id="project-name" value={name} onChange={e => setName(e.target.value)} placeholder="Northstar Beacon v3.2" /></div>
-          <div className="space-y-1.5"><Label htmlFor="project-quantity">Build quantity</Label><Input id="project-quantity" type="number" value={qty} min={1} onChange={e => setQty(Number(e.target.value))} /></div>
           <div className="space-y-1.5"><Label htmlFor="project-deadline">Deadline</Label><Input id="project-deadline" type="date" value={deadline} onChange={e => setDeadline(e.target.value)} /></div>
           {owners.length > 0 && (
             <div className="space-y-1.5">
@@ -54,7 +52,7 @@ export function ProjectCreateButton({ owners = [] }: { owners?: OwnerCandidate[]
             disabled={pending || !code || !name}
             onClick={() => start(async () => {
               const p = await createProject({
-                code, name, quantity: qty,
+                code, name,
                 targetDate: deadline || undefined,
                 ownerId: ownerId || undefined,
               });

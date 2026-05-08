@@ -4,7 +4,7 @@ import type { SectionInfo } from "@/components/builder/section-row";
 export function DocumentPreview({
   project, revisionLetter, lines, sections, generatedOn,
 }: {
-  project: { code: string; name: string; owner: string; target: string; quantity: number };
+  project: { code: string; name: string; owner: string; target: string };
   revisionLetter: string;
   lines: Line[];
   sections: SectionInfo[];
@@ -37,21 +37,20 @@ export function DocumentPreview({
         </div>
       </div>
 
-      <div className="mb-5 grid grid-cols-3 gap-6 text-[11.5px]">
+      <div className="mb-5 grid grid-cols-2 gap-6 text-[11.5px]">
         <Meta label="Project owner" value={project.owner} />
         <Meta label="Target build" value={project.target} />
-        <Meta label="Quantity" value={`${project.quantity} units`} />
       </div>
 
       <table className="w-full border-collapse text-[11.5px]">
         <thead>
           <tr className="bg-[var(--color-surface-3)] text-[10.5px] uppercase tracking-wider">
-            <th className="border-b border-[var(--color-line)] px-2 py-1.5 text-left font-semibold">#</th>
             <th className="border-b border-[var(--color-line)] px-2 py-1.5 text-left font-semibold">SKU</th>
             <th className="border-b border-[var(--color-line)] px-2 py-1.5 text-left font-semibold">Description</th>
-            <th className="border-b border-[var(--color-line)] px-2 py-1.5 text-left font-semibold">Vendor</th>
             <th className="border-b border-[var(--color-line)] px-2 py-1.5 text-left font-semibold">Unit</th>
             <th className="border-b border-[var(--color-line)] px-2 py-1.5 text-right font-semibold">Qty</th>
+            <th className="border-b border-[var(--color-line)] px-2 py-1.5 text-left font-semibold">Manufacturer</th>
+            <th className="border-b border-[var(--color-line)] px-2 py-1.5 text-left font-semibold">Vendor</th>
           </tr>
         </thead>
         <tbody>
@@ -104,14 +103,14 @@ function SectionGroup({
           {title}
         </td>
       </tr>
-      {lines.map((l, i) => (
+      {lines.map((l) => (
         <tr key={l.id}>
-          <td className="border-b border-[var(--color-line)] px-2 py-1.5 text-[var(--color-text-3)]">{i + 1}</td>
           <td className="border-b border-[var(--color-line)] px-2 py-1.5 font-mono">{l.sku}</td>
-          <td className="border-b border-[var(--color-line)] px-2 py-1.5">{l.description}<div className="text-[10px] text-[var(--color-text-3)]">{l.manufacturer}</div></td>
-          <td className="border-b border-[var(--color-line)] px-2 py-1.5">{l.vendorName ?? "—"}</td>
+          <td className="border-b border-[var(--color-line)] px-2 py-1.5">{l.description}</td>
           <td className="border-b border-[var(--color-line)] px-2 py-1.5">{l.unit}</td>
           <td className="border-b border-[var(--color-line)] px-2 py-1.5 text-right tabular-nums">{l.qty}</td>
+          <td className="border-b border-[var(--color-line)] px-2 py-1.5">{l.manufacturer || "—"}</td>
+          <td className="border-b border-[var(--color-line)] px-2 py-1.5">{l.vendorName ?? "—"}</td>
         </tr>
       ))}
     </>

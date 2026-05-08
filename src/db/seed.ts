@@ -114,12 +114,12 @@ async function main() {
   );
 
   const inserted = await db.insert(projects).values([
-    { code: "NB-2412",  name: "Northstar Beacon v3.2",      ownerId: rootUserId, quantity: 50,  targetDate: "2026-05-14" },
-    { code: "GW-2411",  name: "Gateway Hub Rev B",          ownerId: rootUserId, quantity: 25,  targetDate: "2026-05-22" },
-    { code: "SN-2410",  name: "Sensor Node — Industrial",   ownerId: rootUserId, quantity: 100, targetDate: "2026-04-30" },
-    { code: "PWR-2410", name: "Power Module 24V/5A",        ownerId: rootUserId, quantity: 40,  targetDate: "2026-06-02" },
-    { code: "DBG-2409", name: "Debug Probe Rev 1.4",        ownerId: rootUserId, quantity: 20,  targetDate: "2026-04-12" },
-    { code: "RIO-2409", name: "Remote I/O Card",            ownerId: rootUserId, quantity: 10,  targetDate: "2026-07-18" },
+    { code: "NB-2412",  name: "Northstar Beacon v3.2",      ownerId: rootUserId, targetDate: "2026-05-14" },
+    { code: "GW-2411",  name: "Gateway Hub Rev B",          ownerId: rootUserId, targetDate: "2026-05-22" },
+    { code: "SN-2410",  name: "Sensor Node — Industrial",   ownerId: rootUserId, targetDate: "2026-04-30" },
+    { code: "PWR-2410", name: "Power Module 24V/5A",        ownerId: rootUserId, targetDate: "2026-06-02" },
+    { code: "DBG-2409", name: "Debug Probe Rev 1.4",        ownerId: rootUserId, targetDate: "2026-04-12" },
+    { code: "RIO-2409", name: "Remote I/O Card",            ownerId: rootUserId, targetDate: "2026-07-18" },
   ]).returning();
 
   const beacon = inserted.find(p => p.code === "NB-2412")!;

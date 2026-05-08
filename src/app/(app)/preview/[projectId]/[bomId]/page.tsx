@@ -39,7 +39,6 @@ export default async function PreviewPage({ params }: { params: Promise<{ projec
       projectName={project.name}
       projectOwner={ownerName}
       projectTarget={project.targetDate ?? "—"}
-      projectQuantity={project.quantity}
       bomId={bom.id}
       bomName={bom.name}
       revisionId={rev.id}

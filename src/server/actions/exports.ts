@@ -41,7 +41,6 @@ export async function generateExport(input: { revisionId: string; options: z.inf
       projectId: boms.projectId,
       projectCode: projects.code,
       projectName: projects.name,
-      projectQty: projects.quantity,
       projectTarget: projects.targetDate,
       ownerName: user.name,
     })
@@ -88,7 +87,6 @@ export async function generateExport(input: { revisionId: string; options: z.inf
     project: {
       code: rev.projectCode,
       name: rev.projectName,
-      quantity: rev.projectQty,
       owner: rev.ownerName ?? session.user.name,
       target: rev.projectTarget ?? "—",
     },

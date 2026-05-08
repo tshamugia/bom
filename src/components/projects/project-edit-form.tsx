@@ -12,7 +12,6 @@ type Project = {
   id: string;
   code: string;
   name: string;
-  quantity: number;
   targetDate: string | null;
   ownerId: string | null;
 };
@@ -23,7 +22,6 @@ export function ProjectEditForm({ project, owners }: { project: Project; owners:
   const router = useRouter();
   const [code, setCode] = useState(project.code);
   const [name, setName] = useState(project.name);
-  const [qty, setQty] = useState(project.quantity);
   const [deadline, setDeadline] = useState(project.targetDate ?? "");
   const [ownerId, setOwnerId] = useState(project.ownerId ?? "");
   const [pending, start] = useTransition();
@@ -34,7 +32,6 @@ export function ProjectEditForm({ project, owners }: { project: Project; owners:
       <div className="space-y-3">
         <div className="space-y-1.5"><Label htmlFor="edit-code">Code</Label><Input id="edit-code" value={code} onChange={e => setCode(e.target.value)} /></div>
         <div className="space-y-1.5"><Label htmlFor="edit-name">Name</Label><Input id="edit-name" value={name} onChange={e => setName(e.target.value)} /></div>
-        <div className="space-y-1.5"><Label htmlFor="edit-qty">Build quantity</Label><Input id="edit-qty" type="number" min={1} value={qty} onChange={e => setQty(Number(e.target.value))} /></div>
         <div className="space-y-1.5"><Label htmlFor="edit-deadline">Due date</Label><Input id="edit-deadline" type="date" value={deadline} onChange={e => setDeadline(e.target.value)} /></div>
         <div className="space-y-1.5">
           <Label htmlFor="edit-owner">Owner</Label>
@@ -77,7 +74,6 @@ export function ProjectEditForm({ project, owners }: { project: Project; owners:
               await updateProject({
                 id: project.id,
                 code, name,
-                quantity: qty,
                 targetDate: deadline ? deadline : null,
                 ownerId: ownerId ? ownerId : null,
               });

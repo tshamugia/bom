@@ -47,7 +47,6 @@ export default async function ProjectEditPage({ params }: { params: Promise<{ id
           id: project.id,
           code: project.code,
           name: project.name,
-          quantity: project.quantity,
           targetDate: project.targetDate,
           ownerId: project.ownerId,
         }}
