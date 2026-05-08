@@ -9,6 +9,7 @@ import { requireSession } from "../auth-context";
 import { audit } from "../audit";
 import { isRevisionImmutable } from "../lib/revision-status";
 import { copyRevisionContentRefreshed } from "../lib/copy-revision";
+import { touchBom } from "../lib/touch-bom";
 
 async function loadRevision(revisionId: string) {
   await requireSession();
@@ -56,6 +57,7 @@ export async function commitRevision(input: z.infer<typeof CommitInput>) {
     })
     .where(eq(bomRevisions.id, revisionId));
 
+  await touchBom(db, rev.bomId, session.user.id);
   revalidatePath(`/builder/${rev.projectId}/${rev.bomId}`);
   revalidatePath(`/projects/${rev.projectId}/history`);
   revalidatePath(`/projects/${rev.projectId}`);
@@ -115,6 +117,7 @@ export async function branchRevision(input: z.infer<typeof BranchInput>): Promis
     }).returning();
 
     await copyRevisionContentRefreshed(tx, parent.id, child.id);
+    await touchBom(tx, parent.bomId, session.user.id);
     return child.id;
   });
 
@@ -139,8 +142,10 @@ export async function discardDraft(input: z.infer<typeof DiscardInput>) {
   const rev = await loadRevision(revisionId);
   if (rev.status !== "draft") throw new Error("REVISION_NOT_DRAFT");
 
+  const session = await requireSession();
   await db.delete(bomRevisions).where(eq(bomRevisions.id, revisionId));
 
+  await touchBom(db, rev.bomId, session.user.id);
   revalidatePath(`/builder/${rev.projectId}/${rev.bomId}`);
   revalidatePath(`/projects/${rev.projectId}/history`);
   revalidatePath(`/projects/${rev.projectId}`);

@@ -66,6 +66,7 @@ export async function createBom(input: BomCreateInputType): Promise<{ bomId: str
       projectId: data.projectId,
       name: data.name,
       ownerId: session.user.id,
+      lastModifiedById: session.user.id,
     }).returning();
     const [revision] = await tx.insert(bomRevisions).values({
       bomId: bom.id,
@@ -91,11 +92,11 @@ export async function createBom(input: BomCreateInputType): Promise<{ bomId: str
 
 export async function renameBom(input: z.infer<typeof BomRenameInput>) {
   const { bomId, name } = BomRenameInput.parse(input);
-  await requireSession();
+  const session = await requireSession();
   const bom = await loadBom(bomId);
 
   await db.update(boms)
-    .set({ name, updatedAt: new Date() })
+    .set({ name, lastModifiedById: session.user.id, updatedAt: new Date() })
     .where(and(eq(boms.id, bomId), isNull(boms.deletedAt)));
 
   revalidatePath("/builder");
@@ -161,6 +162,7 @@ export async function duplicateBom(input: BomDuplicateInputType): Promise<{ bomI
       projectId: data.targetProjectId,
       name: data.name,
       ownerId: session.user.id,
+      lastModifiedById: session.user.id,
     }).returning();
 
     const [createdRev] = await tx.insert(bomRevisions).values({

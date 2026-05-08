@@ -22,6 +22,7 @@ export default async function BuilderIndex() {
               <th className="px-4 py-2.5 text-left font-medium">BOM</th>
               <th className="px-4 py-2.5 text-left font-medium">Project</th>
               <th className="px-4 py-2.5 text-left font-medium">Owner</th>
+              <th className="px-4 py-2.5 text-left font-medium">Modified by</th>
               <th className="px-4 py-2.5 text-left font-medium">Status</th>
               <th className="px-4 py-2.5 text-left font-medium">Active Rev</th>
               <th className="px-4 py-2.5 text-right font-medium">Lines</th>
@@ -31,7 +32,7 @@ export default async function BuilderIndex() {
           <tbody>
             {boms.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-[12.5px] text-[var(--color-text-3)]">
+                <td colSpan={8} className="px-4 py-12 text-center text-[12.5px] text-[var(--color-text-3)]">
                   <div className="text-[13.5px]">No BOMs yet</div>
                   <div className="mt-1">Click &quot;New BOM&quot; to create your first BOM.</div>
                 </td>
@@ -51,6 +52,16 @@ export default async function BuilderIndex() {
                     </Link>
                   </td>
                   <td className="px-4 py-2.5">{b.ownerName ?? "—"}</td>
+                  <td className="px-4 py-2.5">
+                    {b.lastModifiedByName ? (
+                      <div className="flex flex-col">
+                        <span>{b.lastModifiedByName}</span>
+                        <span className="text-[11px] text-[var(--color-text-3)]">
+                          {new Date(b.updatedAt).toLocaleString()}
+                        </span>
+                      </div>
+                    ) : "—"}
+                  </td>
                   <td className="px-4 py-2.5">
                     {b.activeRevisionStatus
                       ? <RevisionStatusBadge status={b.activeRevisionStatus as "draft" | "committed" | "in-progress" | "review" | "approved" | "locked"} />

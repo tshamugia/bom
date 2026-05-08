@@ -8,6 +8,7 @@ import { boms, bomLines, bomRevisions, bomSections } from "@/db/schema";
 import { requireSession } from "../auth-context";
 import { audit } from "../audit";
 import { isRevisionImmutable } from "../lib/revision-status";
+import { touchBom } from "../lib/touch-bom";
 
 async function ensureRevisionWritable(revisionId: string) {
   await requireSession();
@@ -51,6 +52,7 @@ export async function createSection(input: { revisionId: string; name: string })
   const { revisionId, name } = z
     .object({ revisionId: z.string(), name: z.string().trim().min(1).max(120) })
     .parse(input);
+  const session = await requireSession();
   const rev = await ensureRevisionWritable(revisionId);
 
   const [{ next }] = await db
@@ -63,6 +65,7 @@ export async function createSection(input: { revisionId: string; name: string })
     .values({ revisionId, name, position: next })
     .returning();
 
+  await touchBom(db, rev.bomId, session.user.id);
   revalidatePath(`/builder/${rev.projectId}/${rev.bomId}`);
   await audit({
     kind: "bom.section.created",
@@ -78,10 +81,12 @@ export async function renameSection(input: { id: string; name: string }) {
   const { id, name } = z
     .object({ id: z.string(), name: z.string().trim().min(1).max(120) })
     .parse(input);
+  const session = await requireSession();
   const sec = await ensureSectionWritable(id);
 
   await db.update(bomSections).set({ name }).where(eq(bomSections.id, id));
 
+  await touchBom(db, sec.bomId, session.user.id);
   revalidatePath(`/builder/${sec.projectId}/${sec.bomId}`);
   await audit({
     kind: "bom.section.renamed",
@@ -96,6 +101,7 @@ export async function reorderSection(input: { id: string; position: number }) {
   const { id, position } = z
     .object({ id: z.string(), position: z.number().int().nonnegative() })
     .parse(input);
+  const session = await requireSession();
   const sec = await ensureSectionWritable(id);
 
   await db.transaction(async tx => {
@@ -116,6 +122,7 @@ export async function reorderSection(input: { id: string; position: number }) {
     }
   });
 
+  await touchBom(db, sec.bomId, session.user.id);
   revalidatePath(`/builder/${sec.projectId}/${sec.bomId}`);
   await audit({
     kind: "bom.section.reordered",
@@ -136,6 +143,7 @@ export async function deleteSection(input: {
       mode: z.enum(["moveToUncategorized", "deleteLines"]),
     })
     .parse(input);
+  const session = await requireSession();
   const sec = await ensureSectionWritable(id);
 
   let removedLineCount = 0;
@@ -151,6 +159,7 @@ export async function deleteSection(input: {
     await tx.delete(bomSections).where(eq(bomSections.id, id));
   });
 
+  await touchBom(db, sec.bomId, session.user.id);
   revalidatePath(`/builder/${sec.projectId}/${sec.bomId}`);
   await audit({
     kind: "bom.section.deleted",

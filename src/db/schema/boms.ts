@@ -10,6 +10,7 @@ export const boms = pgTable(
     projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     ownerId: text("owner_id").references(() => user.id, { onDelete: "set null" }),
+    lastModifiedById: text("last_modified_by_id").references(() => user.id, { onDelete: "set null" }),
     deletedAt: timestamp("deleted_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),

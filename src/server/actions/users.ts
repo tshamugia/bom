@@ -8,6 +8,7 @@ import { user } from "@/db/schema";
 import { requireRole, type UserRole } from "../auth-context";
 import { createUserDirect } from "../lib/create-user-direct";
 import { audit } from "../audit";
+import { sendWelcomeEmail } from "@/lib/mailer";
 
 const CreateUserInput = z.object({
   email: z.string().email(),
@@ -37,15 +38,35 @@ export async function createUser(input: CreateUserInputT) {
     role: data.role,
   });
 
+  let emailStatus: "sent" | "skipped" | "failed" = "skipped";
+  let emailError: string | undefined;
+  try {
+    const result = await sendWelcomeEmail({
+      to: data.email,
+      name: data.name,
+      password: data.password,
+      role: data.role,
+    });
+    emailStatus = result.sent ? "sent" : "skipped";
+  } catch (err) {
+    emailStatus = "failed";
+    emailError = err instanceof Error ? err.message : String(err);
+  }
+
   revalidatePath("/users");
   await audit({
     kind: "user.created",
     refType: "user",
     refId: newUserId,
     summary: `Created ${data.role} ${data.email}`,
-    payload: { email: data.email, role: data.role },
+    payload: {
+      email: data.email,
+      role: data.role,
+      emailStatus,
+      ...(emailError ? { emailError } : {}),
+    },
   });
-  return { id: newUserId };
+  return { id: newUserId, emailStatus, emailError };
 }
 
 export async function listUsers() {

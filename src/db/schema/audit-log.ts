@@ -6,6 +6,8 @@ export const auditKindEnum = pgEnum("audit_kind", [
   "bom.created",
   "bom.line.added",
   "bom.line.moved",
+  "bom.line.qty.updated",
+  "bom.line.removed",
   "bom.export.generated",
   "bom.section.created",
   "bom.section.renamed",
@@ -29,6 +31,7 @@ export const auditKindEnum = pgEnum("audit_kind", [
   "bom.renamed",
   "bom.deleted",
   "bom.duplicated",
+  "procurement.email.sent",
 ]);
 
 export const auditLog = pgTable(

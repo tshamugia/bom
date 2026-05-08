@@ -12,6 +12,12 @@ export const auth = betterAuth({
     autoSignIn: true,
     disableSignUp: true,
   },
+  user: {
+    additionalFields: {
+      role: { type: "string", required: false, defaultValue: "member", input: false },
+      disabled: { type: "boolean", required: false, defaultValue: false, input: false },
+    },
+  },
   advanced: {
     cookies: {
       session_token: { name: "better-auth.session_token" },

@@ -11,7 +11,7 @@ import { ApproversCard } from "./approvers-card";
 import { GenerateDialog } from "./generate-dialog";
 import type { Line } from "@/components/builder/sectioned-line-table";
 import type { SectionInfo } from "@/components/builder/section-row";
-import { requestApproval } from "@/server/actions/approvals";
+import { sendBomToProcurement } from "@/server/actions/procurement";
 import { toast } from "sonner";
 
 type Props = {
@@ -40,10 +40,17 @@ export function PreviewShell(p: Props) {
     const targetId = p.procurementRevision.id;
     startReview(async () => {
       try {
-        await requestApproval({ revisionId: targetId });
-        toast.success("Sent for review");
+        await sendBomToProcurement({ revisionId: targetId, options: opts });
+        toast.success("BOM emailed to procurement and sent for review");
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Send failed");
+        const msg = e instanceof Error ? e.message : "Send failed";
+        if (msg === "PROCUREMENT_RECIPIENTS_NOT_CONFIGURED") {
+          toast.error("No procurement recipients configured. Ask an admin to set them in Settings → Procurement email.");
+        } else if (msg === "SMTP_NOT_CONFIGURED") {
+          toast.error("Email is not configured on the server. Ask an admin to set up SMTP.");
+        } else {
+          toast.error(msg);
+        }
       }
     });
   }

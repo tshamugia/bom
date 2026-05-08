@@ -5,7 +5,7 @@ import {
   Bell, Sparkles as Spark, Folder, Calendar, Copy, Star, ArrowRight, ArrowLeft,
   MoreHorizontal as More, Sheet, Printer as Print, Link as LinkIcon,
   Activity, AlertTriangle, LogOut, Users as UsersIcon,
-  User, Sun, Moon, Monitor, Palette,
+  User, Sun, Moon, Monitor, Palette, Mail,
 } from "lucide-react";
 
 export const Icon = {
@@ -14,7 +14,7 @@ export const Icon = {
   Doc, Settings, Edit, Send, Bell, Spark, Folder, Calendar, Copy, Star,
   ArrowRight, ArrowLeft, More, Sheet, Print, Link: LinkIcon,
   Activity, AlertTriangle, LogOut, Users: UsersIcon,
-  User, Sun, Moon, Monitor, Palette,
+  User, Sun, Moon, Monitor, Palette, Mail,
 } as const;
 
 export type IconName = keyof typeof Icon;

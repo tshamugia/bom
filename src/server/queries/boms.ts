@@ -9,6 +9,8 @@ export type BomListRow = {
   name: string;
   ownerId: string | null;
   ownerName: string | null;
+  lastModifiedById: string | null;
+  lastModifiedByName: string | null;
   activeRevisionId: string | null;
   activeRevisionLetter: string | null;
   activeRevisionStatus: string | null;
@@ -32,6 +34,8 @@ export async function listAllBoms(): Promise<BomListAllRow[]> {
       b.name,
       b.owner_id  AS "ownerId",
       u.name      AS "ownerName",
+      b.last_modified_by_id AS "lastModifiedById",
+      m.name      AS "lastModifiedByName",
       b.created_at AS "createdAt",
       b.updated_at AS "updatedAt",
       b.project_id AS "projectId",
@@ -44,6 +48,7 @@ export async function listAllBoms(): Promise<BomListAllRow[]> {
     FROM "bom" b
     INNER JOIN "project" p ON p.id = b.project_id
     LEFT JOIN "user" u ON u.id = b.owner_id
+    LEFT JOIN "user" m ON m.id = b.last_modified_by_id
     LEFT JOIN LATERAL (
       SELECT r.id, r.letter, r.status
       FROM "bom_revision" r
@@ -69,6 +74,8 @@ export async function listBomsByProject(projectId: string): Promise<BomListRow[]
       b.name,
       b.owner_id  AS "ownerId",
       u.name      AS "ownerName",
+      b.last_modified_by_id AS "lastModifiedById",
+      m.name      AS "lastModifiedByName",
       b.created_at AS "createdAt",
       b.updated_at AS "updatedAt",
       latest.id     AS "activeRevisionId",
@@ -77,6 +84,7 @@ export async function listBomsByProject(projectId: string): Promise<BomListRow[]
       COALESCE(lc.line_count, 0)::int AS "lineCount"
     FROM "bom" b
     LEFT JOIN "user" u ON u.id = b.owner_id
+    LEFT JOIN "user" m ON m.id = b.last_modified_by_id
     LEFT JOIN LATERAL (
       SELECT r.id, r.letter, r.status
       FROM "bom_revision" r
@@ -97,6 +105,7 @@ export async function listBomsByProject(projectId: string): Promise<BomListRow[]
 export async function getBom(bomId: string) {
   await requireSession();
   const ownerUser = aliasedTable(user, "bom_owner");
+  const modifierUser = aliasedTable(user, "bom_modifier");
   const [b] = await db
     .select({
       id: boms.id,
@@ -104,6 +113,8 @@ export async function getBom(bomId: string) {
       name: boms.name,
       ownerId: boms.ownerId,
       ownerName: ownerUser.name,
+      lastModifiedById: boms.lastModifiedById,
+      lastModifiedByName: modifierUser.name,
       deletedAt: boms.deletedAt,
       createdAt: boms.createdAt,
       updatedAt: boms.updatedAt,
@@ -113,6 +124,7 @@ export async function getBom(bomId: string) {
     .from(boms)
     .innerJoin(projects, eq(projects.id, boms.projectId))
     .leftJoin(ownerUser, eq(ownerUser.id, boms.ownerId))
+    .leftJoin(modifierUser, eq(modifierUser.id, boms.lastModifiedById))
     .where(and(eq(boms.id, bomId), isNull(boms.deletedAt)))
     .limit(1);
   return b ?? null;

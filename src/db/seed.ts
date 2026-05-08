@@ -1,5 +1,5 @@
 import { db } from "./client";
-import { vendors, categories, subcategories, items, projects, boms, bomRevisions, bomLines, user } from "./schema";
+import { vendors, categories, subcategories, items, projects, boms, bomRevisions, bomLines, user, systemSettings, SYSTEM_SETTINGS_ID } from "./schema";
 import { sql, eq } from "drizzle-orm";
 import { env } from "@/lib/env";
 import { createUserDirect, findUserByEmail } from "@/server/lib/create-user-direct";
@@ -64,7 +64,7 @@ const ITEMS = [
 async function ensureRootUser() {
   const existing = await findUserByEmail(env.ROOT_USER_EMAIL);
   if (existing) {
-    await db.update(user).set({ role: "owner", disabled: false }).where(eq(user.id, existing.id));
+    await db.update(user).set({ role: "admin", disabled: false }).where(eq(user.id, existing.id));
     console.log(`Root user already present: ${env.ROOT_USER_EMAIL}`);
     return existing.id;
   }
@@ -72,7 +72,7 @@ async function ensureRootUser() {
     email: env.ROOT_USER_EMAIL,
     password: env.ROOT_USER_PASSWORD,
     name: env.ROOT_USER_NAME,
-    role: "owner",
+    role: "admin",
   });
   console.log(`Created root user ${env.ROOT_USER_EMAIL}`);
   return id;
@@ -82,6 +82,11 @@ async function main() {
   await db.execute(sql`TRUNCATE "bom_line", "bom_revision", "bom", "project", "item", "subcategory", "category", "vendor" RESTART IDENTITY CASCADE`);
 
   const rootUserId = await ensureRootUser();
+
+  await db
+    .insert(systemSettings)
+    .values({ id: SYSTEM_SETTINGS_ID, procurementTo: [], procurementCc: [] })
+    .onConflictDoNothing({ target: systemSettings.id });
 
   const insertedVendors = await db
     .insert(vendors)

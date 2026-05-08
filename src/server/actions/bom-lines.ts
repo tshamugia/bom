@@ -8,6 +8,7 @@ import { boms, bomLines, bomRevisions, bomSections, items, vendors } from "@/db/
 import { requireSession } from "../auth-context";
 import { audit } from "../audit";
 import { isRevisionImmutable } from "../lib/revision-status";
+import { touchBom } from "../lib/touch-bom";
 
 async function ensureRevisionWritable(revisionId: string) {
   await requireSession();
@@ -47,6 +48,7 @@ export async function addLine(input: { revisionId: string; itemId: string; qty?:
       sectionId: z.string().nullable().optional(),
     })
     .parse(input);
+  const session = await requireSession();
   const rev = await ensureRevisionWritable(revisionId);
 
   const [item] = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
@@ -69,6 +71,7 @@ export async function addLine(input: { revisionId: string; itemId: string; qty?:
   if (existing[0]) {
     const next = existing[0].qty + (input.qty ?? 1);
     const [updated] = await db.update(bomLines).set({ qty: next }).where(eq(bomLines.id, existing[0].id)).returning();
+    await touchBom(db, rev.bomId, session.user.id);
     revalidatePath(`/builder/${rev.projectId}/${rev.bomId}`);
     return updated;
   }
@@ -87,6 +90,7 @@ export async function addLine(input: { revisionId: string; itemId: string; qty?:
     vendorNameSnapshot: vendorRow?.name ?? null,
     position: next,
   }).returning();
+  await touchBom(db, rev.bomId, session.user.id);
   revalidatePath(`/builder/${rev.projectId}/${rev.bomId}`);
   await audit({ kind: "bom.line.added", refType: "bom", refId: rev.bomId, summary: `Added ${item.sku} to a BOM` });
   return inserted;
@@ -113,21 +117,47 @@ async function loadLineRevision(lineId: string) {
 
 export async function updateLineQty(input: { id: string; qty: number }) {
   const { id, qty } = z.object({ id: z.string(), qty: z.number().int().nonnegative() }).parse(input);
-  await requireSession();
+  const session = await requireSession();
   const line = await loadLineRevision(id);
   if (!line) throw new Error("LINE_NOT_FOUND");
   if (isRevisionImmutable(line.status)) throw new Error("REVISION_LOCKED");
+  const [{ sku, prevQty }] = await db
+    .select({ sku: bomLines.skuSnapshot, prevQty: bomLines.qty })
+    .from(bomLines)
+    .where(eq(bomLines.id, id))
+    .limit(1);
   await db.update(bomLines).set({ qty }).where(eq(bomLines.id, id));
+  await touchBom(db, line.bomId, session.user.id);
   revalidatePath(`/builder/${line.projectId}/${line.bomId}`);
+  await audit({
+    kind: "bom.line.qty.updated",
+    refType: "bom",
+    refId: line.bomId,
+    summary: `Line ${sku || ""} quantity ${prevQty} → ${qty}`.trim(),
+    payload: { lineId: id, prevQty, qty },
+  });
 }
 
 export async function removeLine(input: { id: string }) {
-  await requireSession();
+  const session = await requireSession();
   const line = await loadLineRevision(input.id);
   if (!line) throw new Error("LINE_NOT_FOUND");
   if (isRevisionImmutable(line.status)) throw new Error("REVISION_LOCKED");
+  const [{ sku }] = await db
+    .select({ sku: bomLines.skuSnapshot })
+    .from(bomLines)
+    .where(eq(bomLines.id, input.id))
+    .limit(1);
   await db.delete(bomLines).where(eq(bomLines.id, input.id));
+  await touchBom(db, line.bomId, session.user.id);
   revalidatePath(`/builder/${line.projectId}/${line.bomId}`);
+  await audit({
+    kind: "bom.line.removed",
+    refType: "bom",
+    refId: line.bomId,
+    summary: `Line ${sku || ""} removed`.trim(),
+    payload: { lineId: input.id },
+  });
 }
 
 export async function moveLineToSection(input: { lineId: string; sectionId: string | null; position?: number }) {
@@ -138,7 +168,7 @@ export async function moveLineToSection(input: { lineId: string; sectionId: stri
       position: z.number().int().nonnegative().optional(),
     })
     .parse(input);
-  await requireSession();
+  const session = await requireSession();
 
   const line = await loadLineRevision(lineId);
   if (!line) throw new Error("LINE_NOT_FOUND");
@@ -202,6 +232,7 @@ export async function moveLineToSection(input: { lineId: string; sectionId: stri
     }
   });
 
+  await touchBom(db, line.bomId, session.user.id);
   revalidatePath(`/builder/${line.projectId}/${line.bomId}`);
   if (!sameSection) {
     await audit({

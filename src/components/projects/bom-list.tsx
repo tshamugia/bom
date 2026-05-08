@@ -14,6 +14,7 @@ export type BomRow = {
   id: string;
   name: string;
   ownerName: string | null;
+  lastModifiedByName: string | null;
   activeRevisionId: string | null;
   activeRevisionLetter: string | null;
   activeRevisionStatus: "draft" | "committed" | "in-progress" | "review" | "approved" | "locked" | null;
@@ -43,6 +44,7 @@ export function BomList({ projectId, rows }: { projectId: string; rows: BomRow[]
           <tr className="bg-[var(--color-surface-2)] text-[11px] uppercase tracking-wider text-[var(--color-text-3)]">
             <th className="px-4 py-2.5 text-left font-medium">BOM</th>
             <th className="px-4 py-2.5 text-left font-medium">Owner</th>
+            <th className="px-4 py-2.5 text-left font-medium">Modified by</th>
             <th className="px-4 py-2.5 text-left font-medium">Status</th>
             <th className="px-4 py-2.5 text-left font-medium">Active Rev</th>
             <th className="px-4 py-2.5 text-right font-medium">Lines</th>
@@ -58,6 +60,16 @@ export function BomList({ projectId, rows }: { projectId: string; rows: BomRow[]
                 </Link>
               </td>
               <td className="px-4 py-2.5">{b.ownerName ?? "—"}</td>
+              <td className="px-4 py-2.5">
+                {b.lastModifiedByName ? (
+                  <div className="flex flex-col">
+                    <span>{b.lastModifiedByName}</span>
+                    <span className="text-[11px] text-[var(--color-text-3)]">
+                      {new Date(b.updatedAt).toLocaleString()}
+                    </span>
+                  </div>
+                ) : "—"}
+              </td>
               <td className="px-4 py-2.5">
                 {b.activeRevisionStatus
                   ? <RevisionStatusBadge status={b.activeRevisionStatus} />
