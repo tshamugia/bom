@@ -34,10 +34,10 @@ const COLUMN_LABELS: Record<ExportColumnKey, string> = {
 const COLUMN_ORDER: ExportColumnKey[] = [
   "sku",
   "description",
-  "manufacturer",
-  "vendor",
   "unit",
   "qty",
+  "manufacturer",
+  "vendor",
 ];
 
 export const DEFAULT_EXPORT_OPTS: ExportOpts = {

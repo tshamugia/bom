@@ -67,7 +67,7 @@ function SignInForm() {
   const invalid = !!error;
 
   return (
-    <form onSubmit={submit} noValidate className="space-y-5">
+    <form onSubmit={submit} method="post" noValidate className="space-y-5">
       <div className="space-y-1">
         <h1 className="text-[18px] font-semibold tracking-tight">Sign in</h1>
         <p className="text-[13px] text-[var(--color-text-3)]">

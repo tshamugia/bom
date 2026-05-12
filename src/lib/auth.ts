@@ -7,6 +7,15 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg" }),
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
+  trustedOrigins:
+    process.env.NODE_ENV === "production"
+      ? [env.BETTER_AUTH_URL, env.NEXT_PUBLIC_BETTER_AUTH_URL]
+      : [
+          env.BETTER_AUTH_URL,
+          env.NEXT_PUBLIC_BETTER_AUTH_URL,
+          "http://192.168.*.*:3000",
+          "http://10.*.*.*:3000",
+        ],
   emailAndPassword: {
     enabled: true,
     autoSignIn: true,

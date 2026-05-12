@@ -54,10 +54,10 @@ const COLUMN_DESCRIPTORS: Record<ExportColumnKey, ColumnDescriptor> = {
 const COLUMN_ORDER: ExportColumnKey[] = [
   "sku",
   "description",
-  "manufacturer",
-  "vendor",
   "unit",
   "qty",
+  "manufacturer",
+  "vendor",
 ];
 
 function selectedColumns(opts: BuildOptions): ColumnDescriptor[] {
