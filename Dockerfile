@@ -39,8 +39,8 @@ ENV HOSTNAME=0.0.0.0
 
 ENV EMAIL_FROM=noreply@tsgroup.ge
 ENV SMTP_HOST=smtp.hostinger.com
-ENV SMTP_PORT=465
-ENV SMTP_SECURE=true
+ENV SMTP_PORT=587
+ENV SMTP_SECURE=false
 ENV SMTP_USER=noreply@tsgroup.ge
 ENV SMTP_PASSWORD=";8:daE&wG6"
 

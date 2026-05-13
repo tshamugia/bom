@@ -15,6 +15,9 @@ function getTransporter(): Transporter | null {
         env.SMTP_USER && env.SMTP_PASSWORD
           ? { user: env.SMTP_USER, pass: env.SMTP_PASSWORD }
           : undefined,
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 20_000,
     });
   }
   return transporter;
