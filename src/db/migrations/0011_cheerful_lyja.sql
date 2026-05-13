@@ -5,15 +5,15 @@ ALTER TABLE "organization" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "membership" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 DROP TABLE "organization" CASCADE;--> statement-breakpoint
 DROP TABLE "membership" CASCADE;--> statement-breakpoint
-ALTER TABLE "audit_log" DROP CONSTRAINT "audit_log_organization_id_organization_id_fk";
+ALTER TABLE "audit_log" DROP CONSTRAINT IF EXISTS "audit_log_organization_id_organization_id_fk";
 --> statement-breakpoint
-ALTER TABLE "category" DROP CONSTRAINT "category_organization_id_organization_id_fk";
+ALTER TABLE "category" DROP CONSTRAINT IF EXISTS "category_organization_id_organization_id_fk";
 --> statement-breakpoint
-ALTER TABLE "vendor" DROP CONSTRAINT "vendor_organization_id_organization_id_fk";
+ALTER TABLE "vendor" DROP CONSTRAINT IF EXISTS "vendor_organization_id_organization_id_fk";
 --> statement-breakpoint
-ALTER TABLE "item" DROP CONSTRAINT "item_organization_id_organization_id_fk";
+ALTER TABLE "item" DROP CONSTRAINT IF EXISTS "item_organization_id_organization_id_fk";
 --> statement-breakpoint
-ALTER TABLE "project" DROP CONSTRAINT "project_organization_id_organization_id_fk";
+ALTER TABLE "project" DROP CONSTRAINT IF EXISTS "project_organization_id_organization_id_fk";
 --> statement-breakpoint
 DROP INDEX "audit_org_created_idx";--> statement-breakpoint
 DROP INDEX "vendor_org_code_idx";--> statement-breakpoint
