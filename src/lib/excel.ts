@@ -154,9 +154,8 @@ function buildCoverSheet(wb: ExcelJS.Workbook, input: BuildInput) {
     row++;
   }
 
-  ws.getCell(`A${row}`).value = "Halcyon Robotics";
+  ws.getCell(`A${row}`).value = "From Insta Engineering Team";
   ws.getCell(`A${row}`).font = { bold: true };
-  ws.getCell(`A${row + 1}`).value = "438 Industrial Way · Oakland, CA";
   ws.getColumn(1).width = 40;
   ws.getColumn(2).width = 16;
 }
