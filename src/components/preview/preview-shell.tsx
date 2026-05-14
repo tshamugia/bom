@@ -40,17 +40,31 @@ export function PreviewShell(p: Props) {
     const targetId = p.procurementRevision.id;
     startReview(async () => {
       try {
-        await sendBomToProcurement({ revisionId: targetId, options: opts });
-        toast.success("BOM emailed to procurement and sent for review");
+        const res = await sendBomToProcurement({ revisionId: targetId, options: opts });
+        if (res.ok) {
+          toast.success("BOM emailed to procurement and sent for review");
+          return;
+        }
+        switch (res.code) {
+          case "PROCUREMENT_RECIPIENTS_NOT_CONFIGURED":
+            toast.error("No procurement recipients configured. Ask an admin to set them in Settings → Procurement email.");
+            break;
+          case "SMTP_NOT_CONFIGURED":
+            toast.error("Email is not configured on the server. Ask an admin to set up SMTP.");
+            break;
+          case "SMTP_SEND_FAILED":
+            toast.error(`Email failed to send: ${res.message}`);
+            break;
+          case "EXPORT_FAILED":
+            toast.error(`Could not generate the Excel export: ${res.message}`);
+            break;
+          case "APPROVAL_FAILED":
+            toast.error(`Email sent, but starting the approval workflow failed: ${res.message}`);
+            break;
+        }
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Send failed";
-        if (msg === "PROCUREMENT_RECIPIENTS_NOT_CONFIGURED") {
-          toast.error("No procurement recipients configured. Ask an admin to set them in Settings → Procurement email.");
-        } else if (msg === "SMTP_NOT_CONFIGURED") {
-          toast.error("Email is not configured on the server. Ask an admin to set up SMTP.");
-        } else {
-          toast.error(msg);
-        }
+        toast.error(msg);
       }
     });
   }

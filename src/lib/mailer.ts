@@ -31,7 +31,8 @@ export type MailAttachment = {
 
 export type SendMailResult =
   | { sent: true }
-  | { sent: false; reason: "SMTP_NOT_CONFIGURED" };
+  | { sent: false; reason: "SMTP_NOT_CONFIGURED" }
+  | { sent: false; reason: "SMTP_SEND_FAILED"; detail: string };
 
 export async function sendMail(opts: {
   to: string | string[];
@@ -43,8 +44,21 @@ export async function sendMail(opts: {
 }): Promise<SendMailResult> {
   const t = getTransporter();
   if (!t) return { sent: false, reason: "SMTP_NOT_CONFIGURED" };
-  await t.sendMail({ from: env.EMAIL_FROM, ...opts });
-  return { sent: true };
+  try {
+    await t.sendMail({ from: env.EMAIL_FROM, ...opts });
+    return { sent: true };
+  } catch (e) {
+    const detail = e instanceof Error ? (e.message || e.name) : String(e);
+    console.error("[mailer] sendMail failed", {
+      host: env.SMTP_HOST,
+      port: env.SMTP_PORT,
+      secure: env.SMTP_SECURE,
+      from: env.EMAIL_FROM,
+      to: opts.to,
+      error: e,
+    });
+    return { sent: false, reason: "SMTP_SEND_FAILED", detail };
+  }
 }
 
 export async function sendWelcomeEmail(args: {
