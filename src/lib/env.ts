@@ -15,7 +15,10 @@ const Schema = z.object({
   EMAIL_FROM: z.string().email(),
   SMTP_HOST: z.string().min(1).optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
-  SMTP_SECURE: z.coerce.boolean().default(false),
+  SMTP_SECURE: z
+    .union([z.boolean(), z.string()])
+    .default(false)
+    .transform((v) => (typeof v === "boolean" ? v : /^(1|true|yes|on)$/i.test(v.trim()))),
   SMTP_USER: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
   ROOT_USER_EMAIL: z.string().email().default("t.shamugia@insta.ge"),
