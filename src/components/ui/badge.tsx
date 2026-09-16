@@ -1,18 +1,18 @@
 type Tone = "success" | "info" | "warning" | "danger" | "accent" | "gray";
 
-const TONES: Record<Tone, string> = {
-  success: "bg-[var(--color-success-soft)] text-[var(--color-success)]",
-  info:    "bg-[var(--color-info-soft)] text-[var(--color-info)]",
-  warning: "bg-[var(--color-warning-soft)] text-[var(--color-warning)]",
-  danger:  "bg-[var(--color-danger-soft)] text-[var(--color-danger)]",
-  accent:  "bg-[var(--color-accent-soft)] text-[var(--color-accent-text)]",
-  gray:    "bg-[var(--color-surface-3)] text-[var(--color-text-2)]",
+const TONE_CLASS: Record<Tone, string> = {
+  success: "b-green",
+  info: "b-blue",
+  warning: "b-amber",
+  danger: "b-red",
+  accent: "b-purple",
+  gray: "b-gray",
 };
 
 export function Badge({ tone = "gray", children }: { tone?: Tone; children: React.ReactNode }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-px text-[11px] font-medium ${TONES[tone]}`}>
-      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+    <span className={`badge ${TONE_CLASS[tone]}`}>
+      <span className="dot" />
       {children}
     </span>
   );

@@ -1,7 +1,6 @@
 "use client";
 
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
 import { useTweaks, type ColumnKey } from "@/stores/tweaks-store";
 
@@ -14,7 +13,7 @@ export function ColumnsMenu() {
   const { columns, toggleColumn } = useTweaks();
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="outline"><Icon.Sliders size={14} className="mr-1.5" /> Columns</Button>} />
+      <DropdownMenuTrigger render={<button type="button" className="btn"><Icon.Sliders className="ico" /> Columns</button>} />
       <DropdownMenuContent className="w-48">
         <DropdownMenuLabel>Visible columns</DropdownMenuLabel>
         <DropdownMenuSeparator />

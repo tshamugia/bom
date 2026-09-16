@@ -1,6 +1,5 @@
-import { getStats, getRecentActivity, getProjectsForDashboard } from "@/server/queries/dashboard";
+import { getStats, getRecentActivity, getProjectsForDashboard, getUpcomingDeadlines } from "@/server/queries/dashboard";
 import { PageHead } from "@/components/master/page-head";
-import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
 import { StatTile } from "@/components/dashboard/stat-tile";
 import { ProjectsTable } from "@/components/dashboard/projects-table";
@@ -9,10 +8,11 @@ import { NewProjectDialog } from "@/components/projects/new-project-dialog";
 import Link from "next/link";
 
 export default async function DashboardPage() {
-  const [stats, activity, projects] = await Promise.all([
+  const [stats, activity, projects, deadlines] = await Promise.all([
     getStats(),
     getRecentActivity(8),
     getProjectsForDashboard(),
+    getUpcomingDeadlines(4),
   ]);
 
   return (
@@ -22,20 +22,24 @@ export default async function DashboardPage() {
         subtitle="Active BOMs, recent activity, and procurement health."
         actions={
           <>
-            <Link href="/api/dashboard/report.csv">
-              <Button variant="outline"><Icon.Download size={14} className="mr-1.5" /> Export report</Button>
+            <Link href="/api/dashboard/report.csv" className="btn">
+              <Icon.Download className="ico" /> Export report
             </Link>
             <NewProjectDialog />
           </>
         }
       />
 
-      <div className="mb-5 grid grid-cols-4 gap-3">
-        <StatTile tone="accent"  label="Active BOMs"       value={stats.activeBoms} />
-        <StatTile tone="info"    label="Avg. lead time"    value={`${stats.avgLeadTimeDays}d`} />
-        <StatTile tone="warning" label="Approvals pending" value={stats.approvalsPending} delta={stats.approvalsPending > 0 ? "needs action" : ""} deltaTone={stats.approvalsPending > 0 ? "down" : "neutral"} />
+      <div className="stat-grid">
+        <StatTile label="Active BOMs" value={stats.activeBoms} />
+        <StatTile label="Avg. lead time" value={`${stats.avgLeadTimeDays}d`} />
         <StatTile
-          tone={stats.overdueDeadlines > 0 ? "warning" : "success"}
+          label="Approvals pending"
+          value={stats.approvalsPending}
+          delta={stats.approvalsPending > 0 ? "needs action" : ""}
+          deltaTone={stats.approvalsPending > 0 ? "down" : "neutral"}
+        />
+        <StatTile
           label="Upcoming deadlines"
           value={stats.upcomingDeadlines}
           delta={stats.overdueDeadlines > 0 ? `${stats.overdueDeadlines} overdue` : "next 14d"}
@@ -43,10 +47,37 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-[1fr_320px] gap-4">
-        <ProjectsTable rows={projects as any} />
-        <div className="flex flex-col gap-3">
-          <ActivityTimeline items={activity as any} />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 16 }}>
+        <ProjectsTable rows={projects as React.ComponentProps<typeof ProjectsTable>["rows"]} />
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <ActivityTimeline items={activity as React.ComponentProps<typeof ActivityTimeline>["items"]} />
+
+          <div className="card">
+            <div className="card-head"><h3 className="card-title">Upcoming deadlines</h3></div>
+            <div style={{ padding: "4px 0" }}>
+              {deadlines.length === 0 && (
+                <div className="muted" style={{ padding: "12px 16px", fontSize: 12.5 }}>No target dates set.</div>
+              )}
+              {deadlines.map((d, i) => (
+                <div
+                  key={d.id}
+                  style={{
+                    padding: "10px 16px", display: "flex", alignItems: "center", gap: 10,
+                    fontSize: 12.5,
+                    borderBottom: i < deadlines.length - 1 ? "1px solid var(--line-soft)" : "none",
+                  }}
+                >
+                  <Icon.Calendar className="ico" style={{ color: "var(--text-3)" }} />
+                  <Link href={`/projects/${d.id}`} style={{ color: "inherit", flex: 1, minWidth: 0 }}>
+                    <span className="mono" style={{ fontSize: 11.5 }}>{d.code}</span>
+                    <span className="muted" style={{ marginLeft: 8 }}>{d.name}</span>
+                  </Link>
+                  <span className="muted tabular" style={{ textAlign: "right" }}>{d.targetDate}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </>

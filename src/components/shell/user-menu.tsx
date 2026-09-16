@@ -45,29 +45,16 @@ export function UserMenu({ user }: { user: User | null }) {
           <button
             type="button"
             aria-label="Open account menu"
-            className="flex w-full items-center gap-2.5 rounded-lg bg-[var(--color-side-hover-bg)] px-2.5 py-2 text-left transition-colors hover:bg-[var(--color-side-active-bg)]"
+            className="sb-foot w-full text-left"
           >
-            <span
-              className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full text-[12px] font-semibold text-white ring-2 ring-[var(--color-side-bg)]"
-              style={{
-                background:
-                  "linear-gradient(135deg, var(--color-cat-indigo) 0%, var(--color-cat-violet) 100%)",
-              }}
-            >
-              {initials}
+            <span className="avatar">{initials}</span>
+            <span className="min-w-0" style={{ flex: 1 }}>
+              <span className="who block truncate">{user?.name ?? "Anonymous"}</span>
+              <span className="who-sub block truncate capitalize">{user?.role ?? ""}</span>
             </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[12.5px] font-medium leading-tight text-[var(--color-side-active)]">
-                {user?.name ?? "Anonymous"}
-              </span>
-              <span className="block truncate text-[11px] text-[var(--color-side-text-3)]">
-                {user?.role ?? ""}
-              </span>
+            <span className="btn btn-icon btn-ghost" aria-hidden>
+              <Icon.Settings className="ico" />
             </span>
-            <Icon.ChevDown
-              size={14}
-              className="flex-shrink-0 text-[var(--color-side-text-3)]"
-            />
           </button>
         }
       />

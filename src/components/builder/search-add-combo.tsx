@@ -2,8 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useBuilder } from "@/stores/builder-store";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
 import { addLine } from "@/server/actions/bom-lines";
 
@@ -50,34 +48,35 @@ export function SearchAddCombo({
   }
 
   return (
-    <div ref={ref} className="relative flex-1">
-      <Icon.Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-4)]" />
-      <Input
-        className="pl-9"
+    <div ref={ref} className="search-combo">
+      <Icon.Search className="ico" />
+      <input
+        className="input"
         placeholder="Search SKU, description, or manufacturer to add to BOM…"
         value={s.search}
         onChange={e => s.setSearch(e.target.value)}
         onFocus={() => s.setComboOpen(true)}
       />
       {s.comboOpen && (
-        <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-30 max-h-[360px] overflow-auto rounded-lg border border-[var(--color-line-strong)] bg-[var(--color-surface)] shadow-[var(--shadow-pop)]">
+        <div className="dropdown">
           {filtered.length === 0 && (
-            <div className="p-4 text-center text-[12.5px] text-[var(--color-text-3)]">No items match the current filters.</div>
+            <div className="dropdown-empty">No items match the current filters.</div>
           )}
           {filtered.map(it => {
             const inBom = lineItemIds.has(it.id);
             return (
               <div
                 key={it.id}
-                className="grid cursor-pointer grid-cols-[130px_1fr_auto] items-center gap-2.5 border-b border-[var(--color-line-soft)] px-3 py-2 text-[12.5px] last:border-0 hover:bg-[var(--color-accent-soft)]"
+                className="dropdown-row"
+                style={{ gridTemplateColumns: "130px 1fr auto" }}
                 onClick={() => !inBom && add(it.id)}
               >
-                <span className="font-mono text-[11.5px]">{it.sku}</span>
-                <span className="truncate text-[var(--color-text-2)]">{it.description}</span>
+                <span className="mono" style={{ fontSize: 11.5 }}>{it.sku}</span>
+                <span className="desc">{it.description}</span>
                 {inBom ? (
-                  <span className="rounded-full bg-[var(--color-success-soft)] px-2 py-px text-[11px] text-[var(--color-success)]">In BOM</span>
+                  <span className="badge b-green"><Icon.Check className="ico" /> In BOM</span>
                 ) : (
-                  <Button variant="ghost" size="sm" disabled={pending && adding === it.id}><Icon.Plus size={14} /></Button>
+                  <button className="btn btn-sm btn-ghost" disabled={pending && adding === it.id}><Icon.Plus className="ico" /></button>
                 )}
               </div>
             );

@@ -61,12 +61,10 @@ export function ExportOptionsCard({ opts, onChange }: { opts: ExportOpts; onChan
   }
 
   return (
-    <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
-      <div className="border-b border-[var(--color-line-soft)] px-4 py-3">
-        <h3 className="text-[13.5px] font-semibold">Export options</h3>
-      </div>
+    <div className="card">
+      <div className="card-head"><h3 className="card-title">Export options</h3></div>
       <div className="flex flex-col gap-2.5 p-4 text-[12.5px]">
-        <div className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-3)]">Columns</div>
+        <div className="field-label">Columns</div>
         {COLUMN_ORDER.map(key => {
           const required = REQUIRED_COLUMNS.has(key);
           return (
@@ -88,8 +86,8 @@ export function ExportOptionsCard({ opts, onChange }: { opts: ExportOpts; onChan
           );
         })}
 
-        <hr className="my-2 border-[var(--color-line-soft)]" />
-        <div className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-3)]">Layout</div>
+        <hr className="div" />
+        <div className="field-label">Layout</div>
         <label className="flex items-center gap-2">
           <Checkbox
             checked={opts.groupByVendor}
@@ -105,8 +103,8 @@ export function ExportOptionsCard({ opts, onChange }: { opts: ExportOpts; onChan
           <span>Include cover page</span>
         </label>
 
-        <hr className="my-2 border-[var(--color-line-soft)]" />
-        <div className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-3)]">Format</div>
+        <hr className="div" />
+        <div className="field-label">Format</div>
         <Select value={opts.format} onValueChange={v => onChange({ ...opts, format: v as ExportOpts["format"] })}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>

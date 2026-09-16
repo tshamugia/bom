@@ -9,20 +9,18 @@ type Step = {
 
 export function ApproversCard({ steps }: { steps: Step[] | null }) {
   return (
-    <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
-      <div className="border-b border-[var(--color-line-soft)] px-4 py-3">
-        <h3 className="text-[13.5px] font-semibold">Approvers</h3>
-      </div>
-      <div className="py-1">
+    <div className="card">
+      <div className="card-head"><h3 className="card-title">Approvers</h3></div>
+      <div style={{ padding: "4px 0" }}>
         {!steps || steps.length === 0 ? (
-          <div className="px-4 py-4 text-[12.5px] text-[var(--color-text-3)]">Not yet sent for review.</div>
+          <div className="muted" style={{ padding: "12px 16px", fontSize: 12.5 }}>Not yet sent for review.</div>
         ) : (
           steps.map(s => (
-            <div key={s.position} className="flex items-center gap-2.5 px-4 py-2 text-[12.5px]">
-              <div className="grid h-6 w-6 place-items-center rounded-full bg-[var(--color-accent)] text-[10px] font-semibold text-white">
+            <div key={s.position} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", fontSize: 12.5 }}>
+              <div className="avatar" style={{ width: 24, height: 24, fontSize: 10 }}>
                 {(s.assigneeName ?? "?").split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase()}
               </div>
-              <div className="flex-1">
+              <div style={{ flex: 1 }}>
                 <div>{s.assigneeName ?? "Unassigned"}</div>
                 <div className="text-[11px] text-[var(--color-text-3)]">{s.role}</div>
               </div>

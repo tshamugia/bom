@@ -40,7 +40,7 @@ export function CsvImportDialog({ revisionId }: { revisionId: string }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="outline"><Icon.Sheet size={14} className="mr-1.5" /> Import CSV</Button>} />
+      <DialogTrigger render={<button type="button" className="btn"><Icon.Sheet className="ico" /> Import CSV</button>} />
       <DialogContent>
         <DialogHeader><DialogTitle>Import CSV</DialogTitle></DialogHeader>
         <div className="space-y-3">

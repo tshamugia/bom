@@ -2,7 +2,6 @@ import { listVendors, vendorStats } from "@/server/queries/vendors";
 import { PageHead } from "@/components/master/page-head";
 import { VendorStatusBadge } from "@/components/ui/badge";
 import { VendorDialog } from "@/components/master/vendor-dialog";
-import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
 
 export default async function VendorsPage() {
@@ -15,65 +14,61 @@ export default async function VendorsPage() {
         subtitle="Approved suppliers, performance metrics, and lead times."
         actions={
           <>
-            <a href="/api/exports/vendors.xlsx">
-              <Button variant="outline"><Icon.Download size={14} className="mr-1.5" /> Export</Button>
-            </a>
-            <VendorDialog trigger={<Button><Icon.Plus size={14} className="mr-1.5" /> Add vendor</Button>} />
+            <a href="/api/exports/vendors.xlsx" className="btn"><Icon.Download className="ico" /> Export</a>
+            <VendorDialog trigger={<button type="button" className="btn btn-primary"><Icon.Plus className="ico" /> Add vendor</button>} />
           </>
         }
       />
 
-      <div className="mb-5 grid grid-cols-4 gap-3">
-        <Stat label="Total vendors" value={stats.total} />
-        <Stat label="Preferred" value={stats.preferred} />
-        <Stat label="Avg. rating" value={stats.avgRating.toFixed(1)} />
-        <Stat label="Avg. lead time" value="6.4d" />
+      <div className="stat-grid">
+        <div className="stat"><div className="stat-label">Total vendors</div><div className="stat-value">{stats.total}</div></div>
+        <div className="stat"><div className="stat-label">Preferred</div><div className="stat-value">{stats.preferred}</div></div>
+        <div className="stat"><div className="stat-label">Avg. rating</div><div className="stat-value">{stats.avgRating.toFixed(1)}</div></div>
+        <div className="stat"><div className="stat-label">Avg. lead time</div><div className="stat-value">{stats.avgLeadDays ? `${stats.avgLeadDays}d` : "—"}</div></div>
       </div>
 
-      <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
-        <div className="flex items-center gap-2 border-b border-[var(--color-line-soft)] px-4 py-3">
-          <h3 className="text-[13.5px] font-semibold">All vendors</h3>
+      <div className="card">
+        <div className="card-head">
+          <h3 className="card-title">All vendors</h3>
+          <div className="spacer" />
+          <button className="btn btn-sm"><Icon.Filter className="ico" /> Filter</button>
         </div>
-        <table className="w-full text-[12.5px]">
-          <thead>
-            <tr className="bg-[var(--color-surface-2)] text-[11px] uppercase tracking-wider text-[var(--color-text-3)]">
-              <th className="px-4 py-2.5 text-left font-medium">Vendor</th>
-              <th className="px-4 py-2.5 text-left font-medium">Code</th>
-              <th className="px-4 py-2.5 text-left font-medium">Country</th>
-              <th className="px-4 py-2.5 text-left font-medium">Lead time</th>
-              <th className="px-4 py-2.5 text-right font-medium">Items</th>
-              <th className="px-4 py-2.5 text-right font-medium">Rating</th>
-              <th className="px-4 py-2.5 text-left font-medium">Status</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {list.map(v => (
-              <tr key={v.id} className="border-b border-[var(--color-line-soft)] last:border-0 hover:bg-[var(--color-surface-2)]">
-                <td className="px-4 py-2.5 font-medium">{v.name}</td>
-                <td className="px-4 py-2.5 font-mono text-[11.5px]">{v.code}</td>
-                <td className="px-4 py-2.5">{v.country}</td>
-                <td className="px-4 py-2.5 tabular-nums">{v.leadTime}</td>
-                <td className="px-4 py-2.5 text-right tabular-nums">{v.itemsCount}</td>
-                <td className="px-4 py-2.5 text-right tabular-nums">★ {Number(v.rating).toFixed(1)}</td>
-                <td className="px-4 py-2.5"><VendorStatusBadge status={v.status} /></td>
-                <td className="px-4 py-2.5 text-right">
-                  <VendorDialog existing={v as any} trigger={<Button variant="ghost" size="sm"><Icon.Edit size={14} /></Button>} />
-                </td>
+        <div className="table-wrap">
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>Vendor</th><th>Code</th><th>Country</th><th>Lead time</th>
+                <th className="num">SKUs</th><th className="num">Rating</th><th>Status</th><th></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {list.map((v) => (
+                <tr key={v.id}>
+                  <td>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div className="avatar" style={{ width: 28, height: 28, fontSize: 11, background: "linear-gradient(135deg, #6b7180, #4b5160)" }}>{v.code}</div>
+                      <div style={{ fontWeight: 500 }}>{v.name}</div>
+                    </div>
+                  </td>
+                  <td className="mono" style={{ fontSize: 11.5 }}>{v.code}</td>
+                  <td>{v.country}</td>
+                  <td className="tabular">{v.leadTime}</td>
+                  <td className="num tabular">{v.itemsCount}</td>
+                  <td className="num tabular">
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      <Icon.Star className="ico" /> {Number(v.rating).toFixed(1)}
+                    </span>
+                  </td>
+                  <td><VendorStatusBadge status={v.status} /></td>
+                  <td>
+                    <VendorDialog existing={v as React.ComponentProps<typeof VendorDialog>["existing"]} trigger={<button type="button" className="btn btn-icon btn-ghost"><Icon.More className="ico" /></button>} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
-      <div className="mb-1.5 text-[11.5px] font-medium uppercase tracking-wider text-[var(--color-text-3)]">{label}</div>
-      <div className="text-[22px] font-semibold tabular-nums tracking-tight">{value}</div>
-    </div>
   );
 }

@@ -111,15 +111,13 @@ export function CommandPalette() {
         type="button"
         onClick={openPalette}
         aria-label="Search"
-        className="group flex w-80 items-center gap-2 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-2)] px-2.5 py-1.5 text-left text-[var(--color-text-3)] transition-colors hover:bg-[var(--color-surface)]"
+        className="tb-search"
       >
-        <Icon.Search size={14} />
-        <span className="flex-1 text-[13px] text-[var(--color-text-4)]">
-          Search projects, items, vendors…
+        <Icon.Search className="ico" />
+        <span className="flex-1 text-left text-[12.5px] text-[var(--color-text-4)]">
+          Search SKUs, projects, vendors…
         </span>
-        <span className="rounded border border-[var(--color-line)] bg-[var(--color-surface)] px-1.5 font-mono text-[10.5px] font-medium text-[var(--color-text-3)]">
-          ⌘K
-        </span>
+        <span className="kbd">⌘K</span>
       </button>
 
       {open && (

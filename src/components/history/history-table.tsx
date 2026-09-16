@@ -1,6 +1,4 @@
-import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
 
 type Row = {
@@ -18,54 +16,64 @@ type Row = {
 
 export function HistoryTable({ rows }: { rows: Row[] }) {
   return (
-    <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
-      <table className="w-full text-[12.5px]">
-        <thead>
-          <tr className="bg-[var(--color-surface-2)] text-[11px] uppercase tracking-wider text-[var(--color-text-3)]">
-            <th className="px-4 py-2.5 text-left font-medium">BOM</th>
-            <th className="px-4 py-2.5 text-left font-medium">Generated</th>
-            <th className="px-4 py-2.5 text-left font-medium">By</th>
-            <th className="px-4 py-2.5 text-left font-medium">File</th>
-            <th className="px-4 py-2.5 text-right font-medium">Size</th>
-            <th className="px-4 py-2.5 text-left font-medium">Status</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {rows.length === 0 && (
+    <div className="card">
+      <div className="card-head">
+        <h3 className="card-title">Generated BOMs</h3>
+        <div className="spacer" />
+        <span className="muted" style={{ fontSize: 12 }}>Last 90 days</span>
+      </div>
+      <div className="table-wrap">
+        <table className="tbl">
+          <thead>
             <tr>
-              <td colSpan={7} className="px-4 py-12 text-center text-[var(--color-text-3)]">
-                <div className="text-[13px]">No exports yet</div>
-                <div className="mt-1 text-[12px]">
-                  Generate an Excel BOM from the Preview page to see it listed here.
-                </div>
-              </td>
+              <th>BOM</th>
+              <th>Generated</th>
+              <th>By</th>
+              <th>File</th>
+              <th className="num">Size</th>
+              <th>Status</th>
+              <th></th>
             </tr>
-          )}
-          {rows.map(r => (
-            <tr key={r.id} className="border-b border-[var(--color-line-soft)] last:border-0 hover:bg-[var(--color-surface-2)]">
-              <td className="px-4 py-2.5">
-                <div className="font-medium">{r.bomName ?? r.projectName}</div>
-                <div className="font-mono text-[11px] text-[var(--color-text-3)]">{r.projectCode} · Rev. {r.revisionLetter}</div>
-              </td>
-              <td className="px-4 py-2.5 text-[var(--color-text-3)]">{new Date(r.generatedAt).toLocaleString()}</td>
-              <td className="px-4 py-2.5">{r.generatedByName ?? "—"}</td>
-              <td className="px-4 py-2.5 font-mono text-[11.5px]">{r.fileName}</td>
-              <td className="px-4 py-2.5 text-right tabular-nums">{(r.byteSize / 1024).toFixed(1)} KB</td>
-              <td className="px-4 py-2.5">
-                {r.status === "exported" && <Badge tone="success">Exported</Badge>}
-                {r.status === "archived" && <Badge tone="gray">Archived</Badge>}
-                {r.status === "failed"   && <Badge tone="danger">Failed</Badge>}
-              </td>
-              <td className="px-4 py-2.5 text-right">
-                <Link href={`/api/exports/${r.id}/download`} target="_blank">
-                  <Button variant="ghost" size="sm" title="Re-download"><Icon.Download size={14} /></Button>
-                </Link>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={7} style={{ padding: "48px 16px", textAlign: "center", color: "var(--text-3)" }}>
+                  <div style={{ fontSize: 13 }}>No exports yet</div>
+                  <div style={{ marginTop: 4, fontSize: 12 }}>
+                    Generate an Excel BOM from the Preview page to see it listed here.
+                  </div>
+                </td>
+              </tr>
+            )}
+            {rows.map((r) => (
+              <tr key={r.id}>
+                <td>
+                  <div style={{ fontWeight: 500 }}>{r.bomName ?? r.projectName}</div>
+                  <div className="mono muted" style={{ fontSize: 11 }}>{r.projectCode} · Rev. {r.revisionLetter}</div>
+                </td>
+                <td className="muted">{new Date(r.generatedAt).toLocaleString()}</td>
+                <td>{r.generatedByName ?? "—"}</td>
+                <td className="mono" style={{ fontSize: 11.5 }}>{r.fileName}</td>
+                <td className="num tabular">{(r.byteSize / 1024).toFixed(1)} KB</td>
+                <td>
+                  {r.status === "exported" && <Badge tone="success">Exported</Badge>}
+                  {r.status === "archived" && <Badge tone="gray">Archived</Badge>}
+                  {r.status === "failed" && <Badge tone="danger">Failed</Badge>}
+                </td>
+                <td>
+                  <div className="row-actions">
+                    <a href={`/api/exports/${r.id}/download`} target="_blank" rel="noopener noreferrer" className="btn btn-icon btn-ghost" title="Re-download">
+                      <Icon.Download className="ico" />
+                    </a>
+                    <button className="btn btn-icon btn-ghost" title="More"><Icon.More className="ico" /></button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

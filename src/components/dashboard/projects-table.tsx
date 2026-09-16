@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Icon } from "@/components/icons";
-import { Button } from "@/components/ui/button";
 
 type Row = {
   id: string;
@@ -16,47 +15,54 @@ type Row = {
 
 export function ProjectsTable({ rows }: { rows: Row[] }) {
   return (
-    <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
-      <div className="flex items-center gap-2 border-b border-[var(--color-line-soft)] px-4 py-3">
-        <h3 className="text-[13.5px] font-semibold">Projects</h3>
-        <span className="text-[12px] text-[var(--color-text-3)]">{rows.length} active</span>
+    <div className="card">
+      <div className="card-head">
+        <h3 className="card-title">Projects</h3>
+        <span className="muted" style={{ fontSize: 12 }}>{rows.length} active</span>
+        <div className="spacer" />
+        <div className="pill">All teams <Icon.ChevDown className="ico" /></div>
+        <div className="pill">All status <Icon.ChevDown className="ico" /></div>
       </div>
-      <table className="w-full text-[12.5px]">
-        <thead>
-          <tr className="bg-[var(--color-surface-2)] text-[11px] uppercase tracking-wider text-[var(--color-text-3)]">
-            <th className="px-4 py-2.5 text-left font-medium">Project</th>
-            <th className="px-4 py-2.5 text-left font-medium">Owner</th>
-            <th className="px-4 py-2.5 text-right font-medium">BOMs</th>
-            <th className="px-4 py-2.5 text-right font-medium">Lines</th>
-            <th className="px-4 py-2.5 text-left font-medium">Updated</th>
-            <th className="px-4 py-2.5 text-left font-medium">Deadline</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(p => (
-            <tr key={p.id} className="cursor-pointer border-b border-[var(--color-line-soft)] last:border-0 hover:bg-[var(--color-surface-2)]">
-              <td className="px-4 py-2.5">
-                <Link href={`/projects/${p.id}`} className="flex items-center gap-2.5">
-                  <Icon.Folder size={14} className="text-[var(--color-text-3)]" />
-                  <div>
-                    <div className="font-medium">{p.name}</div>
-                    <div className="font-mono text-[11px] text-[var(--color-text-3)]">{p.code}</div>
-                  </div>
-                </Link>
-              </td>
-              <td className="px-4 py-2.5">{p.ownerName ?? "—"}</td>
-              <td className="px-4 py-2.5 text-right tabular-nums">{p.bomCount}</td>
-              <td className="px-4 py-2.5 text-right tabular-nums">{p.lineCount}</td>
-              <td className="px-4 py-2.5 text-[var(--color-text-3)]">{relativeTime(p.updatedAt)}</td>
-              <td className="px-4 py-2.5 text-[var(--color-text-3)]">{p.targetDate ?? "—"}</td>
-              <td className="px-4 py-2.5 text-right">
-                <Link href={`/projects/${p.id}`}><Button variant="ghost" size="sm"><Icon.Chevron size={14} /></Button></Link>
-              </td>
+      <div className="table-wrap">
+        <table className="tbl">
+          <thead>
+            <tr>
+              <th>Project</th>
+              <th>Owner</th>
+              <th className="num">BOMs</th>
+              <th className="num">Lines</th>
+              <th>Rev</th>
+              <th>Updated</th>
+              <th>Target</th>
+              <th></th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((p) => (
+              <tr key={p.id} style={{ cursor: "pointer" }}>
+                <td>
+                  <Link href={`/projects/${p.id}`} style={{ display: "flex", alignItems: "center", gap: 10, color: "inherit" }}>
+                    <Icon.Folder className="ico" />
+                    <div>
+                      <div style={{ fontWeight: 500 }}>{p.name}</div>
+                      <div className="mono" style={{ fontSize: 11, color: "var(--text-3)" }}>{p.code}</div>
+                    </div>
+                  </Link>
+                </td>
+                <td>{p.ownerName ?? "—"}</td>
+                <td className="num tabular">{p.bomCount}</td>
+                <td className="num tabular">{p.lineCount}</td>
+                <td className="muted">{p.revLetter ? `Rev ${p.revLetter}` : "—"}</td>
+                <td className="muted">{relativeTime(p.updatedAt)}</td>
+                <td className="muted">{p.targetDate ?? "—"}</td>
+                <td>
+                  <Link href={`/projects/${p.id}`} className="btn btn-icon btn-ghost"><Icon.Chevron className="ico" /></Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -64,7 +70,7 @@ export function ProjectsTable({ rows }: { rows: Row[] }) {
 function relativeTime(d: Date | string) {
   const ms = Date.now() - new Date(d).getTime();
   const h = ms / 3_600_000;
-  if (h < 1)  return `${Math.max(1, Math.round(ms / 60_000))}m ago`;
+  if (h < 1) return `${Math.max(1, Math.round(ms / 60_000))}m ago`;
   if (h < 24) return `${Math.round(h)}h ago`;
   const days = Math.round(h / 24);
   return days === 1 ? "1d ago" : days < 14 ? `${days}d ago` : `${Math.round(days / 7)}w ago`;

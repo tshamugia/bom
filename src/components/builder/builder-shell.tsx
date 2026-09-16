@@ -14,7 +14,6 @@ import { CsvImportDialog } from "./csv-import-dialog";
 import { DuplicateDialog } from "./duplicate-dialog";
 import { RevisionHeader } from "@/components/revisions/revision-header";
 import type { SwitcherBom } from "./bom-switcher";
-import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
 import type { SectionInfo } from "./section-row";
 
@@ -100,6 +99,13 @@ export function BuilderShell(p: Props) {
         bomsInProject={p.bomsInProject}
       />
       <div className="mb-5 flex items-center justify-end gap-2">
+        <div className="steps">
+          <div className="step active"><span className="num">1</span> Build</div>
+          <span className="arrow">›</span>
+          <div className="step"><span className="num">2</span> Preview</div>
+          <span className="arrow">›</span>
+          <div className="step"><span className="num">3</span> Generate</div>
+        </div>
         <LayoutToggle />
         <DuplicateDialog
           sourceBomId={p.bomId}
@@ -108,12 +114,12 @@ export function BuilderShell(p: Props) {
           sourceRevisionId={p.revisionId}
           projects={p.projectsForDuplicate}
         />
-        <Button onClick={() => router.push(`/preview/${p.projectId}/${p.bomId}`)}>
-          <Icon.Eye size={14} className="mr-1.5" /> Preview
-        </Button>
+        <button className="btn btn-primary" onClick={() => router.push(`/preview/${p.projectId}/${p.bomId}`)}>
+          <Icon.Eye className="ico" /> Preview
+        </button>
       </div>
 
-      <div className={layout === "stacked" ? "block" : "grid grid-cols-[248px_1fr] items-start gap-4"}>
+      <div className={layout === "stacked" ? "builder layout-stacked" : "builder"}>
         {layout === "stacked" ? (
           <FilterBar
             vendors={p.vendors}
@@ -130,9 +136,9 @@ export function BuilderShell(p: Props) {
           />
         )}
 
-        <div className="overflow-hidden rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
+        <div className="card" style={{ overflow: "hidden" }}>
           {isDraft && (
-            <div className="flex gap-2 border-b border-[var(--color-line-soft)] bg-[var(--color-surface-2)] p-3.5">
+            <div className="add-strip">
               <SearchAddCombo
                 revisionId={p.revisionId}
                 catalog={p.catalog}

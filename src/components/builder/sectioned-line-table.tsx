@@ -1,8 +1,6 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
 import { useTweaks, type ColumnKey } from "@/stores/tweaks-store";
 import { moveLineToSection, removeLine, updateLineQty } from "@/server/actions/bom-lines";
@@ -105,9 +103,9 @@ export function SectionedLineTable({
   return (
     <>
       <div className="overflow-auto">
-        <table className="w-full">
+        <table className="list-table">
           <thead>
-            <tr className="border-b border-[var(--color-line)] bg-[var(--color-surface)] text-[11px] uppercase tracking-wider text-[var(--color-text-3)]">
+            <tr>
               <Th w={32}>#</Th>
               {columns.sku && <Th>SKU / Part #</Th>}
               {columns.desc && <Th>Description</Th>}
@@ -348,8 +346,8 @@ function LineRow({
           {readOnly ? (
             <span className="font-mono text-[12px] tabular-nums">{it.qty}</span>
           ) : (
-            <Input
-              className="h-7 w-16 text-right font-mono text-[12px] tabular-nums"
+            <input
+              className="qty-input"
               type="number"
               min={0}
               value={qty}
@@ -368,14 +366,15 @@ function LineRow({
       )}
       <td className="px-3 py-2 text-right">
         {!readOnly && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="opacity-0 group-hover:opacity-100"
-            onClick={() => start(async () => { await removeLine({ id: it.id }); })}
-          >
-            <Icon.Trash size={14} />
-          </Button>
+          <div className="row-actions" style={{ justifyContent: "flex-end" }}>
+            <button
+              className="btn btn-icon btn-ghost"
+              title="Remove"
+              onClick={() => start(async () => { await removeLine({ id: it.id }); })}
+            >
+              <Icon.Trash className="ico" />
+            </button>
+          </div>
         )}
       </td>
     </tr>

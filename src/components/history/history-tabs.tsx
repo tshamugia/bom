@@ -8,7 +8,7 @@ export function HistoryTabs({ active, query }: { active: HistoryTab; query: stri
     { id: "activity", label: "Activity" },
   ];
   return (
-    <div className="mb-4 flex items-center gap-1 border-b border-[var(--color-line-soft)]">
+    <div className="tabs">
       {tabs.map(t => {
         const params = new URLSearchParams(query);
         params.set("tab", t.id);
@@ -17,17 +17,10 @@ export function HistoryTabs({ active, query }: { active: HistoryTab; query: stri
           <Link
             key={t.id}
             href={`/history?${params.toString()}`}
-            className={`relative px-3 py-2 text-[12.5px] font-medium transition-colors ${
-              isActive
-                ? "text-[var(--color-text)]"
-                : "text-[var(--color-text-3)] hover:text-[var(--color-text)]"
-            }`}
+            className={`tab ${isActive ? "active" : ""}`}
             scroll={false}
           >
             {t.label}
-            {isActive && (
-              <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-[var(--color-accent)]" />
-            )}
           </Link>
         );
       })}

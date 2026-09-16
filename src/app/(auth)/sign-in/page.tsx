@@ -168,10 +168,9 @@ function SignInForm() {
       <button
         type="submit"
         disabled={pending}
-        className="group relative inline-flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-lg text-[14px] font-medium text-white shadow-[0_1px_0_rgba(255,255,255,0.18)_inset,0_1px_2px_rgba(15,18,34,0.12),0_4px_14px_-4px_rgba(79,70,229,0.55)] transition-all hover:shadow-[0_1px_0_rgba(255,255,255,0.22)_inset,0_2px_4px_rgba(15,18,34,0.14),0_8px_22px_-6px_rgba(79,70,229,0.7)] focus-visible:ring-3 focus-visible:ring-[var(--color-accent)]/40 focus-visible:outline-none active:translate-y-px disabled:cursor-not-allowed disabled:opacity-80"
+        className="group relative inline-flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-lg text-[14px] font-medium text-white shadow-[0_1px_0_rgba(255,255,255,0.18)_inset,0_1px_2px_rgba(15,18,34,0.12),0_4px_14px_-4px_rgba(85,98,255,0.6)] transition-all hover:brightness-[1.06] hover:shadow-[0_1px_0_rgba(255,255,255,0.22)_inset,0_2px_4px_rgba(15,18,34,0.14),0_8px_22px_-6px_rgba(138,92,255,0.7)] focus-visible:ring-3 focus-visible:ring-[var(--color-accent)]/40 focus-visible:outline-none active:translate-y-px disabled:cursor-not-allowed disabled:opacity-80"
         style={{
-          backgroundImage:
-            "linear-gradient(180deg, #6366f1 0%, #4f46e5 55%, #4338ca 100%)",
+          backgroundImage: "linear-gradient(135deg, #5562ff 0%, #8a5cff 100%)",
         }}
       >
         <span

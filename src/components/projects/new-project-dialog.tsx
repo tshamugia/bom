@@ -55,9 +55,9 @@ export function NewProjectDialog() {
     >
       <DialogTrigger
         render={
-          <Button>
-            <Icon.Plus size={14} className="mr-1.5" /> New project
-          </Button>
+          <button type="button" className="btn btn-primary">
+            <Icon.Plus className="ico" /> New project
+          </button>
         }
       />
       <DialogContent>

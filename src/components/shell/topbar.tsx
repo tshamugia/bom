@@ -23,28 +23,21 @@ export function Topbar() {
   const [section, here] = CRUMBS[key];
 
   return (
-    <header
-      className="sticky top-0 z-20 flex items-center gap-4 border-b border-[var(--color-line)] bg-[var(--color-surface)]/85 px-6 backdrop-blur supports-[backdrop-filter]:bg-[var(--color-surface)]/70"
-      style={{ height: 56 }}
-    >
-      <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-[13px]">
-        <span className="font-medium text-[var(--color-text-3)]">{section}</span>
-        <Icon.Chevron size={12} className="text-[var(--color-text-4)]" />
-        <span className="font-semibold text-[var(--color-text)] tracking-tight">{here}</span>
+    <header className="topbar">
+      <nav aria-label="Breadcrumb" className="crumbs">
+        <span>{section}</span>
+        <span className="sep">/</span>
+        <span className="here">{here}</span>
       </nav>
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="tb-actions">
         <CommandPalette />
 
-        <button
-          aria-label="Notifications"
-          className="relative grid h-8 w-8 place-items-center rounded-lg text-[var(--color-text-2)] transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]"
-        >
-          <Icon.Bell size={15} />
-          <span
-            className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full ring-2 ring-[var(--color-surface)]"
-            style={{ background: "var(--color-danger)" }}
-          />
+        <button className="btn btn-icon btn-ghost" aria-label="Notifications" title="Notifications">
+          <Icon.Bell className="ico" />
+        </button>
+        <button className="btn btn-ghost btn-sm">
+          <Icon.Spark className="ico" /> What&apos;s new
         </button>
       </div>
     </header>

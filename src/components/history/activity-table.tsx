@@ -67,58 +67,55 @@ function refHref(refType: string | null, refId: string | null, payload?: Record<
 
 export function ActivityTable({ rows }: { rows: ActivityRow[] }) {
   return (
-    <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
-      <table className="w-full text-[12.5px]">
-        <thead>
-          <tr className="bg-[var(--color-surface-2)] text-[11px] uppercase tracking-wider text-[var(--color-text-3)]">
-            <th className="px-4 py-2.5 text-left font-medium">When</th>
-            <th className="px-4 py-2.5 text-left font-medium">Who</th>
-            <th className="px-4 py-2.5 text-left font-medium">Event</th>
-            <th className="px-4 py-2.5 text-left font-medium">Summary</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {rows.length === 0 && (
+    <div className="card">
+      <div className="table-wrap">
+        <table className="tbl">
+          <thead>
             <tr>
-              <td colSpan={5} className="px-4 py-12 text-center text-[var(--color-text-3)]">
-                <div className="text-[13px]">No activity matches these filters</div>
-                <div className="mt-1 text-[12px]">Clear filters or pick a wider date range.</div>
-              </td>
+              <th>When</th>
+              <th>Who</th>
+              <th>Event</th>
+              <th>Summary</th>
+              <th></th>
             </tr>
-          )}
-          {rows.map(r => {
-            const meta = KIND_META[r.kind] ?? { label: r.kind, tone: "gray" as Tone, group: "—" };
-            const href = refHref(r.refType, r.refId, r.payload as Record<string, unknown> | null | undefined);
-            return (
-              <tr
-                key={r.id}
-                className="border-b border-[var(--color-line-soft)] last:border-0 hover:bg-[var(--color-surface-2)]"
-              >
-                <td className="px-4 py-2.5 align-top text-[var(--color-text-3)] whitespace-nowrap">
-                  {new Date(r.createdAt).toLocaleString()}
-                </td>
-                <td className="px-4 py-2.5 align-top">{r.actorName ?? "system"}</td>
-                <td className="px-4 py-2.5 align-top">
-                  <Badge tone={meta.tone}>{meta.label}</Badge>
-                </td>
-                <td className="px-4 py-2.5 align-top">{r.summary}</td>
-                <td className="px-4 py-2.5 align-top text-right">
-                  {href && (
-                    <Link
-                      href={href}
-                      className="text-[var(--color-info)] hover:underline"
-                      target={r.refType === "export" ? "_blank" : undefined}
-                    >
-                      Open
-                    </Link>
-                  )}
+          </thead>
+          <tbody>
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={5} style={{ padding: "48px 16px", textAlign: "center", color: "var(--text-3)" }}>
+                  <div style={{ fontSize: 13 }}>No activity matches these filters</div>
+                  <div style={{ marginTop: 4, fontSize: 12 }}>Clear filters or pick a wider date range.</div>
                 </td>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
+            )}
+            {rows.map(r => {
+              const meta = KIND_META[r.kind] ?? { label: r.kind, tone: "gray" as Tone, group: "—" };
+              const href = refHref(r.refType, r.refId, r.payload as Record<string, unknown> | null | undefined);
+              return (
+                <tr key={r.id}>
+                  <td className="muted" style={{ verticalAlign: "top", whiteSpace: "nowrap" }}>
+                    {new Date(r.createdAt).toLocaleString()}
+                  </td>
+                  <td style={{ verticalAlign: "top" }}>{r.actorName ?? "system"}</td>
+                  <td style={{ verticalAlign: "top" }}>
+                    <Badge tone={meta.tone}>{meta.label}</Badge>
+                  </td>
+                  <td style={{ verticalAlign: "top" }}>{r.summary}</td>
+                  <td style={{ verticalAlign: "top", textAlign: "right" }}>
+                    {href && (
+                      r.refType === "export" ? (
+                        <a href={href} target="_blank" rel="noopener noreferrer">Open</a>
+                      ) : (
+                        <Link href={href}>Open</Link>
+                      )
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

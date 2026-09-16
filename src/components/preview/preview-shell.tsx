@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
 import { DocumentPreview } from "./document-preview";
 import { SummaryCard } from "./summary-card";
@@ -74,38 +73,45 @@ export function PreviewShell(p: Props) {
 
   return (
     <>
-      <div className="mb-5 flex items-start justify-between gap-4">
+      <div className="page-head">
         <div>
-          <h1 className="text-[20px] font-semibold tracking-tight">{p.bomName}</h1>
-          <p className="text-[13px] text-[var(--color-text-3)]">
-            {p.projectCode} · Preview &amp; export the latest revision.
+          <h1 className="page-title">Preview &amp; Generate</h1>
+          <p className="page-sub">
+            {p.projectCode} · {p.bomName} — review the generated document, then export to Excel for procurement.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => router.push(`/builder/${p.projectId}/${p.bomId}`)}>
-            <Icon.ArrowLeft size={14} className="mr-1.5" /> Back to builder
-          </Button>
-          <Button variant="outline" onClick={() => window.print()}>
-            <Icon.Print size={14} className="mr-1.5" /> Print
-          </Button>
-          <Button
-            variant="outline"
+        <div className="split">
+          <div className="steps">
+            <div className="step done"><span className="num"><Icon.Check className="ico" /></span> Build</div>
+            <span className="arrow">›</span>
+            <div className="step active"><span className="num">2</span> Preview</div>
+            <span className="arrow">›</span>
+            <div className="step"><span className="num">3</span> Generate</div>
+          </div>
+          <button className="btn" onClick={() => router.push(`/builder/${p.projectId}/${p.bomId}`)}>
+            <Icon.ArrowLeft className="ico" /> Back to builder
+          </button>
+          <button className="btn" onClick={() => window.print()}>
+            <Icon.Print className="ico" /> Print
+          </button>
+          <button
+            className="btn"
             disabled={pending || !p.procurementRevision}
             title={!p.procurementRevision ? "Commit a revision before sending to procurement." : undefined}
             onClick={sendForReview}
           >
-            <Icon.Send size={14} className="mr-1.5" /> Send to procurement
+            <Icon.Send className="ico" /> Send to procurement
             {p.procurementRevision && p.procurementRevision.letter !== p.revisionLetter
               ? <span className="ml-1 text-[11px] text-[var(--color-text-3)]">(Rev {p.procurementRevision.letter})</span>
               : null}
-          </Button>
+          </button>
           <GenerateDialog
             revisionId={p.revisionId}
             projectCode={p.projectCode}
             revisionLetter={p.revisionLetter}
             lineCount={p.lines.length}
             opts={opts}
-            trigger={<Button><Icon.Download size={14} className="mr-1.5" /> Generate Excel</Button>}
+            trigger={<button type="button" className="btn btn-primary"><Icon.Download className="ico" /> Generate Excel</button>}
           />
         </div>
       </div>
