@@ -10,7 +10,7 @@ export default async function PreviewIndex() {
   return (
     <>
       <PageHead title="Preview & Generate" subtitle="All BOMs across projects. Pick one to preview and export." />
-      <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
+      <div className="overflow-x-auto rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
         <table className="w-full text-[12.5px]">
           <thead>
             <tr className="bg-[var(--color-surface-2)] text-[11px] uppercase tracking-wider text-[var(--color-text-3)]">

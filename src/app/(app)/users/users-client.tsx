@@ -99,7 +99,7 @@ export function UsersClient({
         </Button>
       </form>
 
-      <div className="overflow-hidden rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)]">
+      <div className="overflow-x-auto rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)]">
         <table className="w-full text-[13px]">
           <thead className="border-b border-[var(--color-line)] bg-[var(--color-surface-2)] text-left text-[12px] font-semibold uppercase tracking-wide text-[var(--color-text-3)]">
             <tr>

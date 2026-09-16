@@ -6,7 +6,13 @@ import { Icon } from "@/components/icons";
 import { NAV } from "./nav-config";
 import { UserMenu } from "./user-menu";
 
-export function Sidebar({ user }: { user: { name: string; email: string; role: "owner" | "admin" | "member" } | null }) {
+export function Sidebar({
+  user,
+  onNavigate,
+}: {
+  user: { name: string; email: string; role: "owner" | "admin" | "member" } | null;
+  onNavigate?: () => void;
+}) {
   const path = usePathname();
   const role = user?.role ?? "member";
 
@@ -38,6 +44,7 @@ export function Sidebar({ user }: { user: { name: string; email: string; role: "
                     href={it.href}
                     aria-current={active ? "page" : undefined}
                     className={`sb-item ${active ? "active" : ""}`}
+                    onClick={onNavigate}
                   >
                     <I className="ico" />
                     <span>{it.label}</span>

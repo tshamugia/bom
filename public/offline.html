@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0e1330" />
+    <title>Offline · BOM Studio</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: #0e1330;
+        background-image:
+          radial-gradient(900px 400px at -10% -10%, rgba(138, 92, 255, 0.22), transparent 60%),
+          radial-gradient(700px 300px at 110% 110%, rgba(85, 98, 255, 0.2), transparent 60%);
+        color: #e6e9f7;
+        font-family: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        text-align: center;
+      }
+      .card { max-width: 380px; }
+      .logo {
+        width: 56px; height: 56px;
+        margin: 0 auto 20px;
+        border-radius: 14px;
+        display: grid; place-items: center;
+        background: linear-gradient(135deg, #5562ff 0%, #8a5cff 100%);
+        color: #fff; font-weight: 700; font-size: 26px;
+        letter-spacing: -0.04em;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18), 0 8px 28px rgba(138, 92, 255, 0.45);
+      }
+      h1 { font-size: 20px; font-weight: 600; margin: 0 0 8px; letter-spacing: -0.01em; }
+      p { font-size: 14px; line-height: 1.55; color: #a3aad1; margin: 0 0 24px; }
+      button {
+        appearance: none;
+        border: 0;
+        cursor: pointer;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        color: #fff;
+        background: linear-gradient(135deg, #5562ff 0%, #8a5cff 100%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 6px 18px rgba(85, 98, 255, 0.4);
+      }
+      button:hover { filter: brightness(1.06); }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="logo">B</div>
+      <h1>You're offline</h1>
+      <p>BOM Studio needs a connection to load this page. Check your network and try again.</p>
+      <button type="button" onclick="location.reload()">Retry</button>
+    </div>
+  </body>
+</html>

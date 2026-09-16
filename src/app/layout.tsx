@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
+import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
@@ -9,6 +10,23 @@ const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono"
 export const metadata: Metadata = {
   title: "BOM Studio",
   description: "Bill of Materials management for hardware teams.",
+  applicationName: "BOM Studio",
+  // <link rel="manifest"> is injected automatically from app/manifest.ts.
+  appleWebApp: {
+    capable: true,
+    title: "BOM Studio",
+    statusBarStyle: "black-translucent",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  colorScheme: "light dark",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0e1330" },
+  ],
 };
 
 const themeScript = `
@@ -23,6 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {themeScript}
         </Script>
         {children}
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

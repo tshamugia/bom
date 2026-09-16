@@ -988,3 +988,108 @@ html, body {
 }
 
 @keyframes toast-in { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ════════════════════════════════════════════════
+   Responsive layer — kept OUTSIDE @layer components
+   so these overrides win over the desktop defaults
+   above regardless of source order/specificity.
+   Breakpoints: 960px (shell → drawer), 700px (dense
+   grids collapse), 480px (phone tightening).
+   ════════════════════════════════════════════════ */
+
+/* Hamburger + scrim are desktop-hidden by default. */
+.tb-menu { display: none; }
+.nav-scrim { display: none; }
+
+@media (max-width: 960px) {
+  /* Single-column shell; sidebar becomes an off-canvas drawer. */
+  .app { grid-template-columns: 1fr; }
+
+  .tb-menu { display: inline-flex; }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: min(272px, 82vw);
+    height: 100dvh;
+    z-index: 60;
+    transform: translateX(-100%);
+    transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+  }
+  .app[data-nav-open] .sidebar {
+    transform: none;
+    box-shadow: var(--shadow-pop);
+  }
+
+  .nav-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    background: rgba(9, 11, 26, 0.5);
+    -webkit-backdrop-filter: blur(1px);
+    backdrop-filter: blur(1px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.24s ease, visibility 0.24s ease;
+    cursor: pointer;
+  }
+  .app[data-nav-open] .nav-scrim {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* Topbar tightens; search collapses to an icon button. */
+  .topbar { padding: 0 14px; gap: 10px; }
+  .tb-search { width: auto; padding: 6px; }
+  .tb-search > span { display: none; }
+
+  /* Builder switches to a stacked, non-sticky layout. */
+  .builder { grid-template-columns: 1fr; }
+  .filter-panel { position: static; top: auto; }
+
+  .content { padding: 18px 16px; }
+}
+
+@media (max-width: 700px) {
+  .content { padding: 14px 12px; }
+
+  /* Page header stacks and actions wrap under the title. */
+  .page-head { flex-direction: column; align-items: stretch; gap: 12px; }
+  .page-title { font-size: 19px; }
+
+  /* Dense grids collapse. */
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(2, 1fr); }
+  .grid-2 { grid-template-columns: 1fr; }
+  .summary-bar { grid-template-columns: repeat(2, 1fr); }
+
+  /* Steps wrap instead of overflowing the viewport. */
+  .steps { flex-wrap: wrap; }
+
+  /* Catalog add-strip search + dropdown reflow. */
+  .add-strip { flex-wrap: wrap; }
+  .dropdown-row { grid-template-columns: 1fr auto; row-gap: 2px; }
+  .dropdown-row .desc { grid-column: 1 / -1; }
+
+  /* Doc preview loses its wide print padding on small screens. */
+  .doc-preview { padding: 20px 18px; }
+  .doc-totals { width: 100%; }
+
+  /* Hide the low-priority "What's new" action to save room. */
+  .tb-actions > .btn-sm { display: none; }
+}
+
+@media (max-width: 480px) {
+  .stat-grid { grid-template-columns: 1fr; }
+  .grid-3 { grid-template-columns: 1fr; }
+  .summary-bar { grid-template-columns: 1fr; }
+  .page-title { font-size: 18px; }
+  .doc-preview { padding: 16px 14px; }
+  .kv { grid-template-columns: 1fr; gap: 2px 0; }
+  .kv dt { margin-top: 8px; }
+}

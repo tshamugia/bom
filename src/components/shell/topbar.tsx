@@ -17,13 +17,23 @@ const CRUMBS: Record<string, [string, string]> = {
   "/settings": ["Account", "Settings"],
 };
 
-export function Topbar() {
+export function Topbar({ onMenuToggle, navOpen }: { onMenuToggle?: () => void; navOpen?: boolean }) {
   const path = usePathname();
   const key = Object.keys(CRUMBS).find(k => path === k || path.startsWith(`${k}/`)) ?? "/projects";
   const [section, here] = CRUMBS[key];
 
   return (
     <header className="topbar">
+      <button
+        type="button"
+        className="btn btn-icon btn-ghost tb-menu"
+        aria-label="Toggle navigation"
+        aria-expanded={navOpen ?? false}
+        onClick={onMenuToggle}
+      >
+        <Icon.Menu className="ico" />
+      </button>
+
       <nav aria-label="Breadcrumb" className="crumbs">
         <span>{section}</span>
         <span className="sep">/</span>
