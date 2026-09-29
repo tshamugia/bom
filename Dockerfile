@@ -37,12 +37,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-ENV EMAIL_FROM=noreply@tsgroup.ge
-ENV SMTP_HOST=smtp.hostinger.com
-ENV SMTP_PORT=587
-ENV SMTP_SECURE=false
-ENV SMTP_USER=noreply@tsgroup.ge
-ENV SMTP_PASSWORD=";8:daE&wG6"
+# EMAIL_FROM, SMTP_* and S3 settings come from the Railway service variables
+# at runtime — never bake credentials into the image.
 
 RUN addgroup --system --gid 1001 nodejs \
  && adduser --system --uid 1001 nextjs
