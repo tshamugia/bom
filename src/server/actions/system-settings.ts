@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { systemSettings, SYSTEM_SETTINGS_ID } from "@/db/schema";
 import { requireRole } from "../auth-context";
+import { audit } from "../audit";
 
 const EmailList = z.array(z.string().trim().email()).max(50);
 
@@ -19,7 +20,7 @@ export type ProcurementSettingsInputT = z.infer<typeof ProcurementSettingsInput>
 
 export async function updateProcurementSettings(input: ProcurementSettingsInputT) {
   const data = ProcurementSettingsInput.parse(input);
-  const session = await requireRole("owner", "admin");
+  const session = await requireRole("admin");
 
   const subject = data.subject?.length ? data.subject : null;
   const body = data.body?.length ? data.body : null;
@@ -49,4 +50,9 @@ export async function updateProcurementSettings(input: ProcurementSettingsInputT
 
   revalidatePath("/settings/procurement");
   revalidatePath("/settings");
+  await audit({
+    kind: "settings.procurement.updated",
+    summary: `Procurement email settings updated (${data.to.length} to, ${data.cc.length} cc)`,
+    payload: { to: data.to, cc: data.cc, subject, bodyChanged: body !== null },
+  });
 }

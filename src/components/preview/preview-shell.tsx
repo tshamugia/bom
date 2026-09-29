@@ -12,6 +12,7 @@ import type { Line } from "@/components/builder/sectioned-line-table";
 import type { SectionInfo } from "@/components/builder/section-row";
 import { sendBomToProcurement } from "@/server/actions/procurement";
 import { toast } from "sonner";
+import { formatDate } from "@/lib/format";
 
 type Props = {
   projectId: string;
@@ -27,6 +28,10 @@ type Props = {
   lines: Line[];
   sections: SectionInfo[];
   steps: Array<{ position: number; role: string; status: "pending" | "active" | "approved" | "rejected" | "skipped"; assigneeName: string | null }> | null;
+  /** e.g. "ELV-101 rev2" — the drawing revisions this BOM revision was built from. */
+  referenceDrawings?: string[];
+  /** Viewers see and print the document but can't export or send it. */
+  readOnly?: boolean;
 };
 
 export function PreviewShell(p: Props) {
@@ -75,48 +80,58 @@ export function PreviewShell(p: Props) {
     <>
       <div className="page-head">
         <div>
-          <h1 className="page-title">Preview &amp; Generate</h1>
+          <h1 className="page-title">{p.readOnly ? "Preview" : <>Preview &amp; Generate</>}</h1>
           <p className="page-sub">
-            {p.projectCode} · {p.bomName} — review the generated document, then export to Excel for procurement.
+            {p.projectCode} · {p.bomName} — {p.readOnly
+              ? "the BOM document for the active revision."
+              : "review the generated document, then export to Excel for procurement."}
           </p>
         </div>
         <div className="split">
-          <div className="steps">
-            <div className="step done"><span className="num"><Icon.Check className="ico" /></span> Build</div>
-            <span className="arrow">›</span>
-            <div className="step active"><span className="num">2</span> Preview</div>
-            <span className="arrow">›</span>
-            <div className="step"><span className="num">3</span> Generate</div>
-          </div>
-          <button className="btn" onClick={() => router.push(`/builder/${p.projectId}/${p.bomId}`)}>
-            <Icon.ArrowLeft className="ico" /> Back to builder
-          </button>
+          {!p.readOnly && (
+            <>
+              <div className="steps">
+                <div className="step done"><span className="num"><Icon.Check className="ico" /></span> Build</div>
+                <span className="arrow">›</span>
+                <div className="step active"><span className="num">2</span> Preview</div>
+                <span className="arrow">›</span>
+                <div className="step"><span className="num">3</span> Generate</div>
+              </div>
+              <button className="btn" onClick={() => router.push(`/builder/${p.projectId}/${p.bomId}`)}>
+                <Icon.ArrowLeft className="ico" /> Back to builder
+              </button>
+            </>
+          )}
           <button className="btn" onClick={() => window.print()}>
             <Icon.Print className="ico" /> Print
           </button>
-          <button
-            className="btn"
-            disabled={pending || !p.procurementRevision}
-            title={!p.procurementRevision ? "Commit a revision before sending to procurement." : undefined}
-            onClick={sendForReview}
-          >
-            <Icon.Send className="ico" /> Send to procurement
-            {p.procurementRevision && p.procurementRevision.letter !== p.revisionLetter
-              ? <span className="ml-1 text-[11px] text-[var(--color-text-3)]">(Rev {p.procurementRevision.letter})</span>
-              : null}
-          </button>
-          <GenerateDialog
-            revisionId={p.revisionId}
-            projectCode={p.projectCode}
-            revisionLetter={p.revisionLetter}
-            lineCount={p.lines.length}
-            opts={opts}
-            trigger={<button type="button" className="btn btn-primary"><Icon.Download className="ico" /> Generate Excel</button>}
-          />
+          {!p.readOnly && (
+            <>
+              <button
+                className="btn"
+                disabled={pending || !p.procurementRevision}
+                title={!p.procurementRevision ? "Commit a revision before sending to procurement." : undefined}
+                onClick={sendForReview}
+              >
+                <Icon.Send className="ico" /> Send to procurement
+                {p.procurementRevision && p.procurementRevision.letter !== p.revisionLetter
+                  ? <span className="ml-1 text-[11px] text-[var(--color-text-3)]">(Rev {p.procurementRevision.letter})</span>
+                  : null}
+              </button>
+              <GenerateDialog
+                revisionId={p.revisionId}
+                projectCode={p.projectCode}
+                revisionLetter={p.revisionLetter}
+                lineCount={p.lines.length}
+                opts={opts}
+                trigger={<button type="button" className="btn btn-primary"><Icon.Download className="ico" /> Generate Excel</button>}
+              />
+            </>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-[1fr_280px] items-start gap-4">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
         <DocumentPreview
           project={{
             code: p.projectCode, name: p.projectName, owner: p.projectOwner,
@@ -125,11 +140,12 @@ export function PreviewShell(p: Props) {
           revisionLetter={p.revisionLetter}
           lines={p.lines}
           sections={p.sections}
-          generatedOn={new Date().toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+          referenceDrawings={p.referenceDrawings ?? []}
+          generatedOn={formatDate(new Date())}
         />
-        <div className="sticky top-[68px] flex flex-col gap-3">
+        <div className="flex flex-col gap-3 lg:sticky lg:top-[68px]">
           <SummaryCard lines={p.lines.length} totalUnits={totalUnits} vendors={vendorCount} />
-          <ExportOptionsCard opts={opts} onChange={setOpts} />
+          {!p.readOnly && <ExportOptionsCard opts={opts} onChange={setOpts} />}
           <ApproversCard steps={p.steps} />
         </div>
       </div>

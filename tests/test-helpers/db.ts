@@ -2,12 +2,13 @@ import { sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { user } from "@/db/schema";
 import { createId } from "@paralleldrive/cuid2";
+import type { UserRole } from "@/lib/roles";
 
 export async function resetDb() {
   await db.execute(sql`TRUNCATE "bom_line", "bom_section", "bom_revision", "bom", "project", "item", "subcategory", "category", "vendor", "audit_log", "session", "account", "verification", "user" RESTART IDENTITY CASCADE`);
 }
 
-export async function ensureUser(role: "owner" | "admin" | "member" = "owner") {
+export async function ensureUser(role: UserRole = "admin") {
   const id = createId();
   const [u] = await db
     .insert(user)

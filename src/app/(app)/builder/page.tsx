@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
 import { Badge, RevisionStatusBadge } from "@/components/ui/badge";
 import { NewBomDialog } from "@/components/boms/new-bom-dialog";
+import { formatDateTime } from "@/lib/format";
 
 export default async function BuilderIndex() {
   const [boms, projects] = await Promise.all([listAllBoms(), listProjectsForPicker()]);
@@ -57,7 +58,7 @@ export default async function BuilderIndex() {
                       <div className="flex flex-col">
                         <span>{b.lastModifiedByName}</span>
                         <span className="text-[11px] text-[var(--color-text-3)]">
-                          {new Date(b.updatedAt).toLocaleString()}
+                          {formatDateTime(b.updatedAt)}
                         </span>
                       </div>
                     ) : "—"}

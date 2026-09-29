@@ -5,13 +5,14 @@ import { asc, count, desc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { boms, bomLines, bomRevisions, bomSections } from "@/db/schema";
-import { requireSession } from "../auth-context";
+import { EDITOR_ROLES } from "@/lib/roles";
+import { requireRole, requireSession } from "../auth-context";
 import { audit } from "../audit";
 import { isRevisionImmutable } from "../lib/revision-status";
 import { touchBom } from "../lib/touch-bom";
 
 async function ensureRevisionWritable(revisionId: string) {
-  await requireSession();
+  await requireRole(...EDITOR_ROLES);
   const [row] = await db
     .select({
       id: bomRevisions.id,
@@ -29,7 +30,7 @@ async function ensureRevisionWritable(revisionId: string) {
 }
 
 async function ensureSectionWritable(sectionId: string) {
-  await requireSession();
+  await requireRole(...EDITOR_ROLES);
   const [row] = await db
     .select({
       id: bomSections.id,
@@ -52,7 +53,7 @@ export async function createSection(input: { revisionId: string; name: string })
   const { revisionId, name } = z
     .object({ revisionId: z.string(), name: z.string().trim().min(1).max(120) })
     .parse(input);
-  const session = await requireSession();
+  const session = await requireRole(...EDITOR_ROLES);
   const rev = await ensureRevisionWritable(revisionId);
 
   const [{ next }] = await db
@@ -81,7 +82,7 @@ export async function renameSection(input: { id: string; name: string }) {
   const { id, name } = z
     .object({ id: z.string(), name: z.string().trim().min(1).max(120) })
     .parse(input);
-  const session = await requireSession();
+  const session = await requireRole(...EDITOR_ROLES);
   const sec = await ensureSectionWritable(id);
 
   await db.update(bomSections).set({ name }).where(eq(bomSections.id, id));
@@ -101,7 +102,7 @@ export async function reorderSection(input: { id: string; position: number }) {
   const { id, position } = z
     .object({ id: z.string(), position: z.number().int().nonnegative() })
     .parse(input);
-  const session = await requireSession();
+  const session = await requireRole(...EDITOR_ROLES);
   const sec = await ensureSectionWritable(id);
 
   await db.transaction(async tx => {
@@ -143,7 +144,7 @@ export async function deleteSection(input: {
       mode: z.enum(["moveToUncategorized", "deleteLines"]),
     })
     .parse(input);
-  const session = await requireSession();
+  const session = await requireRole(...EDITOR_ROLES);
   const sec = await ensureSectionWritable(id);
 
   let removedLineCount = 0;

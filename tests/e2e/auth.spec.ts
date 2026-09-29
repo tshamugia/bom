@@ -32,7 +32,7 @@ test("sign-out clears the session and bounces to /sign-in", async ({ page }) => 
   await expect(page).toHaveURL(/\/sign-in/);
 });
 
-test("/users is reachable as owner; non-admin users would be redirected away", async ({ page }) => {
+test("/users is reachable as admin; non-admin users would be redirected away", async ({ page }) => {
   await signInAndGo(page, "/users");
   await expect(page.getByRole("heading", { name: /^users$/i })).toBeVisible();
 });

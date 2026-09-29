@@ -43,7 +43,9 @@ export async function listCategories() {
   return db
     .select({
       id: categories.id, name: categories.name,
-      itemCount: sql<number>`(SELECT COUNT(*) FROM ${items} WHERE ${items.categoryId} = ${categories.id})`.mapWith(Number),
+      // Qualify columns explicitly: Drizzle renders ${col} unqualified inside
+      // sql``, so `"category_id" = "id"` resolved both sides to "item".
+      itemCount: sql<number>`(SELECT COUNT(*) FROM ${items} WHERE ${items}."category_id" = ${categories}."id")`.mapWith(Number),
     })
     .from(categories)
     .orderBy(categories.name);

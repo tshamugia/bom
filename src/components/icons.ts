@@ -6,6 +6,7 @@ import {
   MoreHorizontal as More, Sheet, Printer as Print, Link as LinkIcon,
   Activity, AlertTriangle, LogOut, Users as UsersIcon,
   User, Sun, Moon, Monitor, Palette, Mail, Menu,
+  DraftingCompass, MessageSquare, GitBranch, ShieldCheck, KeyRound,
 } from "lucide-react";
 
 export const Icon = {
@@ -15,6 +16,8 @@ export const Icon = {
   ArrowRight, ArrowLeft, More, Sheet, Print, Link: LinkIcon,
   Activity, AlertTriangle, LogOut, Users: UsersIcon,
   User, Sun, Moon, Monitor, Palette, Mail, Menu,
+  Drawing: DraftingCompass, Comment: MessageSquare, Branch: GitBranch,
+  Shield: ShieldCheck, Key: KeyRound,
 } as const;
 
 export type IconName = keyof typeof Icon;

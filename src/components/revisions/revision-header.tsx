@@ -5,6 +5,7 @@ import { DiscardDraftButton } from "@/components/builder/discard-draft-button";
 import { BranchRevisionButton } from "@/components/builder/branch-revision-button";
 import { InlineProjectName } from "@/components/builder/inline-project-name";
 import { BomSwitcher, type SwitcherBom } from "@/components/builder/bom-switcher";
+import { formatDateTime } from "@/lib/format";
 
 export type RevisionHeaderProps = {
   projectId: string;
@@ -66,7 +67,7 @@ export function RevisionHeader(p: RevisionHeaderProps) {
           ) : (
             <>
               Committed by {r.committedByName ?? "—"}
-              {r.committedAt ? <> · {new Date(r.committedAt).toLocaleString()}</> : null}
+              {r.committedAt ? <> · {formatDateTime(r.committedAt)}</> : null}
               {r.commitMessage ? <> · <em>&ldquo;{r.commitMessage}&rdquo;</em></> : null}
             </>
           )}

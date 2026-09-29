@@ -2,7 +2,8 @@
 
 import { Suspense, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AlertCircle, Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
+import Link from "next/link";
+import { AlertCircle, CheckCircle2, Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import { signIn } from "@/lib/auth-client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,7 +36,9 @@ function SignInFormFallback() {
 function SignInForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") || "/projects";
+  // "/" sends each role to its landing page (viewers → dashboard).
+  const next = params.get("next") || "/";
+  const justReset = params.get("reset") === "1";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -75,6 +78,16 @@ function SignInForm() {
         </p>
       </div>
 
+      {justReset && !error && (
+        <div
+          role="status"
+          className="flex items-start gap-2 rounded-md border border-[var(--color-success)]/25 bg-[var(--color-success-soft)] px-2.5 py-2 text-[13px] text-[var(--color-success)]"
+        >
+          <CheckCircle2 aria-hidden className="mt-px size-4 shrink-0" />
+          <span>Password changed. Sign in with your new password.</span>
+        </div>
+      )}
+
       <div className="space-y-3.5">
         <div className="space-y-1.5">
           <Label htmlFor="email">Email</Label>
@@ -106,7 +119,16 @@ function SignInForm() {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="password">Password</Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password">Password</Label>
+            <Link
+              href="/forgot-password"
+              tabIndex={-1}
+              className="text-[12px] text-[var(--color-text-3)] hover:text-[var(--color-accent)] hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
           <div className="relative">
             <Lock
               aria-hidden

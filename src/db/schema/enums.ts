@@ -15,4 +15,4 @@ export const revisionStatusEnum = pgEnum("revision_status", [
   "locked",
 ]);
 
-export const userRoleEnum = pgEnum("user_role", ["owner", "admin", "member"]);
+export const userRoleEnum = pgEnum("user_role", ["admin", "member", "viewer"]);

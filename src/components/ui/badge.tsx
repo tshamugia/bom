@@ -1,4 +1,4 @@
-type Tone = "success" | "info" | "warning" | "danger" | "accent" | "gray";
+type Tone = "success" | "info" | "warning" | "danger" | "accent" | "gray" | "teal" | "pink";
 
 const TONE_CLASS: Record<Tone, string> = {
   success: "b-green",
@@ -7,6 +7,8 @@ const TONE_CLASS: Record<Tone, string> = {
   danger: "b-red",
   accent: "b-purple",
   gray: "b-gray",
+  teal: "b-teal",
+  pink: "b-pink",
 };
 
 export function Badge({ tone = "gray", children }: { tone?: Tone; children: React.ReactNode }) {

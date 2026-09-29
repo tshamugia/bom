@@ -3,8 +3,12 @@ import { z } from "zod";
 import { asc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
-import { bomExports, bomLines, bomRevisions, bomSections, boms, projects, user } from "@/db/schema";
-import { requireSession } from "../auth-context";
+import {
+  bomExports, bomLines, bomRevisionDrawings, bomRevisions, bomSections, boms, drawingRevisions, drawings, projects, user,
+} from "@/db/schema";
+import { formatDrawingRevision } from "@/lib/drawing-status";
+import { EDITOR_ROLES } from "@/lib/roles";
+import { requireRole } from "../auth-context";
 import { audit } from "../audit";
 import { buildBomWorkbook, type BomRow } from "@/lib/excel";
 import { putObject } from "@/lib/s3";
@@ -42,7 +46,7 @@ export type RunExportResult = {
 
 export async function runExport(input: { revisionId: string; options: ExportOptionsT }): Promise<RunExportResult> {
   const options = ExportOptions.parse(input.options);
-  const session = await requireSession();
+  const session = await requireRole(...EDITOR_ROLES);
 
   const [rev] = await db
     .select({
@@ -93,6 +97,14 @@ export async function runExport(input: { revisionId: string; options: ExportOpti
     sectionPosition: l.sectionPosition,
   }));
 
+  const drawingRefs = await db
+    .select({ code: drawings.code, number: drawingRevisions.number })
+    .from(bomRevisionDrawings)
+    .innerJoin(drawings, eq(drawings.id, bomRevisionDrawings.drawingId))
+    .innerJoin(drawingRevisions, eq(drawingRevisions.id, bomRevisionDrawings.drawingRevisionId))
+    .where(eq(bomRevisionDrawings.bomRevisionId, rev.id))
+    .orderBy(asc(drawings.code));
+
   const isDraft = rev.status === "draft";
   const draftSuffix = isDraft ? `_DRAFT_${new Date().toISOString().slice(0, 10)}` : "";
 
@@ -107,6 +119,7 @@ export async function runExport(input: { revisionId: string; options: ExportOpti
     rows,
     options,
     isDraft,
+    referenceDrawings: drawingRefs.map(d => `${d.code} ${formatDrawingRevision(d.number)}`),
   });
 
   const fileName = `BOM_${rev.projectCode}_Rev_${rev.letter}${draftSuffix}.xlsx`;

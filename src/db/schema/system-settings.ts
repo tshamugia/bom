@@ -9,6 +9,8 @@ export const systemSettings = pgTable("system_settings", {
   procurementCc: jsonb("procurement_cc").notNull().$type<string[]>().default([]),
   procurementSubject: text("procurement_subject"),
   procurementBody: text("procurement_body"),
+  /** Parsed with `parseReminderConfig` — missing keys fall back to defaults. */
+  drawingReminders: jsonb("drawing_reminders").notNull().$type<Record<string, unknown>>().default({}),
   updatedById: text("updated_by_id").references(() => user.id, { onDelete: "set null" }),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

@@ -17,12 +17,14 @@ export function NewProjectDialog() {
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
+  const [client, setClient] = useState("");
   const [pending, start] = useTransition();
   const router = useRouter();
 
   function reset() {
     setCode("");
     setName("");
+    setClient("");
   }
 
   const submit = () => {
@@ -31,6 +33,7 @@ export function NewProjectDialog() {
         const project = await createProject({
           code: code.trim(),
           name: name.trim(),
+          clientName: client.trim() || undefined,
         });
         toast.success("Project created");
         setOpen(false);
@@ -64,7 +67,7 @@ export function NewProjectDialog() {
         <DialogHeader>
           <DialogTitle>New project</DialogTitle>
           <DialogDescription>
-            Projects start empty. Add one or more BOMs from the project page.
+            Projects start empty. Fill in the passport and add BOMs and drawings from the project page.
           </DialogDescription>
         </DialogHeader>
 
@@ -87,6 +90,16 @@ export function NewProjectDialog() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Rover Mk II"
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="new-project-client">Client (optional)</Label>
+            <Input
+              id="new-project-client"
+              value={client}
+              onChange={(e) => setClient(e.target.value)}
+              maxLength={200}
+              placeholder="e.g. Hilton Tbilisi"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !blocked && !pending) {
                   e.preventDefault();

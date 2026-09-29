@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
-import { KIND_GROUPS, kindLabel } from "./activity-table";
+import { ACTIVITY_KIND_GROUPS, kindLabel, type KindGroup } from "./activity-table";
 import type { AuditKind } from "@/server/queries/audit";
 
 type ProjectOption = { id: string; code: string; name: string };
@@ -13,9 +13,17 @@ type ActorOption = { id: string; name: string | null };
 export function ActivityFilters({
   projects,
   actors,
+  basePath = "/history",
+  baseParams = { tab: "activity" },
+  kindGroups = ACTIVITY_KIND_GROUPS,
 }: {
   projects: ProjectOption[];
   actors: ActorOption[];
+  /** Page the filters navigate to. */
+  basePath?: string;
+  /** Params kept on every navigation (the History tab, the Audit log preset…). */
+  baseParams?: Record<string, string>;
+  kindGroups?: KindGroup[];
 }) {
   const router = useRouter();
   const sp = useSearchParams();
@@ -54,14 +62,13 @@ export function ActivityFilters({
   }
 
   function apply() {
-    const params = new URLSearchParams();
-    params.set("tab", "activity");
+    const params = new URLSearchParams(baseParams);
     if (selectedProjects.length > 0) params.set("project", selectedProjects.join(","));
     if (selectedActors.length > 0) params.set("actor", selectedActors.join(","));
     if (selectedKinds.length > 0) params.set("kind", selectedKinds.join(","));
     if (from) params.set("from", from);
     if (to) params.set("to", to);
-    router.push(`/history?${params.toString()}`);
+    router.push(`${basePath}?${params.toString()}`);
     setOpen(false);
   }
 
@@ -71,7 +78,7 @@ export function ActivityFilters({
     setSelectedKinds([]);
     setFrom("");
     setTo("");
-    router.push("/history?tab=activity");
+    router.push(`${basePath}?${new URLSearchParams(baseParams).toString()}`);
     setOpen(false);
   }
 
@@ -90,7 +97,7 @@ export function ActivityFilters({
         <div className="absolute right-0 top-9 z-30 w-[26rem] rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-3 shadow-[var(--shadow-card)]">
           <Section label="Event">
             <div className="max-h-44 overflow-y-auto rounded-md border border-[var(--color-line-soft)]">
-              {KIND_GROUPS.map(g => (
+              {kindGroups.map(g => (
                 <div key={g.group}>
                   <div className="bg-[var(--color-surface-2)] px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-3)]">
                     {g.group}

@@ -12,3 +12,6 @@ export * from "./bom-exports";
 export * from "./approvals";
 export * from "./audit-log";
 export * from "./system-settings";
+export * from "./drawings";
+export * from "./bom-drawing-links";
+export * from "./project-passport";

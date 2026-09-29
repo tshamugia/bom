@@ -3,22 +3,28 @@ import { listProjects } from "@/server/queries/projects";
 import { PageHead } from "@/components/master/page-head";
 import { ProjectRowActions } from "@/components/projects/project-row-actions";
 import { NewProjectDialog } from "@/components/projects/new-project-dialog";
+import { formatDate } from "@/lib/format";
+import { canEdit, isAdmin } from "@/lib/roles";
+import { requireSession } from "@/server/auth-context";
 
 export default async function ProjectsListPage() {
-  const list = await listProjects();
+  const [session, list] = await Promise.all([requireSession(), listProjects()]);
+  const admin = isAdmin(session.user);
+  const readOnly = !canEdit(session.user);
   return (
     <>
       <PageHead
         title="Projects"
-        subtitle="Owner, deadlines, and BOMs."
-        actions={<NewProjectDialog />}
+        subtitle="Clients, managers, deadlines and BOMs."
+        actions={readOnly ? undefined : <NewProjectDialog />}
       />
       <div className="overflow-x-auto rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
         <table className="w-full text-[12.5px]">
           <thead>
             <tr className="bg-[var(--color-surface-2)] text-[11px] uppercase tracking-wider text-[var(--color-text-3)]">
               <th className="px-4 py-2.5 text-left font-medium">Project</th>
-              <th className="px-4 py-2.5 text-left font-medium">Owner</th>
+              <th className="px-4 py-2.5 text-left font-medium">Client</th>
+              <th className="px-4 py-2.5 text-left font-medium">Manager</th>
               <th className="px-4 py-2.5 text-right font-medium">BOMs</th>
               <th className="px-4 py-2.5 text-left font-medium">Due</th>
               <th className="px-4 py-2.5 text-right font-medium">Lines</th>
@@ -28,7 +34,7 @@ export default async function ProjectsListPage() {
           <tbody>
             {list.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-[12.5px] text-[var(--color-text-3)]">
+                <td colSpan={7} className="px-4 py-12 text-center text-[12.5px] text-[var(--color-text-3)]">
                   <div className="text-[13.5px]">No projects yet</div>
                 </td>
               </tr>
@@ -41,12 +47,13 @@ export default async function ProjectsListPage() {
                       <div className="font-mono text-[11px] text-[var(--color-text-3)]">{p.code}</div>
                     </Link>
                   </td>
+                  <td className="px-4 py-2.5">{p.clientName ?? <span className="text-[var(--color-text-3)]">—</span>}</td>
                   <td className="px-4 py-2.5">{p.ownerName ?? "—"}</td>
                   <td className="px-4 py-2.5 text-right tabular-nums">{p.bomCount}</td>
-                  <td className="px-4 py-2.5 text-[var(--color-text-3)]">{p.targetDate ?? "—"}</td>
+                  <td className="whitespace-nowrap px-4 py-2.5 text-[var(--color-text-3)]">{p.targetDate ? formatDate(p.targetDate) : "—"}</td>
                   <td className="px-4 py-2.5 text-right tabular-nums">{p.lineCount}</td>
                   <td className="px-4 py-2.5 text-right">
-                    <ProjectRowActions id={p.id} code={p.code} />
+                    <ProjectRowActions id={p.id} code={p.code} canDelete={admin} readOnly={readOnly} />
                   </td>
                 </tr>
               ))

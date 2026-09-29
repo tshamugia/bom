@@ -6,7 +6,8 @@ import { db } from "@/db/client";
 import {
   approvalWorkflows, approvalSteps, boms, bomRevisions,
 } from "@/db/schema";
-import { requireSession } from "../auth-context";
+import { EDITOR_ROLES } from "@/lib/roles";
+import { requireRole } from "../auth-context";
 import { audit } from "../audit";
 
 const DEFAULT_STAGES: Array<{ role: string }> = [
@@ -16,7 +17,7 @@ const DEFAULT_STAGES: Array<{ role: string }> = [
 ];
 
 async function loadRevision(revisionId: string) {
-  await requireSession();
+  await requireRole(...EDITOR_ROLES);
   const [row] = await db
     .select({
       id: bomRevisions.id,
@@ -53,7 +54,7 @@ async function loadWorkflow(workflowId: string) {
 export async function requestApproval(input: { revisionId: string }) {
   const rev = await loadRevision(input.revisionId);
   if (rev.status !== "committed") throw new Error("REVISION_NOT_COMMITTED");
-  const session = await requireSession();
+  const session = await requireRole(...EDITOR_ROLES);
 
   const [workflow] = await db.insert(approvalWorkflows).values({
     revisionId: rev.id,
@@ -81,7 +82,7 @@ export async function requestApproval(input: { revisionId: string }) {
 }
 
 export async function approveStep(input: { workflowId: string; note?: string }) {
-  const session = await requireSession();
+  const session = await requireRole(...EDITOR_ROLES);
 
   const w = await loadWorkflow(input.workflowId);
   if (!w) throw new Error("WORKFLOW_NOT_FOUND");
@@ -124,7 +125,7 @@ export async function approveStep(input: { workflowId: string; note?: string }) 
 }
 
 export async function rejectStep(input: { workflowId: string; note?: string }) {
-  const session = await requireSession();
+  const session = await requireRole(...EDITOR_ROLES);
 
   const w = await loadWorkflow(input.workflowId);
   if (!w) throw new Error("WORKFLOW_NOT_FOUND");
@@ -149,7 +150,7 @@ export async function rejectStep(input: { workflowId: string; note?: string }) {
 }
 
 export async function cancelWorkflow(input: { workflowId: string }) {
-  await requireSession();
+  await requireRole(...EDITOR_ROLES);
   const w = await loadWorkflow(input.workflowId);
   if (!w) throw new Error("WORKFLOW_NOT_FOUND");
 
@@ -157,4 +158,5 @@ export async function cancelWorkflow(input: { workflowId: string }) {
   await db.update(bomRevisions).set({ status: "in-progress" }).where(eq(bomRevisions.id, w.revisionId));
   revalidatePath("/approvals");
   revalidatePath("/dashboard");
+  await audit({ kind: "approval.cancelled", refType: "workflow", refId: w.id, summary: "Approval workflow cancelled", payload: { revisionId: w.revisionId } });
 }

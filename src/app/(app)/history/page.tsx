@@ -7,6 +7,8 @@ import { HistoryFilters } from "@/components/history/history-filters";
 import { ActivityTable } from "@/components/history/activity-table";
 import { ActivityFilters } from "@/components/history/activity-filters";
 import { HistoryTabs, type HistoryTab } from "@/components/history/history-tabs";
+import { canEdit } from "@/lib/roles";
+import { requireSession } from "@/server/auth-context";
 
 type SP = {
   tab?: string;
@@ -23,6 +25,8 @@ export default async function HistoryPage({
   searchParams: Promise<SP>;
 }) {
   const sp = await searchParams;
+  const session = await requireSession();
+  const readOnly = !canEdit(session.user);
   const tab: HistoryTab = sp.tab === "activity" ? "activity" : "exports";
   const projectIds = sp.project?.split(",").filter(Boolean);
   const from = sp.from ? new Date(sp.from) : undefined;
@@ -60,6 +64,7 @@ export default async function HistoryPage({
           kinds={sp.kind?.split(",").filter(Boolean) as AuditKind[] | undefined}
           from={from}
           to={to}
+          readOnly={readOnly}
         />
       )}
     </>
@@ -85,15 +90,17 @@ async function ActivityPanel({
   kinds,
   from,
   to,
+  readOnly,
 }: {
   projectIds?: string[];
   actorIds?: string[];
   kinds?: AuditKind[];
   from?: Date;
   to?: Date;
+  readOnly: boolean;
 }) {
   const { rows } = await listActivity({ projectIds, actorIds, kinds, from, to });
-  return <ActivityTable rows={rows} />;
+  return <ActivityTable rows={rows} readOnly={readOnly} />;
 }
 
 async function ActivitySidecar({

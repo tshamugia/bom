@@ -65,3 +65,16 @@ test("softDeleteProject hides project from listings; restoreProject brings it ba
   expect(list).toHaveLength(1);
   expect(list[0].id).toBe(projectId);
 });
+
+test("members can't archive or restore projects", async () => {
+  const { projectId } = await setup();
+  await mockSession("member");
+  await expect(softDeleteProject({ id: projectId })).rejects.toThrow(/FORBIDDEN/);
+  expect(await listProjects()).toHaveLength(1);
+
+  await mockSession("admin");
+  await softDeleteProject({ id: projectId });
+  await mockSession("member");
+  await expect(restoreProject({ id: projectId })).rejects.toThrow(/FORBIDDEN/);
+  expect(await listProjects()).toHaveLength(0);
+});

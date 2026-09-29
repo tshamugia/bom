@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { globalSearch, type SearchHit } from "@/server/actions/search";
 import { Icon } from "@/components/icons";
 
+const noopSubscribe = () => () => {};
+const isApplePlatform = () => /Mac|iPhone|iPad/.test(navigator.platform);
+
 export function CommandPalette() {
   const router = useRouter();
+  const isMac = useSyncExternalStore(noopSubscribe, isApplePlatform, () => true);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<SearchHit[]>([]);
@@ -117,7 +121,7 @@ export function CommandPalette() {
         <span className="flex-1 text-left text-[12.5px] text-[var(--color-text-4)]">
           Search SKUs, projects, vendors…
         </span>
-        <span className="kbd">⌘K</span>
+        <span className="kbd">{isMac ? "⌘K" : "Ctrl K"}</span>
       </button>
 
       {open && (
