@@ -54,7 +54,7 @@ export function ThemeToggle() {
 
   return (
     <div className="px-1 py-1">
-      <div className="px-1.5 pb-1 text-[10.5px] font-semibold uppercase tracking-wider text-[var(--color-text-3)]">
+      <div className="px-1.5 pb-1 text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground">
         Theme
       </div>
       <div className="grid grid-cols-3 gap-1">
@@ -66,10 +66,11 @@ export function ThemeToggle() {
               key={o.value}
               type="button"
               onClick={() => pick(o.value)}
+              aria-pressed={active}
               className={`flex flex-col items-center gap-1 rounded-md px-2 py-1.5 text-[11px] transition-colors ${
                 active
-                  ? "bg-[var(--color-side-active-bg)] text-[var(--color-side-active)]"
-                  : "text-[var(--color-side-text-2)] hover:bg-[var(--color-side-hover-bg)] hover:text-[var(--color-side-active)]"
+                  ? "bg-primary font-medium text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >
               <I size={14} />

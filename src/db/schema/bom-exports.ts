@@ -24,7 +24,8 @@ export const bomExports = pgTable("bom_export", {
   id: text("id").primaryKey().$defaultFn(() => createId()),
   revisionId: text("revision_id").notNull().references(() => bomRevisions.id, { onDelete: "cascade" }),
   format: exportFormatEnum("format").notNull().default("xlsx"),
-  fileKey: text("file_key").notNull(),
+  /** Legacy S3 key — exports are no longer stored; the file is rebuilt on download. */
+  fileKey: text("file_key"),
   fileName: text("file_name").notNull(),
   byteSize: integer("byte_size").notNull(),
   options: jsonb("options").notNull().$type<ExportOptions>(),

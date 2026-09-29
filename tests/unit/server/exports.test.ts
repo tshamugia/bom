@@ -3,22 +3,17 @@ import { eq } from "drizzle-orm";
 import { resetDb } from "@/../tests/test-helpers/db";
 import { mockSession } from "@/../tests/test-helpers/auth";
 import { db } from "@/db/client";
-import { items, vendors, categories, projects, boms, bomRevisions, bomLines } from "@/db/schema";
+import ExcelJS from "exceljs";
+import { items, vendors, categories, projects, boms, bomRevisions, bomLines, bomExports } from "@/db/schema";
 import { generateExport } from "@/server/actions/exports";
 import { listExports } from "@/server/queries/exports";
+import { renderExportFile } from "@/server/lib/run-export";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/server/auth-context", () => ({ requireSession: vi.fn(), requireRole: vi.fn() }));
 
-vi.mock("@/lib/s3", () => ({
-  putObject: vi.fn(async (key: string) => ({ key, bucket: "mock" })),
-  presignDownload: vi.fn(async (key: string) => `https://mock/${key}`),
-}));
-import { putObject } from "@/lib/s3";
-
 beforeEach(async () => {
   await resetDb();
-  vi.mocked(putObject).mockClear();
 });
 
 async function setup() {
@@ -61,32 +56,80 @@ function defaultOptions() {
   };
 }
 
-test("generateExport uploads to S3 and persists a row", async () => {
+async function readSheet(buf: Buffer, name = "BOM") {
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(buf as unknown as ArrayBuffer);
+  return wb.getWorksheet(name)!;
+}
+
+async function exportRow(id: string) {
+  const [row] = await db.select().from(bomExports).where(eq(bomExports.id, id));
+  return row;
+}
+
+test("generateExport returns the workbook and records a row without storing the file", async () => {
   const { revisionId, userId } = await setup();
   const ex = await generateExport({
     revisionId,
     options: defaultOptions(),
   });
-  expect(ex.id).toBeTruthy();
+  if (!ex.ok) throw new Error(ex.error);
   expect(ex.fileName).toMatch(/^BOM_TST_Rev_A\.xlsx$/);
-  expect(putObject).toHaveBeenCalledOnce();
+  const ws = await readSheet(Buffer.from(ex.data, "base64"));
+  expect(ws.getRow(6).getCell(2).value).toBe("X-1");
 
   const list = await listExports();
   expect(list).toHaveLength(1);
+  expect(list[0].id).toBe(ex.id);
   expect(list[0].generatedById).toBe(userId);
+  expect((await exportRow(ex.id)).fileKey).toBeNull();
+});
+
+test("generateExport returns an error instead of throwing when the revision is missing", async () => {
+  await mockSession();
+  const ex = await generateExport({ revisionId: "nope", options: defaultOptions() });
+  expect(ex).toEqual({ ok: false, error: "This revision no longer exists." });
+});
+
+test("generateExport rejects viewers", async () => {
+  const { revisionId } = await setup();
+  await mockSession("viewer");
+  const ex = await generateExport({ revisionId, options: defaultOptions() });
+  expect(ex.ok).toBe(false);
+  expect(await listExports()).toHaveLength(0);
+});
+
+test("renderExportFile rebuilds a recorded export with its options", async () => {
+  const { revisionId } = await setup();
+  const ex = await generateExport({
+    revisionId,
+    options: { ...defaultOptions(), includeCoverPage: true },
+  });
+  if (!ex.ok) throw new Error(ex.error);
+
+  const file = await renderExportFile(ex.id);
+  expect(file?.fileName).toBe(ex.fileName);
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(file!.buffer as unknown as ArrayBuffer);
+  expect(wb.worksheets.map(w => w.name)).toEqual(["Cover", "BOM"]);
+  expect(wb.getWorksheet("BOM")!.getRow(6).getCell(2).value).toBe("X-1");
+
+  expect(await renderExportFile("missing")).toBeNull();
 });
 
 test("generateExport on draft revision records revisionStatusAtExport=draft", async () => {
   const { revisionId } = await setup();
   await db.update(bomRevisions).set({ status: "draft" }).where(eq(bomRevisions.id, revisionId));
-  const row = await generateExport({ revisionId, options: defaultOptions() });
-  expect(row.revisionStatusAtExport).toBe("draft");
-  expect(row.fileName).toMatch(/^BOM_TST_Rev_A_DRAFT_\d{4}-\d{2}-\d{2}\.xlsx$/);
+  const ex = await generateExport({ revisionId, options: defaultOptions() });
+  if (!ex.ok) throw new Error(ex.error);
+  expect((await exportRow(ex.id)).revisionStatusAtExport).toBe("draft");
+  expect(ex.fileName).toMatch(/^BOM_TST_Rev_A_DRAFT_\d{4}-\d{2}-\d{2}\.xlsx$/);
 });
 
 test("generateExport on committed revision records revisionStatusAtExport=committed", async () => {
   const { revisionId } = await setup();
   await db.update(bomRevisions).set({ status: "committed" }).where(eq(bomRevisions.id, revisionId));
-  const row = await generateExport({ revisionId, options: defaultOptions() });
-  expect(row.revisionStatusAtExport).toBe("committed");
+  const ex = await generateExport({ revisionId, options: defaultOptions() });
+  if (!ex.ok) throw new Error(ex.error);
+  expect((await exportRow(ex.id)).revisionStatusAtExport).toBe("committed");
 });

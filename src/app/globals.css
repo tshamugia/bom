@@ -982,13 +982,16 @@ html {
 .app { display: block; min-height: 100dvh; background: var(--bg); }
 
 /* Phones and tablets: the sidebar is an off-canvas drawer. `visibility` keeps
-   its links out of the tab order while it is closed. */
+   its links out of the tab order while it is closed.
+   Shell layers (drawer 45 > scrim 44 > tab bar 40) stay below the z-50
+   overlay layer, so menus, selects and dialogs — including the account menu
+   that opens from the sidebar — render on top of them. */
 .sidebar {
   position: fixed;
   top: 0; left: 0; bottom: 0;
   width: min(288px, 84vw);
   height: 100dvh;
-  z-index: 60;
+  z-index: 45;
   transform: translateX(-100%);
   visibility: hidden;
   transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0.26s;
@@ -1004,7 +1007,7 @@ html {
   display: block;
   position: fixed;
   inset: 0;
-  z-index: 55;
+  z-index: 44;
   border: 0; padding: 0; margin: 0;
   background: rgba(9, 11, 26, 0.5);
   -webkit-backdrop-filter: blur(1px);
@@ -1071,7 +1074,7 @@ html {
   grid-auto-columns: minmax(0, 1fr);
   position: fixed;
   left: 0; right: 0; bottom: 0;
-  z-index: 50;
+  z-index: 40;
   background: color-mix(in srgb, var(--surface) 94%, transparent);
   -webkit-backdrop-filter: saturate(1.6) blur(12px);
   backdrop-filter: saturate(1.6) blur(12px);
