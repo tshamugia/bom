@@ -11,7 +11,7 @@ export function DuplicatePolicyRadio({
   disabled?: boolean;
 }) {
   return (
-    <fieldset className="flex items-center gap-4 text-[12.5px]">
+    <fieldset className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]">
       <legend className="mr-2 text-[var(--color-text-3)]">When a SKU already exists:</legend>
       <label className="flex items-center gap-1.5">
         <input type="radio" name="dup" disabled={disabled} checked={value === "skip"} onChange={() => onChange("skip")} />

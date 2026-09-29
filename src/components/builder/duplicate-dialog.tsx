@@ -75,7 +75,7 @@ export function DuplicateDialog({ sourceBomId, sourceBomName, sourceProjectId, s
               id="duplicate-target-project"
               value={targetProjectId}
               onChange={e => setTargetProjectId(e.target.value)}
-              className="h-9 w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 text-[13px]"
+              className="h-9 w-full min-w-0 rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 text-[13px]"
             >
               {projects.length === 0 ? (
                 <option value={sourceProjectId}>Current project</option>

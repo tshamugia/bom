@@ -8,7 +8,8 @@ import { Icon } from "@/components/icons";
 const noopSubscribe = () => () => {};
 const isApplePlatform = () => /Mac|iPhone|iPad/.test(navigator.platform);
 
-export function CommandPalette() {
+/** `viewer`: search covers projects and drawings — viewers don't use the catalog or vendors. */
+export function CommandPalette({ viewer = false }: { viewer?: boolean }) {
   const router = useRouter();
   const isMac = useSyncExternalStore(noopSubscribe, isApplePlatform, () => true);
   const [open, setOpen] = useState(false);
@@ -82,6 +83,7 @@ export function CommandPalette() {
   const grouped = useMemo(() => {
     const groups: { label: string; entries: SearchHit[] }[] = [
       { label: "Projects", entries: hits.filter(h => h.kind === "project") },
+      { label: "Drawings", entries: hits.filter(h => h.kind === "drawing") },
       { label: "Items", entries: hits.filter(h => h.kind === "item") },
       { label: "Vendors", entries: hits.filter(h => h.kind === "vendor") },
     ];
@@ -119,7 +121,7 @@ export function CommandPalette() {
       >
         <Icon.Search className="ico" />
         <span className="flex-1 text-left text-[12.5px] text-[var(--color-text-4)]">
-          Search SKUs, projects, vendors…
+          {viewer ? "Search projects, drawings…" : "Search SKUs, projects, vendors…"}
         </span>
         <span className="kbd">{isMac ? "⌘K" : "Ctrl K"}</span>
       </button>
@@ -132,7 +134,7 @@ export function CommandPalette() {
           <div
             role="dialog"
             aria-label="Command palette"
-            className="mt-[18vh] w-[min(640px,calc(100%-2rem))] overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]"
+            className="mt-[max(12px,env(safe-area-inset-top))] w-[min(640px,calc(100%-1.5rem))] sm:mt-[18vh] overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center gap-2 border-b border-[var(--color-line)] px-3 py-2.5">
@@ -142,7 +144,7 @@ export function CommandPalette() {
                 value={query}
                 onChange={e => onQueryChange(e.target.value)}
                 onKeyDown={onKey}
-                placeholder="Search projects, items, vendors…"
+                placeholder={viewer ? "Search projects, drawings…" : "Search projects, items, vendors…"}
                 className="flex-1 border-0 bg-transparent text-[14px] text-[var(--color-text)] placeholder:text-[var(--color-text-4)] outline-none"
               />
               <span className="rounded border border-[var(--color-line)] bg-[var(--color-surface-2)] px-1.5 font-mono text-[10.5px] text-[var(--color-text-3)]">

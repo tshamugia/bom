@@ -121,7 +121,7 @@ export function ReminderSettingsForm({
       </div>
 
       <div className="table-wrap rounded-md border border-[var(--color-line)]">
-        <table className="tbl">
+        <table className="tbl tbl-cards">
           <thead>
             <tr>
               <th>Remind about</th>
@@ -134,13 +134,13 @@ export function ReminderSettingsForm({
               const r = config[rule.key] as Record<string, boolean | number>;
               return (
                 <tr key={rule.key} style={r.enabled ? undefined : { opacity: 0.55 }}>
-                  <td>
+                  <td className="td-main">
                     <label className="flex items-center gap-2 font-medium">
                       <input type="checkbox" checked={!!r.enabled} onChange={e => setRule(rule.key, "enabled", e.target.checked)} />
                       {rule.title}
                     </label>
                   </td>
-                  <td style={{ whiteSpace: "nowrap" }}>
+                  <td className="td-full" data-label="When" style={{ whiteSpace: "nowrap" }}>
                     {rule.days ? (
                       <label className="flex items-center gap-1.5">
                         <input
@@ -158,7 +158,7 @@ export function ReminderSettingsForm({
                       <span className="muted">Every day while overdue</span>
                     )}
                   </td>
-                  <td>
+                  <td className="td-full" data-label="Send to">
                     <div className="flex flex-wrap gap-x-4 gap-y-1">
                       {rule.to.map(t => (
                         <label key={t.field} className="flex items-center gap-1.5">

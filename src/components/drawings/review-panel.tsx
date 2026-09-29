@@ -41,7 +41,7 @@ export function ReviewPanel({
     <div className="card mb-4" style={{ borderColor: "var(--amber)" }}>
       <div className="card-head">
         <Icon.AlertTriangle className="ico" style={{ color: "var(--amber)", width: 16, height: 16 }} />
-        <div>
+        <div className="min-w-0">
           <h3 className="card-title">
             {canReview ? `Your approval is requested for ${revisionLabel}` : `${revisionLabel} is waiting for approval`}
           </h3>
@@ -60,7 +60,7 @@ export function ReviewPanel({
             onChange={e => setComment(e.target.value)}
             placeholder="Comment — required when sending back"
           />
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <Button variant="outline" disabled={pending || !comment.trim()} onClick={() => decide("in-progress")}>
               Send back
             </Button>

@@ -87,10 +87,10 @@ export function PreviewShell(p: Props) {
               : "review the generated document, then export to Excel for procurement."}
           </p>
         </div>
-        <div className="split">
+        <div className="page-actions">
           {!p.readOnly && (
             <>
-              <div className="steps">
+              <div className="steps max-[701px]:hidden">
                 <div className="step done"><span className="num"><Icon.Check className="ico" /></span> Build</div>
                 <span className="arrow">›</span>
                 <div className="step active"><span className="num">2</span> Preview</div>

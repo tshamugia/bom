@@ -80,7 +80,7 @@ export default async function AuditLogPage({ searchParams }: { searchParams: Pro
         }
       />
 
-      <div className="tabs">
+      <div className="tabs tabs-scroll">
         {AUDIT_PRESETS.map(p => (
           <Link
             key={p.id}
@@ -96,7 +96,7 @@ export default async function AuditLogPage({ searchParams }: { searchParams: Pro
       <AuditLogTable rows={rows} />
 
       {(page > 1 || nextCursor) && (
-        <div className="mt-3 flex items-center justify-between text-[12.5px]">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[12.5px]">
           <span className="text-[var(--color-text-3)]">
             Page {page} · {PAGE_SIZE} per page
           </span>

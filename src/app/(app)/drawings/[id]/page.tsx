@@ -21,6 +21,7 @@ import { TimeCard } from "@/components/drawings/time-card";
 import { RemarksCard } from "@/components/drawings/remarks-card";
 import { TransmittalsCard } from "@/components/drawings/transmittals-card";
 import { BomUsageCard } from "@/components/drawings/bom-usage-card";
+import { DrawingPipeline } from "@/components/drawings/drawing-pipeline";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { formatDrawingRevision, isDrawingOverdue } from "@/lib/drawing-status";
 
@@ -51,6 +52,16 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
   const revLabel = formatDrawingRevision(current.number);
   const overdue = isDrawingOverdue(drawing.dueDate, current.status);
   const canReview = !readOnly && current.reviewerId === session.user.id && drawing.ownerId !== session.user.id;
+  const transmittalsCard = (
+    <TransmittalsCard
+      transmittals={transmittals}
+      latestRevisionId={current.id}
+      latestRevisionNumber={current.number}
+      users={users}
+      currentUserId={session.user.id}
+      readOnly={readOnly}
+    />
+  );
 
   return (
     <>
@@ -110,7 +121,8 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
           <span className="mono text-[12px] font-semibold">{revLabel}</span>
           <DrawingStatusBadge status={current.status} />
         </div>
-        <dl className="kv p-4">
+        <DrawingPipeline status={current.status} ownerName={drawing.ownerName} reviewerName={current.reviewerName} />
+        <dl className="kv p-4" style={{ borderTop: "1px solid var(--line-soft)" }}>
           <dt>Project</dt>
           <dd><Link href={`/projects/${drawing.projectId}`} className="hover:underline">{drawing.projectCode} — {drawing.projectName}</Link></dd>
           <dt>Discipline</dt>
@@ -138,24 +150,24 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
       </div>
 
       <div className="grid-2 mb-5" style={{ alignItems: "start" }}>
+        {/* Viewers confirm receipt in Transmittals, so it comes first for them. */}
+        {readOnly && transmittalsCard}
         <RemarksCard remarks={remarks} revisions={revisionOptions} readOnly={readOnly} />
-        <TransmittalsCard
-          transmittals={transmittals}
-          latestRevisionId={current.id}
-          latestRevisionNumber={current.number}
-          users={users}
-          currentUserId={session.user.id}
-          readOnly={readOnly}
-        />
-        <TimeCard
-          estimatedHours={drawing.estimatedHours}
-          entries={timeEntries}
-          revisions={revisionOptions}
-          currentUserId={session.user.id}
-          canManageAll={admin}
-          readOnly={readOnly}
-        />
-        <BomUsageCard links={bomLinks} latestRevisionNumber={current.number} readOnly={readOnly} />
+        {!readOnly && transmittalsCard}
+        {/* Hours and BOM links are engineering internals — viewers follow status and issues. */}
+        {!readOnly && (
+          <>
+            <TimeCard
+              estimatedHours={drawing.estimatedHours}
+              entries={timeEntries}
+              revisions={revisionOptions}
+              currentUserId={session.user.id}
+              canManageAll={admin}
+              readOnly={readOnly}
+            />
+            <BomUsageCard links={bomLinks} latestRevisionNumber={current.number} readOnly={readOnly} />
+          </>
+        )}
       </div>
 
       <div className="mb-2 flex items-center justify-between">

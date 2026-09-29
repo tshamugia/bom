@@ -29,9 +29,9 @@ function DisciplineRow({ d }: { d: Discipline }) {
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <Input value={name} onChange={e => setName(e.target.value)} maxLength={60} />
-      <span className="w-24 shrink-0 text-right text-[12px] text-[var(--color-text-3)]">
+    <div className="flex items-center gap-2 max-[701px]:flex-wrap">
+      <Input value={name} onChange={e => setName(e.target.value)} maxLength={60} className="max-[701px]:basis-full" />
+      <span className="w-24 shrink-0 text-right text-[12px] text-[var(--color-text-3)] max-[701px]:mr-auto max-[701px]:w-auto max-[701px]:text-left">
         {d.drawingCount} drawing{d.drawingCount === 1 ? "" : "s"}
       </span>
       <Button
@@ -75,7 +75,7 @@ export function DisciplinesEditor({ disciplines }: { disciplines: Discipline[] }
   };
 
   return (
-    <div className="grid gap-2">
+    <div className="grid gap-2 max-[701px]:gap-4">
       {disciplines.map(d => <DisciplineRow key={`${d.id}:${d.name}`} d={d} />)}
       <div className="mt-2 flex gap-2">
         <Input

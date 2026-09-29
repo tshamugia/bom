@@ -27,15 +27,15 @@ export function ProjectSwitcher({
         render={
           <button
             type="button"
-            className="flex h-7 items-center gap-1.5 rounded-[var(--radius-2)] border border-[var(--color-line)] bg-[var(--color-surface)] px-2 text-[12px] font-medium text-[var(--color-text-2)] hover:bg-[var(--color-surface-2)]"
+            className="flex h-7 max-w-full min-w-0 items-center gap-1.5 rounded-[var(--radius-2)] border border-[var(--color-line)] bg-[var(--color-surface)] px-2 text-[12px] font-medium text-[var(--color-text-2)] hover:bg-[var(--color-surface-2)]"
           >
             <span className="font-mono text-[11px] text-[var(--color-text-3)]">{active.code}</span>
-            <span className="text-[var(--color-text)]">{active.name}</span>
+            <span className="truncate text-[var(--color-text)]">{active.name}</span>
             <Icon.ChevDown size={12} className="text-[var(--color-text-3)]" />
           </button>
         }
       />
-      <DropdownMenuContent align="start" className="min-w-[260px]">
+      <DropdownMenuContent align="start" className="min-w-[260px] max-w-[calc(100vw-2rem)]">
         <DropdownMenuLabel className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text-3)]">
           Switch project
         </DropdownMenuLabel>

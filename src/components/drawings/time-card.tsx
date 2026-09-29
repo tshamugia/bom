@@ -73,7 +73,7 @@ function LogTimeDialog({ revisions }: { revisions: RevisionOption[] }) {
           <DialogDescription>Hours you spent on this drawing. They add up against the estimate.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-3">
-          <div className="grid grid-cols-[90px_1fr_100px] gap-3">
+          <div className="grid grid-cols-[90px_1fr_100px] gap-3 max-[480px]:grid-cols-2">
             <div className="grid gap-1.5">
               <Label htmlFor="time-hours">Hours</Label>
               <Input
@@ -86,7 +86,7 @@ function LogTimeDialog({ revisions }: { revisions: RevisionOption[] }) {
                 onChange={e => setHours(e.target.value)}
               />
             </div>
-            <div className="grid gap-1.5">
+            <div className="grid gap-1.5 max-[480px]:order-last max-[480px]:col-span-2">
               <Label htmlFor="time-date">Date</Label>
               <Input id="time-date" type="date" max={todayIso()} value={workDate} onChange={e => setWorkDate(e.target.value)} />
             </div>
@@ -210,7 +210,7 @@ export function TimeCard({
       </div>
       {entries.length > 0 && (
         <div className="table-wrap" style={{ borderTop: "1px solid var(--line-soft)", maxHeight: 280 }}>
-          <table className="tbl">
+          <table className="tbl tbl-list">
             <thead>
               <tr>
                 <th>Date</th>
@@ -223,15 +223,15 @@ export function TimeCard({
             <tbody>
               {entries.map(e => (
                 <tr key={e.id}>
-                  <td style={{ whiteSpace: "nowrap" }}>{formatDate(e.workDate)}</td>
-                  <td>
+                  <td className="l-meta" style={{ whiteSpace: "nowrap" }}>{formatDate(e.workDate)}</td>
+                  <td className="l-title">
                     {e.userName ?? "—"}
-                    {e.note && <div className="muted" style={{ fontSize: 11.5 }}>{e.note}</div>}
+                    {e.note && <div className="muted max-[701px]:[overflow-wrap:anywhere]" style={{ fontSize: 11.5 }}>{e.note}</div>}
                   </td>
-                  <td className="mono muted">{formatDrawingRevision(e.revisionNumber)}</td>
-                  <td className="num">{formatHours(e.hours)}</td>
+                  <td className="mono muted l-meta">{formatDrawingRevision(e.revisionNumber)}</td>
+                  <td className="num l-aside">{formatHours(e.hours)}</td>
                   {!readOnly && (
-                    <td style={{ width: 40 }}>
+                    <td className="l-aside" style={{ width: 40 }}>
                       {(canManageAll || e.userId === currentUserId) && (
                         <div className="row-actions"><DeleteEntryButton id={e.id} /></div>
                       )}

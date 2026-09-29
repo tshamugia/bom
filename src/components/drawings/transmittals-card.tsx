@@ -15,9 +15,10 @@ import { Icon } from "@/components/icons";
 import { formatDateTime } from "@/lib/format";
 import { TRANSMITTAL_PURPOSES, TRANSMITTAL_PURPOSE_LABEL, type TransmittalPurpose } from "@/lib/drawing-meta";
 import { formatDrawingRevision } from "@/lib/drawing-status";
-import { acknowledgeTransmittal, issueDrawingTransmittal } from "@/server/actions/drawing-transmittals";
+import { issueDrawingTransmittal } from "@/server/actions/drawing-transmittals";
 import type { TransmittalRow } from "@/server/queries/drawing-control";
 import { SELECT_CLASS, TEXTAREA_CLASS, type UserOption } from "./drawing-form-fields";
+import { AcknowledgeButton } from "./acknowledge-button";
 
 function IssueDialog({
   revisionId,
@@ -165,31 +166,6 @@ function IssueDialog({
   );
 }
 
-function AcknowledgeButton({ id }: { id: string }) {
-  const [pending, start] = useTransition();
-  const router = useRouter();
-  return (
-    <button
-      type="button"
-      className="btn btn-primary btn-sm"
-      disabled={pending}
-      onClick={() =>
-        start(async () => {
-          const res = await acknowledgeTransmittal({ id });
-          if (!res.ok) {
-            toast.error(res.error);
-            return;
-          }
-          toast.success("Receipt acknowledged");
-          router.refresh();
-        })
-      }
-    >
-      <Icon.Check className="ico" /> Acknowledge
-    </button>
-  );
-}
-
 export function TransmittalsCard({
   transmittals,
   latestRevisionId,
@@ -212,8 +188,8 @@ export function TransmittalsCard({
 
   return (
     <div className="card">
-      <div className="card-head">
-        <div>
+      <div className="card-head max-[701px]:flex-wrap">
+        <div className="min-w-0">
           <h3 className="card-title">Transmittals</h3>
           <p className="card-sub">Who received which revision, and whether it is still current.</p>
         </div>
@@ -239,7 +215,7 @@ export function TransmittalsCard({
         <div className="muted px-4 py-3 text-[12.5px]">Not issued to anyone yet.</div>
       ) : (
         <div className="table-wrap" style={{ maxHeight: 320 }}>
-          <table className="tbl">
+          <table className="tbl tbl-list">
             <thead>
               <tr>
                 <th>Rev</th>
@@ -253,24 +229,24 @@ export function TransmittalsCard({
                 const superseded = t.revisionNumber < latestRevisionNumber;
                 return (
                   <tr key={t.id}>
-                    <td style={{ whiteSpace: "nowrap" }}>
+                    <td className="l-meta" style={{ whiteSpace: "nowrap" }}>
                       <span className="mono">{formatDrawingRevision(t.revisionNumber)}</span>
                       {superseded && (
-                        <div style={{ marginTop: 2 }}>
+                        <div className="max-[701px]:ml-1.5 max-[701px]:inline" style={{ marginTop: 2 }}>
                           <Badge tone="danger">Superseded by {formatDrawingRevision(latestRevisionNumber)}</Badge>
                         </div>
                       )}
                     </td>
-                    <td>
+                    <td className="l-title">
                       {t.recipientName ?? t.externalName ?? "—"}
                       {!t.recipientUserId && <span className="muted"> · no account</span>}
                       <div className="muted" style={{ fontSize: 11 }}>
                         {formatDateTime(t.createdAt)} · by {t.sentByName ?? "—"}
                       </div>
-                      {t.note && <div className="muted whitespace-pre-line" style={{ fontSize: 11.5 }}>{t.note}</div>}
+                      {t.note && <div className="muted whitespace-pre-line max-[701px]:[overflow-wrap:anywhere]" style={{ fontSize: 11.5 }}>{t.note}</div>}
                     </td>
-                    <td className="muted" style={{ whiteSpace: "nowrap" }}>{TRANSMITTAL_PURPOSE_LABEL[t.purpose]}</td>
-                    <td style={{ whiteSpace: "nowrap" }}>
+                    <td className="muted l-meta" style={{ whiteSpace: "nowrap" }}>{TRANSMITTAL_PURPOSE_LABEL[t.purpose]}</td>
+                    <td className="l-aside" style={{ whiteSpace: "nowrap" }}>
                       {t.acknowledgedAt ? (
                         <>
                           <Badge tone="success">Received</Badge>

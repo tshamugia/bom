@@ -92,7 +92,7 @@ export function NewBomDialog({
                 id="new-bom-project"
                 value={selectedProjectId}
                 onChange={(e) => setSelectedProjectId(e.target.value)}
-                className="h-9 w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 text-[13px]"
+                className="h-9 w-full min-w-0 rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 text-[13px]"
               >
                 <option value="">— Select project —</option>
                 {projects!.map((p) => (

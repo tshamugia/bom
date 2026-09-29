@@ -106,8 +106,8 @@ export function PassportEditDialog({
           <DialogDescription>Who the project is for, where, under which contract and by when.</DialogDescription>
         </DialogHeader>
 
-        <div className="grid max-h-[65vh] gap-3 overflow-y-auto pr-1">
-          <div className="grid grid-cols-[140px_1fr] gap-3">
+        <div className="grid max-h-[65vh] gap-3 overflow-y-auto pr-1 max-[701px]:max-h-none max-[701px]:overflow-visible max-[701px]:pr-0">
+          <div className="grid grid-cols-[140px_1fr] gap-3 max-[480px]:grid-cols-1">
             <div className="grid gap-1.5">
               <Label htmlFor="pp-code">Code</Label>
               <Input id="pp-code" value={v.code} maxLength={32} onChange={e => set("code", e.target.value)} />
@@ -117,7 +117,7 @@ export function PassportEditDialog({
               <Input id="pp-name" value={v.name} maxLength={200} onChange={e => set("name", e.target.value)} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 max-[480px]:grid-cols-1">
             <div className="grid gap-1.5">
               <Label htmlFor="pp-client">Client</Label>
               <Input id="pp-client" value={v.clientName} maxLength={200} placeholder="e.g. Hilton Tbilisi" onChange={e => set("clientName", e.target.value)} />
@@ -174,9 +174,9 @@ export function PassportEditDialog({
               {archiving ? "Archiving…" : "Archive project"}
             </Button>
           ) : (
-            <span />
+            <span className="max-sm:hidden" />
           )}
-          <div className="flex gap-2">
+          <div className="flex gap-2 max-sm:*:flex-1">
             <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
             <Button onClick={save} disabled={pending || blocked}>{pending ? "Saving…" : "Save"}</Button>
           </div>

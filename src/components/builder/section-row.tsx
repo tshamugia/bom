@@ -66,7 +66,7 @@ export function SectionRow({
       }`}
     >
       <td colSpan={visibleColCount} className="px-3 py-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 max-[701px]:sticky max-[701px]:left-3 max-[701px]:max-w-[calc(100vw-52px)]">
           <button
             type="button"
             onClick={onToggleCollapsed}
@@ -79,7 +79,7 @@ export function SectionRow({
           {editing ? (
             <Input
               autoFocus
-              className="h-7 w-56 text-[13px] font-semibold"
+              className="h-7 w-56 min-w-0 text-[13px] font-semibold"
               value={draft}
               onChange={e => setDraft(e.target.value)}
               onBlur={commitRename}
@@ -98,24 +98,24 @@ export function SectionRow({
               type="button"
               onClick={() => onActivate()}
               onDoubleClick={() => setEditing(true)}
-              className="text-[13px] font-semibold tracking-tight text-[var(--color-text-1)]"
+              className="text-[13px] font-semibold tracking-tight text-[var(--color-text-1)] max-[701px]:min-w-0 max-[701px]:truncate"
               title="Click to make active, double-click to rename"
             >
               {section.name}
             </button>
           )}
 
-          <span className="rounded-full bg-[var(--color-surface-3)] px-2 py-px font-mono text-[11px] text-[var(--color-text-3)]">
+          <span className="shrink-0 rounded-full bg-[var(--color-surface-3)] px-2 py-px font-mono text-[11px] text-[var(--color-text-3)]">
             {lineCount}
           </span>
 
           {isActive && (
-            <span className="rounded-full bg-[var(--color-accent-soft)] px-2 py-px text-[11px] font-medium text-[var(--color-accent)]">
+            <span className="shrink-0 whitespace-nowrap rounded-full bg-[var(--color-accent-soft)] px-2 py-px text-[11px] font-medium text-[var(--color-accent)]">
               ● Active
             </span>
           )}
 
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex shrink-0 items-center gap-1">
             {!isActive && (
               <Button variant="ghost" size="sm" onClick={onActivate}>
                 Set active

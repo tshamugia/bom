@@ -59,12 +59,18 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         actions={
           <>
             <Link href={`/dashboard?project=${project.id}`}>
-              <Button variant="outline"><Icon.Home size={14} className="mr-1.5" /> Dashboard</Button>
+              <Button variant="outline" className="w-full">
+                <Icon.Home size={14} className="mr-1.5" /> {readOnly ? "Overview" : "Dashboard"}
+              </Button>
             </Link>
-            <Link href={`/projects/${project.id}/history`}>
-              <Button variant="outline"><Icon.History size={14} className="mr-1.5" /> History</Button>
-            </Link>
-            {!readOnly && <NewBomDialog projectId={project.id} />}
+            {!readOnly && (
+              <>
+                <Link href={`/projects/${project.id}/history`}>
+                  <Button variant="outline" className="w-full"><Icon.History size={14} className="mr-1.5" /> History</Button>
+                </Link>
+                <NewBomDialog projectId={project.id} />
+              </>
+            )}
           </>
         }
       />
@@ -98,9 +104,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       </div>
       <BomList projectId={project.id} rows={bomList as BomRow[]} canDelete={admin} readOnly={readOnly} />
 
-      <div className="mt-8 mb-2 flex items-center justify-between gap-2">
+      <div className="mt-8 mb-2 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-[15px] font-semibold tracking-tight">Drawings</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link href={`/drawings?project=${project.id}`} className="text-[12px] text-[var(--color-text-2)] hover:underline">
             Open in register
           </Link>
@@ -120,48 +126,54 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           rows={drawingRows}
           today={today}
           showProject={false}
+          showHours={!readOnly}
           emptyText="No drawings in this project yet."
         />
       </div>
 
-      <div className="mt-8 mb-2">
-        <h2 className="text-[15px] font-semibold tracking-tight">Notifications</h2>
-      </div>
-      <div className="grid-2" style={{ alignItems: "start", gap: 16 }}>
-        <div className="card">
-          <div className="card-head">
-            <div>
-              <h3 className="card-title">Drawing status emails</h3>
-              <p className="card-sub">
-                Emailed when a drawing in {project.code} changes status — in addition to the owner, the approving engineer and the list in Settings → Drawings.
-              </p>
+      {/* Who gets drawing emails is an admin setting; viewers don't need it. */}
+      {!readOnly && (
+        <>
+          <div className="mt-8 mb-2">
+            <h2 className="text-[15px] font-semibold tracking-tight">Notifications</h2>
+          </div>
+          <div className="grid-2" style={{ alignItems: "start", gap: 16 }}>
+            <div className="card">
+              <div className="card-head">
+                <div>
+                  <h3 className="card-title">Drawing status emails</h3>
+                  <p className="card-sub">
+                    Emailed when a drawing in {project.code} changes status — in addition to the owner, the approving engineer and the list in Settings → Drawings.
+                  </p>
+                </div>
+              </div>
+              <div className="p-4">
+                <RecipientsForm projectId={project.id} users={owners} initialIds={recipientIds} readOnly={!admin} />
+              </div>
             </div>
-          </div>
-          <div className="p-4">
-            <RecipientsForm projectId={project.id} users={owners} initialIds={recipientIds} readOnly={!admin} />
-          </div>
-        </div>
 
-        <div className="card">
-          <div className="card-head">
-            <div>
-              <h3 className="card-title">Reminder managers</h3>
-              <p className="card-sub">
-                Get the daily drawing reminders for {project.code}, in addition to the managers in Settings → Drawings.
-              </p>
+            <div className="card">
+              <div className="card-head">
+                <div>
+                  <h3 className="card-title">Reminder managers</h3>
+                  <p className="card-sub">
+                    Get the daily drawing reminders for {project.code}, in addition to the managers in Settings → Drawings.
+                  </p>
+                </div>
+              </div>
+              <div className="p-4">
+                <RecipientsForm
+                  projectId={project.id}
+                  users={owners}
+                  initialIds={reminderIds}
+                  list="reminders"
+                  readOnly={!admin}
+                />
+              </div>
             </div>
           </div>
-          <div className="p-4">
-            <RecipientsForm
-              projectId={project.id}
-              users={owners}
-              initialIds={reminderIds}
-              list="reminders"
-              readOnly={!admin}
-            />
-          </div>
-        </div>
-      </div>
+        </>
+      )}
     </>
   );
 }

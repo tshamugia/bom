@@ -62,7 +62,7 @@ export function InlineProjectName({ projectId, initialName }: Props) {
         className="group inline-flex items-center gap-1 rounded text-left text-[20px] font-semibold tracking-tight transition-colors hover:text-[var(--color-text-2)]"
         title="Click to rename"
       >
-        <span>{name}</span>
+        <span className="max-[701px]:[overflow-wrap:anywhere]">{name}</span>
         {pending && (
           <span className="text-[11px] font-normal text-[var(--color-text-3)]">saving…</span>
         )}
@@ -85,7 +85,7 @@ export function InlineProjectName({ projectId, initialName }: Props) {
           cancel();
         }
       }}
-      className="rounded border border-[var(--color-line)] bg-[var(--color-surface)] px-1.5 py-0.5 text-[20px] font-semibold tracking-tight text-[var(--color-text)] outline-none focus:border-[var(--color-cat-indigo)] focus:ring-2 focus:ring-[var(--color-cat-indigo)]/20"
+      className="max-w-full min-w-0 rounded border border-[var(--color-line)] bg-[var(--color-surface)] px-1.5 py-0.5 text-[20px] font-semibold tracking-tight text-[var(--color-text)] outline-none focus:border-[var(--color-cat-indigo)] focus:ring-2 focus:ring-[var(--color-cat-indigo)]/20"
       maxLength={200}
     />
   );

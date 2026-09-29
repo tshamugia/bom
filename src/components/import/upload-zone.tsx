@@ -29,17 +29,17 @@ export function UploadZone() {
 
   return (
     <div className="space-y-3">
-      <div className="rounded-lg border border-dashed border-[var(--color-line-strong)] bg-[var(--color-surface)] p-8 text-center">
+      <div className="rounded-lg border border-dashed border-[var(--color-line-strong)] bg-[var(--color-surface)] p-8 text-center max-[701px]:p-5">
         <p className="text-[13px] font-medium">Upload a catalog XLSX</p>
         <p className="mt-1 text-[12px] text-[var(--color-text-3)]">Use the strict template — header row must match exactly.</p>
-        <div className="mt-4 flex items-center justify-center gap-3">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
           <a href="/templates/catalog-import-template.xlsx" download>
             <Button variant="outline">Download template</Button>
           </a>
           <input
             type="file"
             accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            className="text-[12.5px]"
+            className="max-w-full text-[12.5px]"
             onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f); }}
             disabled={pending}
           />
@@ -50,7 +50,7 @@ export function UploadZone() {
       {headerErr && (
         <div className="rounded-lg border border-red-300/60 bg-red-50/50 p-3 text-[12px]">
           <div className="font-medium">Header row doesn&apos;t match the template.</div>
-          <div className="mt-1 text-[var(--color-text-3)]">
+          <div className="mt-1 text-[var(--color-text-3)] [overflow-wrap:anywhere]">
             Expected: <code>{headerErr.expected.join(", ")}</code><br />
             Found: <code>{headerErr.found.join(", ") || "(empty)"}</code>
           </div>

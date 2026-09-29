@@ -85,7 +85,7 @@ function ContactDialog({
             <Label htmlFor="pc-name">Name</Label>
             <Input id="pc-name" value={v.name} maxLength={200} autoFocus onChange={e => set("name", e.target.value)} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 max-[480px]:grid-cols-1">
             <div className="grid gap-1.5">
               <Label htmlFor="pc-role">Role</Label>
               <Input id="pc-role" value={v.role} maxLength={100} placeholder="e.g. Client PM, Site foreman" onChange={e => set("role", e.target.value)} />
@@ -95,7 +95,7 @@ function ContactDialog({
               <Input id="pc-company" value={v.company} maxLength={200} onChange={e => set("company", e.target.value)} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 max-[480px]:grid-cols-1">
             <div className="grid gap-1.5">
               <Label htmlFor="pc-phone">Phone</Label>
               <Input id="pc-phone" type="tel" value={v.phone} maxLength={50} placeholder="+995 5xx xx xx xx" onChange={e => set("phone", e.target.value)} />
@@ -148,8 +148,8 @@ export function ContactsCard({
 }) {
   return (
     <div className="card" style={{ minWidth: 0 }}>
-      <div className="card-head">
-        <div>
+      <div className="card-head max-[701px]:flex-wrap">
+        <div className="min-w-0">
           <h3 className="card-title">Contacts</h3>
           <p className="card-sub">Who to call about this project.</p>
         </div>
@@ -169,9 +169,9 @@ export function ContactsCard({
           style={{ borderTop: i === 0 ? undefined : "1px solid var(--line-soft)" }}
         >
           <div className="min-w-0 flex-1">
-            <div className="text-[13px] font-medium">{c.name}</div>
+            <div className="text-[13px] font-medium [overflow-wrap:anywhere]">{c.name}</div>
             {(c.role || c.company) && (
-              <div className="muted text-[12px]">{[c.role, c.company].filter(Boolean).join(" · ")}</div>
+              <div className="muted text-[12px] [overflow-wrap:anywhere]">{[c.role, c.company].filter(Boolean).join(" · ")}</div>
             )}
             <div className="mt-0.5 flex flex-wrap gap-x-4 gap-y-0.5 text-[12.5px]">
               {c.phone && (
@@ -180,8 +180,8 @@ export function ContactsCard({
                 </a>
               )}
               {c.email && (
-                <a href={`mailto:${c.email}`} className="inline-flex items-center gap-1 hover:underline">
-                  <Icon.Mail size={12} /> {c.email}
+                <a href={`mailto:${c.email}`} className="inline-flex min-w-0 max-w-full items-center gap-1 hover:underline">
+                  <Icon.Mail size={12} className="shrink-0" /> <span className="min-w-0 [overflow-wrap:anywhere]">{c.email}</span>
                 </a>
               )}
             </div>

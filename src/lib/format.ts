@@ -28,3 +28,16 @@ export function formatDateTime(d: Date | string): string {
 export function formatDate(d: Date | string): string {
   return dateFmt.format(new Date(d));
 }
+
+/** e.g. "just now", "25m ago", "5h ago", "3d ago"; older than two weeks falls back to the date. */
+export function formatRelative(d: Date | string, now: Date = new Date()): string {
+  const ms = now.getTime() - new Date(d).getTime();
+  const min = Math.round(ms / 60_000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min}m ago`;
+  const h = Math.round(ms / 3_600_000);
+  if (h < 24) return `${h}h ago`;
+  const days = Math.round(h / 24);
+  if (days < 14) return `${days}d ago`;
+  return formatDate(d);
+}

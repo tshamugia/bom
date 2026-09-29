@@ -134,7 +134,7 @@ export function UsersClient({ callerId, users }: { callerId: string; users: User
       </form>
 
       <div className="overflow-x-auto rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)]">
-        <table className="w-full text-[13px]">
+        <table className="tbl-cards w-full text-[13px]">
           <thead className="border-b border-[var(--color-line)] bg-[var(--color-surface-2)] text-left text-[12px] font-semibold uppercase tracking-wide text-[var(--color-text-3)]">
             <tr>
               <th className="px-3 py-2.5">Name</th>
@@ -149,12 +149,12 @@ export function UsersClient({ callerId, users }: { callerId: string; users: User
               const self = u.id === callerId;
               return (
                 <tr key={u.id} className="border-b border-[var(--color-line-soft)] last:border-0">
-                  <td className="px-3 py-2.5">
+                  <td className="td-main px-3 py-2.5 max-[701px]:font-medium">
                     {u.name}
                     {self && <span className="ml-1.5 text-[11.5px] text-[var(--color-text-3)]">(you)</span>}
                   </td>
-                  <td className="px-3 py-2.5 text-[var(--color-text-2)]">{u.email}</td>
-                  <td className="px-3 py-2.5">
+                  <td className="td-full px-3 py-2.5 text-[var(--color-text-2)] max-[701px]:-mt-2 max-[701px]:[overflow-wrap:anywhere]">{u.email}</td>
+                  <td className="px-3 py-2.5" data-label="Role">
                     {self ? (
                       <Badge tone={ROLE_TONE[u.role]}>
                         <span className="capitalize">{u.role}</span>
@@ -173,14 +173,14 @@ export function UsersClient({ callerId, users }: { callerId: string; users: User
                       </select>
                     )}
                   </td>
-                  <td className="px-3 py-2.5">
+                  <td className="px-3 py-2.5" data-label="Status">
                     {u.disabled
                       ? <Badge tone="danger">Disabled</Badge>
                       : <Badge tone="success">Active</Badge>}
                   </td>
-                  <td className="px-3 py-2.5">
+                  <td className="td-end px-3 py-2.5">
                     {!self && (
-                      <div className="flex items-center justify-end gap-1.5">
+                      <div className="flex flex-wrap items-center justify-end gap-1.5">
                         <ResetPasswordDialog userId={u.id} name={u.name} email={u.email} />
                         <Button size="sm" variant="outline" onClick={() => toggleDisabled(u)} disabled={pending}>
                           {u.disabled ? "Re-enable" : "Disable"}

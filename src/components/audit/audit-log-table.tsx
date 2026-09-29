@@ -12,7 +12,7 @@ export function AuditLogTable({ rows }: { rows: AuditLogRow[] }) {
   return (
     <div className="card">
       <div className="table-wrap">
-        <table className="tbl">
+        <table className="tbl tbl-list">
           <thead>
             <tr>
               <th>When</th>
@@ -37,24 +37,24 @@ export function AuditLogTable({ rows }: { rows: AuditLogRow[] }) {
               const href = refHref(r.refType, r.refId, r.payload);
               return (
                 <tr key={r.id}>
-                  <td className="muted" style={{ verticalAlign: "top", whiteSpace: "nowrap" }}>
+                  <td className="muted l-meta" style={{ verticalAlign: "top", whiteSpace: "nowrap" }}>
                     {formatDateTime(r.createdAt)}
                   </td>
-                  <td style={{ verticalAlign: "top" }}>
+                  <td className="l-meta" style={{ verticalAlign: "top" }}>
                     {r.actorName ? (
                       <>
-                        <div>{r.actorName}</div>
-                        {r.actorEmail && <div className="muted" style={{ fontSize: 11.5 }}>{r.actorEmail}</div>}
+                        <div className="max-[701px]:inline">{r.actorName}</div>
+                        {r.actorEmail && <div className="muted max-[701px]:hidden" style={{ fontSize: 11.5 }}>{r.actorEmail}</div>}
                       </>
                     ) : (
                       <span className="muted">{r.kind.startsWith("auth.") || r.kind.startsWith("user.password") ? "anonymous" : "system"}</span>
                     )}
                   </td>
-                  <td style={{ verticalAlign: "top" }}>
+                  <td className="l-aside" style={{ verticalAlign: "top" }}>
                     <Badge tone={meta.tone}>{meta.label}</Badge>
                   </td>
-                  <td style={{ verticalAlign: "top", minWidth: 240 }}>
-                    <div>{r.summary}</div>
+                  <td className="l-title min-[701px]:min-w-[240px]" style={{ verticalAlign: "top" }}>
+                    <div className="max-[701px]:text-[13px] max-[701px]:[overflow-wrap:anywhere]">{r.summary}</div>
                     {hasDetails(r) && (
                       <details style={{ marginTop: 4 }}>
                         <summary className="muted" style={{ cursor: "pointer", fontSize: 11.5 }}>Details</summary>
@@ -83,10 +83,10 @@ export function AuditLogTable({ rows }: { rows: AuditLogRow[] }) {
                       </details>
                     )}
                   </td>
-                  <td className="mono muted" style={{ verticalAlign: "top", fontSize: 11.5, whiteSpace: "nowrap" }}>
+                  <td className="mono muted l-meta" style={{ verticalAlign: "top", fontSize: 11.5, whiteSpace: "nowrap" }}>
                     {r.ip ?? "—"}
                   </td>
-                  <td style={{ verticalAlign: "top", textAlign: "right" }}>
+                  <td className={href ? "l-meta" : "l-hide"} style={{ verticalAlign: "top", textAlign: "right" }}>
                     {href && (
                       r.refType === "export" ? (
                         <a href={href} target="_blank" rel="noopener noreferrer">Open</a>

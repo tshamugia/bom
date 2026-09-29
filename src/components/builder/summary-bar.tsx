@@ -12,7 +12,7 @@ export function SummaryBar({
 
 function Cell({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="summary-cell">
+    <div className="summary-cell max-[701px]:px-3">
       <div className="lab">{label}</div>
       <div className="val">{value}</div>
     </div>

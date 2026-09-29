@@ -22,10 +22,10 @@ export default async function ProfilePage() {
     <>
       <PageHead title="Profile" subtitle="Your account information and password." />
 
-      <div className="max-w-xl rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+      <div className="max-w-xl rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)] max-[701px]:p-4">
         <div className="flex items-center gap-4 border-b border-[var(--color-line-soft)] pb-4">
           <div
-            className="grid h-14 w-14 place-items-center rounded-full text-[18px] font-semibold text-white"
+            className="grid h-14 w-14 shrink-0 place-items-center rounded-full text-[18px] font-semibold text-white"
             style={{
               background:
                 "linear-gradient(135deg, var(--color-cat-indigo) 0%, var(--color-cat-violet) 100%)",
@@ -37,13 +37,13 @@ export default async function ProfilePage() {
             <div className="text-[16px] font-semibold tracking-tight text-[var(--color-text)]">
               {session.user.name}
             </div>
-            <div className="text-[13px] text-[var(--color-text-3)]">
+            <div className="text-[13px] text-[var(--color-text-3)] [overflow-wrap:anywhere]">
               {session.user.email}
             </div>
           </div>
         </div>
 
-        <dl className="mt-4 grid grid-cols-[120px_1fr] gap-y-3 text-[13px]">
+        <dl className="mt-4 grid grid-cols-[120px_minmax(0,1fr)] gap-y-3 text-[13px] max-[480px]:grid-cols-[84px_minmax(0,1fr)]">
           <dt className="text-[var(--color-text-3)]">Role</dt>
           <dd>
             <Badge tone={role === "admin" ? "info" : "gray"}>
@@ -51,13 +51,13 @@ export default async function ProfilePage() {
             </Badge>
           </dd>
           <dt className="text-[var(--color-text-3)]">Email</dt>
-          <dd className="text-[var(--color-text)]">{session.user.email}</dd>
+          <dd className="text-[var(--color-text)] [overflow-wrap:anywhere]">{session.user.email}</dd>
           <dt className="text-[var(--color-text-3)]">Name</dt>
           <dd className="text-[var(--color-text)]">{session.user.name}</dd>
         </dl>
       </div>
 
-      <div className="mt-5 max-w-xl rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+      <div className="mt-5 max-w-xl rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)] max-[701px]:p-4">
         <h2 className="text-[14px] font-semibold tracking-tight">Password</h2>
         <p className="mt-0.5 mb-4 text-[12.5px] text-[var(--color-text-3)]">
           Changing it signs you out on your other devices.

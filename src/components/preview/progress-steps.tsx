@@ -9,9 +9,9 @@ type Step = {
 
 export function ProgressSteps({ steps }: { steps: Step[] }) {
   return (
-    <div className="flex h-9 items-center gap-1 rounded-[var(--radius-3)] border border-[var(--color-line)] bg-[var(--color-surface)] px-2 text-[12px]">
+    <div className="flex h-9 max-w-full items-center gap-1 overflow-x-auto rounded-[var(--radius-3)] border border-[var(--color-line)] bg-[var(--color-surface)] px-2 text-[12px]">
       {steps.map((s, i) => (
-        <div key={s.label} className="flex items-center gap-1">
+        <div key={s.label} className="flex shrink-0 items-center gap-1">
           {i > 0 && <Icon.Chevron size={12} className="text-[var(--color-text-4)]" />}
           <StepBadge step={s} index={i} />
         </div>

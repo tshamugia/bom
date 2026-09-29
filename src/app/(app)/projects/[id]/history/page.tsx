@@ -62,12 +62,12 @@ export default async function HistoryPage({ params }: { params: Promise<{ id: st
   return (
     <div>
       <div className="mb-4">
-        <h1 className="text-[20px] font-semibold tracking-tight">{project.name} — history</h1>
+        <h1 className="text-[20px] font-semibold tracking-tight [overflow-wrap:anywhere]">{project.name} — history</h1>
         <p className="text-[13px] text-[var(--color-text-3)]">All revisions across the BOMs of {project.code}.</p>
       </div>
 
       {bomRows.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-[var(--color-line)] bg-[var(--color-surface)] p-10 text-center text-[13px] text-[var(--color-text-3)]">
+        <div className="rounded-lg border border-dashed border-[var(--color-line)] bg-[var(--color-surface)] p-10 text-center text-[13px] text-[var(--color-text-3)] max-[701px]:p-6">
           No BOMs in this project yet.
         </div>
       ) : (
@@ -76,8 +76,8 @@ export default async function HistoryPage({ params }: { params: Promise<{ id: st
             const rows = groupedByBom.get(b.id) ?? [];
             return (
               <div key={b.id}>
-                <div className="mb-2 flex items-center justify-between">
-                  <h2 className="text-[14px] font-semibold tracking-tight">{b.name}</h2>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <h2 className="min-w-0 text-[14px] font-semibold tracking-tight [overflow-wrap:anywhere]">{b.name}</h2>
                   <Link href={`/${readOnly ? "preview" : "builder"}/${project.id}/${b.id}`}>
                     <Button variant="ghost" size="sm"><Icon.Box size={14} className="mr-1" /> Open</Button>
                   </Link>

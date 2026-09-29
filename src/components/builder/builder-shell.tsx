@@ -101,8 +101,8 @@ export function BuilderShell(p: Props) {
         bomsInProject={p.bomsInProject}
       />
       {p.drawings}
-      <div className="mb-5 flex items-center justify-end gap-2">
-        <div className="steps">
+      <div className="mb-5 flex flex-wrap items-center justify-end gap-2">
+        <div className="steps max-[701px]:hidden">
           <div className="step active"><span className="num">1</span> Build</div>
           <span className="arrow">›</span>
           <div className="step"><span className="num">2</span> Preview</div>

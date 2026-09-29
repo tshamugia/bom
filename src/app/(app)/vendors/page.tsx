@@ -38,7 +38,7 @@ export default async function VendorsPage() {
           <h3 className="card-title">All vendors</h3>
         </div>
         <div className="table-wrap">
-          <table className="tbl">
+          <table className="tbl tbl-cards">
             <thead>
               <tr>
                 <th>Vendor</th><th>Code</th><th>Country</th><th>Lead time</th>
@@ -48,23 +48,23 @@ export default async function VendorsPage() {
             <tbody>
               {list.map((v) => (
                 <tr key={v.id}>
-                  <td>
+                  <td className="td-main">
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <div className="avatar" style={{ width: 28, height: 28, fontSize: 11, background: "linear-gradient(135deg, #6b7180, #4b5160)" }}>{v.code}</div>
-                      <div style={{ fontWeight: 500 }}>{v.name}</div>
+                      <div className="min-w-0" style={{ fontWeight: 500 }}>{v.name}</div>
                     </div>
                   </td>
-                  <td className="mono" style={{ fontSize: 11.5 }}>{v.code}</td>
-                  <td>{v.country}</td>
-                  <td className="tabular">{v.leadTime}</td>
-                  <td className="num tabular">{v.itemsCount}</td>
-                  <td className="num tabular">
+                  <td className="mono td-hide" style={{ fontSize: 11.5 }}>{v.code}</td>
+                  <td data-label="Country">{v.country}</td>
+                  <td className="tabular" data-label="Lead time">{v.leadTime}</td>
+                  <td className="num tabular" data-label="SKUs">{v.itemsCount}</td>
+                  <td className="num tabular" data-label="Rating">
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
                       <Icon.Star className="ico" /> {Number(v.rating).toFixed(1)}
                     </span>
                   </td>
-                  <td><VendorStatusBadge status={v.status} /></td>
-                  <td>
+                  <td data-label="Status"><VendorStatusBadge status={v.status} /></td>
+                  <td className="max-[701px]:self-end max-[701px]:justify-self-end">
                     {!readOnly && (
                       <VendorDialog existing={v as React.ComponentProps<typeof VendorDialog>["existing"]} trigger={<button type="button" className="btn btn-icon btn-ghost"><Icon.More className="ico" /></button>} />
                     )}

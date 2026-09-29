@@ -16,7 +16,7 @@ export default async function DiffPage({
 
   return (
     <div>
-      <div className="mb-4 flex items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <h1 className="text-[20px] font-semibold tracking-tight">Comparing</h1>
         <Badge tone="gray">Rev {diff.left.letter}</Badge>
         <span className="text-[var(--color-text-3)]">→</span>
@@ -24,7 +24,7 @@ export default async function DiffPage({
         <RevisionStatusBadge status={diff.right.status as never} />
       </div>
 
-      <div className="mb-4 grid grid-cols-4 gap-2 text-[12px]">
+      <div className="mb-4 grid grid-cols-4 gap-2 text-[12px] max-[480px]:grid-cols-2">
         <Stat label="Added" value={diff.lines.added.length} />
         <Stat label="Removed" value={diff.lines.removed.length} />
         <Stat label="Changed" value={diff.lines.changed.length} />

@@ -13,7 +13,7 @@ export function PageHead({
         <h1 className="page-title">{title}</h1>
         <p className="page-sub">{subtitle}</p>
       </div>
-      {actions && <div className="split">{actions}</div>}
+      {actions && <div className="page-actions">{actions}</div>}
     </div>
   );
 }

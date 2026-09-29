@@ -76,10 +76,10 @@ function ManageDialog({
             <div className="field-label">Linked</div>
             {links.length === 0 && <div className="muted text-[12.5px]">Nothing linked yet.</div>}
             {links.map(l => (
-              <div key={l.linkId} className="flex items-center gap-2 rounded-md border border-[var(--color-line)] px-2.5 py-1.5 text-[12.5px]">
+              <div key={l.linkId} className="flex items-center gap-2 rounded-md border border-[var(--color-line)] px-2.5 py-1.5 text-[12.5px] max-[480px]:flex-wrap">
                 <span className="mono font-semibold">{l.code}</span>
-                <span className="min-w-0 flex-1 truncate">{l.name}</span>
-                <span className="mono">{formatDrawingRevision(l.linkedRevisionNumber)}</span>
+                <span className="min-w-0 flex-1 truncate max-[480px]:order-last max-[480px]:basis-full">{l.name}</span>
+                <span className="mono max-[480px]:ml-auto">{formatDrawingRevision(l.linkedRevisionNumber)}</span>
                 {isOutdated(l) && (
                   <button
                     type="button"
@@ -114,7 +114,7 @@ function ManageDialog({
             ) : (
               <div className="grid max-h-60 gap-0.5 overflow-auto rounded-md border border-[var(--color-line)] p-1">
                 {candidates.map(d => (
-                  <label key={d.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-[12.5px] hover:bg-[var(--color-surface-2)]">
+                  <label key={d.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-[12.5px] hover:bg-[var(--color-surface-2)] max-[480px]:flex-wrap max-[480px]:gap-y-0.5">
                     <input
                       type="checkbox"
                       checked={picked.includes(d.id)}
@@ -123,7 +123,7 @@ function ManageDialog({
                       }
                     />
                     <span className="mono font-semibold">{d.code}</span>
-                    <span className="min-w-0 flex-1 truncate">{d.name}</span>
+                    <span className="min-w-0 flex-1 truncate max-[480px]:order-last max-[480px]:basis-full max-[480px]:pl-6">{d.name}</span>
                     <span className="mono muted">{formatDrawingRevision(d.revisionNumber)}</span>
                     <DrawingStatusBadge status={d.status} />
                   </label>

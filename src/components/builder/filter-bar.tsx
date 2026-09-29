@@ -31,7 +31,7 @@ export function FilterBar({
   const anyActive = vendorActive + categoryActive > 0;
 
   return (
-    <div className="mb-3 flex items-center gap-2">
+    <div className="mb-3 flex flex-wrap items-center gap-2">
       <div className="flex items-center gap-1.5 pr-1 text-[12px] font-medium text-[var(--color-text-3)]">
         <Icon.Filter size={14} /> Filters
       </div>

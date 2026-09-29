@@ -49,13 +49,13 @@ function EmailListEditor(props: {
         {props.values.map((v, i) => (
           <span
             key={`${v}-${i}`}
-            className="inline-flex items-center gap-1 rounded-md border border-[var(--color-line)] bg-[var(--color-surface-2)] px-2 py-0.5 text-[12.5px] text-[var(--color-text)]"
+            className="inline-flex max-w-full items-center gap-1 rounded-md border border-[var(--color-line)] bg-[var(--color-surface-2)] px-2 py-0.5 text-[12.5px] text-[var(--color-text)]"
           >
-            {v}
+            <span className="min-w-0 [overflow-wrap:anywhere]">{v}</span>
             <button
               type="button"
               onClick={() => remove(i)}
-              className="text-[var(--color-text-3)] hover:text-[var(--color-text)]"
+              className="shrink-0 text-[var(--color-text-3)] hover:text-[var(--color-text)]"
               aria-label={`Remove ${v}`}
             >
               <Icon.X size={12} />
@@ -118,7 +118,7 @@ export function ProcurementSettingsForm({ initial }: { initial: ProcurementSetti
   return (
     <form
       onSubmit={onSubmit}
-      className="grid max-w-2xl gap-5 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]"
+      className="grid max-w-2xl gap-5 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)] max-[701px]:p-4"
     >
       <EmailListEditor
         label="TO recipients"

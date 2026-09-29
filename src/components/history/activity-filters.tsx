@@ -84,7 +84,7 @@ export function ActivityFilters({
 
   return (
     <div className="relative" ref={ref}>
-      <Button variant="outline" onClick={() => setOpen(o => !o)}>
+      <Button variant="outline" className="max-[701px]:w-full" onClick={() => setOpen(o => !o)}>
         <Icon.Filter size={14} className="mr-1.5" />
         Filter
         {activeCount > 0 && (
@@ -94,7 +94,7 @@ export function ActivityFilters({
         )}
       </Button>
       {open && (
-        <div className="absolute right-0 top-9 z-30 w-[26rem] rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-3 shadow-[var(--shadow-card)]">
+        <div className="absolute right-0 top-[calc(100%+4px)] z-30 w-[26rem] rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-3 shadow-[var(--shadow-card)] max-[701px]:left-0 max-[701px]:w-auto">
           <Section label="Event">
             <div className="max-h-44 overflow-y-auto rounded-md border border-[var(--color-line-soft)]">
               {kindGroups.map(g => (

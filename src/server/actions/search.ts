@@ -1,21 +1,26 @@
 "use server";
 
-import { and, ilike, isNull, or } from "drizzle-orm";
+import { and, desc, eq, ilike, isNull, or } from "drizzle-orm";
 import { db } from "@/db/client";
-import { projects, items, vendors } from "@/db/schema";
+import { drawings, projects, items, vendors } from "@/db/schema";
+import { canEdit } from "@/lib/roles";
 import { requireSession } from "../auth-context";
 
 export type SearchHit =
   | { kind: "project"; id: string; primary: string; secondary: string; href: string }
+  | { kind: "drawing"; id: string; primary: string; secondary: string; href: string }
   | { kind: "item"; id: string; primary: string; secondary: string; href: string }
   | { kind: "vendor"; id: string; primary: string; secondary: string; href: string };
 
 export async function globalSearch(query: string): Promise<SearchHit[]> {
-  await requireSession();
+  const session = await requireSession();
   const q = query.trim();
   if (q.length === 0) return [];
   const like = `%${q}%`;
   const limit = 8;
+
+  // Viewers' app is projects and drawings; the catalog and vendors are closed to them.
+  if (!canEdit(session.user)) return searchForViewer(like, limit);
 
   const [projectRows, itemRows, vendorRows] = await Promise.all([
     db
@@ -67,4 +72,29 @@ export async function globalSearch(query: string): Promise<SearchHit[]> {
     });
   }
   return hits;
+}
+
+async function searchForViewer(like: string, limit: number): Promise<SearchHit[]> {
+  const [projectRows, drawingRows] = await Promise.all([
+    db
+      .select({ id: projects.id, code: projects.code, name: projects.name })
+      .from(projects)
+      .where(and(isNull(projects.deletedAt), or(ilike(projects.name, like), ilike(projects.code, like))!))
+      .limit(limit),
+    db
+      .select({ id: drawings.id, code: drawings.code, name: drawings.name, projectCode: projects.code })
+      .from(drawings)
+      .innerJoin(projects, eq(projects.id, drawings.projectId))
+      .where(and(
+        isNull(drawings.deletedAt),
+        isNull(projects.deletedAt),
+        or(ilike(drawings.code, like), ilike(drawings.name, like))!,
+      ))
+      .orderBy(desc(drawings.updatedAt))
+      .limit(limit),
+  ]);
+  return [
+    ...projectRows.map(p => ({ kind: "project" as const, id: p.id, primary: p.name, secondary: p.code, href: `/projects/${p.id}` })),
+    ...drawingRows.map(d => ({ kind: "drawing" as const, id: d.id, primary: d.name, secondary: `${d.code} · ${d.projectCode}`, href: `/drawings/${d.id}` })),
+  ];
 }
