@@ -8,10 +8,9 @@ import {
 } from "@/db/schema";
 import { formatDrawingRevision } from "@/lib/drawing-status";
 import { EDITOR_ROLES } from "@/lib/roles";
-import { requireRole } from "../auth-context";
+import { requireRole, requireSession } from "../auth-context";
 import { audit } from "../audit";
 import { buildBomWorkbook, type BomRow } from "@/lib/excel";
-import { putObject } from "@/lib/s3";
 
 const Columns = z
   .object({
@@ -32,6 +31,8 @@ export const ExportOptions = z.object({
 
 export type ExportOptionsT = z.infer<typeof ExportOptions>;
 
+export const XLSX_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
 export type RunExportResult = {
   row: typeof bomExports.$inferSelect;
   buffer: Buffer;
@@ -44,10 +45,7 @@ export type RunExportResult = {
   bomName: string;
 };
 
-export async function runExport(input: { revisionId: string; options: ExportOptionsT }): Promise<RunExportResult> {
-  const options = ExportOptions.parse(input.options);
-  const session = await requireRole(...EDITOR_ROLES);
-
+async function loadRevision(revisionId: string) {
   const [rev] = await db
     .select({
       id: bomRevisions.id,
@@ -65,10 +63,20 @@ export async function runExport(input: { revisionId: string; options: ExportOpti
     .innerJoin(boms, eq(boms.id, bomRevisions.bomId))
     .innerJoin(projects, eq(projects.id, boms.projectId))
     .leftJoin(user, eq(user.id, projects.ownerId))
-    .where(eq(bomRevisions.id, input.revisionId))
+    .where(eq(bomRevisions.id, revisionId))
     .limit(1);
-  if (!rev) throw new Error("REVISION_NOT_FOUND");
+  return rev ?? null;
+}
 
+type LoadedRevision = NonNullable<Awaited<ReturnType<typeof loadRevision>>>;
+
+/** Builds the workbook from the revision's current lines — nothing is stored. */
+async function buildRevisionWorkbook(
+  rev: LoadedRevision,
+  options: ExportOptionsT,
+  isDraft: boolean,
+  ownerFallback: string,
+): Promise<Buffer> {
   const lines = await db
     .select({
       sku: bomLines.skuSnapshot,
@@ -105,14 +113,11 @@ export async function runExport(input: { revisionId: string; options: ExportOpti
     .where(eq(bomRevisionDrawings.bomRevisionId, rev.id))
     .orderBy(asc(drawings.code));
 
-  const isDraft = rev.status === "draft";
-  const draftSuffix = isDraft ? `_DRAFT_${new Date().toISOString().slice(0, 10)}` : "";
-
-  const buf = await buildBomWorkbook({
+  return buildBomWorkbook({
     project: {
       code: rev.projectCode,
       name: rev.projectName,
-      owner: rev.ownerName ?? session.user.name,
+      owner: rev.ownerName ?? ownerFallback,
       target: rev.projectTarget ?? "—",
     },
     revisionLetter: rev.letter,
@@ -121,15 +126,23 @@ export async function runExport(input: { revisionId: string; options: ExportOpti
     isDraft,
     referenceDrawings: drawingRefs.map(d => `${d.code} ${formatDrawingRevision(d.number)}`),
   });
+}
 
+export async function runExport(input: { revisionId: string; options: ExportOptionsT }): Promise<RunExportResult> {
+  const options = ExportOptions.parse(input.options);
+  const session = await requireRole(...EDITOR_ROLES);
+
+  const rev = await loadRevision(input.revisionId);
+  if (!rev) throw new Error("REVISION_NOT_FOUND");
+
+  const isDraft = rev.status === "draft";
+  const draftSuffix = isDraft ? `_DRAFT_${new Date().toISOString().slice(0, 10)}` : "";
+  const buf = await buildRevisionWorkbook(rev, options, isDraft, session.user.name);
   const fileName = `BOM_${rev.projectCode}_Rev_${rev.letter}${draftSuffix}.xlsx`;
-  const fileKey = `exports/${rev.id}/${Date.now()}-${fileName}`;
-  await putObject(fileKey, buf, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 
   const [row] = await db.insert(bomExports).values({
     revisionId: rev.id,
     format: "xlsx",
-    fileKey,
     fileName,
     byteSize: buf.length,
     options,
@@ -158,4 +171,37 @@ export async function runExport(input: { revisionId: string; options: ExportOpti
     projectName: rev.projectName,
     bomName: rev.bomName,
   };
+}
+
+/**
+ * Rebuilds a recorded export for download. Locked/committed revisions are
+ * immutable, so the file matches the original; a draft export reflects the
+ * draft as it is now.
+ */
+export async function renderExportFile(exportId: string): Promise<{ fileName: string; buffer: Buffer } | null> {
+  await requireSession();
+  const [ex] = await db
+    .select({
+      revisionId: bomExports.revisionId,
+      fileName: bomExports.fileName,
+      options: bomExports.options,
+      revisionStatusAtExport: bomExports.revisionStatusAtExport,
+      generatedByName: user.name,
+    })
+    .from(bomExports)
+    .leftJoin(user, eq(user.id, bomExports.generatedById))
+    .where(eq(bomExports.id, exportId))
+    .limit(1);
+  if (!ex) return null;
+
+  const rev = await loadRevision(ex.revisionId);
+  if (!rev) return null;
+
+  const buffer = await buildRevisionWorkbook(
+    rev,
+    ExportOptions.parse(ex.options),
+    ex.revisionStatusAtExport === "draft",
+    ex.generatedByName ?? "—",
+  );
+  return { fileName: ex.fileName, buffer };
 }

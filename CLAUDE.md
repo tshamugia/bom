@@ -39,7 +39,7 @@ Vitest sets `fileParallelism: false` (see `vitest.config.ts`) — tests rely on 
 ### Routing & access control
 - `src/app/(app)/*` — authenticated app shell (sidebar + topbar in `(app)/layout.tsx`); the layout calls `auth.api.getSession` and redirects to `/sign-in` if missing.
 - `src/app/(auth)/*` — sign-in, `/forgot-password` and `/reset-password`. Public registration is intentionally disabled (`emailAndPassword.disableSignUp: true`); users are created from `/users` by an admin.
-- `src/app/api/*` — route handlers (e.g. `api/auth/[...all]` for better-auth, `api/exports/[id]` for signed-URL S3 downloads).
+- `src/app/api/*` — route handlers (e.g. `api/auth/[...all]` for better-auth, `api/exports/[id]/download` rebuilds an export on the fly).
 - `src/proxy.ts` (Next 16's renamed middleware) gates protected paths (`/dashboard`, `/builder`, `/preview`, `/catalog`, `/vendors`, `/approvals`, `/history`, `/users`, `/audit`, `/projects`, `/settings`, `/drawings`) with a real `auth.api.getSession` check, not just cookie presence. It also sends viewers from `/builder/*` to the matching `/preview/*` page, from `/catalog`, `/vendors` and `/history` to `/dashboard`, and from `/projects/[id]/history|diff` to the project page.
 
 ### Single-tenant access control
@@ -72,7 +72,8 @@ Zustand stores in `src/stores/` (`builder-store.ts`, `tweaks-store.ts`) hold eph
 
 ### Integrations
 - **better-auth** (`src/lib/auth.ts`): email/password only. Public sign-up is disabled; cookies are pinned to `httpOnly`, `sameSite=lax`, 7-day `maxAge`, and `secure` in production.
-- **S3** (`src/lib/s3.ts`): exports are uploaded and served via presigned URLs from `api/exports/[id]`. Env: `AWS_REGION`, `S3_BUCKET`, optional `AWS_S3_ENDPOINT` + `S3_FORCE_PATH_STYLE` for MinIO/local.
+- **Excel exports are never stored.** BOM exports (`src/server/lib/run-export.ts`) record a `bom_export` metadata row and hand the bytes straight back; `api/exports/[id]/download` rebuilds the file from the revision + saved options (`renderExportFile`). Catalog/vendor/dashboard `.xlsx` routes stream too. Don't reintroduce S3 uploads for exports.
+- **S3** (`src/lib/s3.ts`): only catalog-import staging uses it now. Env: `AWS_REGION`, `S3_BUCKET`, optional `AWS_S3_ENDPOINT` + `S3_FORCE_PATH_STYLE` for MinIO/local.
 - **exceljs / papaparse** (`src/lib/excel.ts`): catalog import + BOM export.
 - **Env validation** (`src/lib/env.ts`): Zod-validated at module load — adding a new env var means updating this schema.
 

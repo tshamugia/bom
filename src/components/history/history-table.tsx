@@ -64,7 +64,7 @@ export function HistoryTable({ rows }: { rows: Row[] }) {
                 </td>
                 <td className="l-aside">
                   <div className="row-actions">
-                    <a href={`/api/exports/${r.id}/download`} target="_blank" rel="noopener noreferrer" className="btn btn-icon btn-ghost" title="Re-download">
+                    <a href={`/api/exports/${r.id}/download`} download className="btn btn-icon btn-ghost" title="Re-download">
                       <Icon.Download className="ico" />
                     </a>
                   </div>

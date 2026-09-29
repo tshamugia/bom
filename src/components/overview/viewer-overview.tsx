@@ -213,8 +213,7 @@ function BomSendRow({ b }: { b: FeedBomSend }) {
       {b.exportId && (
         <a
           href={`/api/exports/${b.exportId}/download`}
-          target="_blank"
-          rel="noopener noreferrer"
+          download
           className="btn btn-icon btn-ghost"
           aria-label={`Download ${b.bomName} Rev ${b.revisionLetter}`}
           title="Download Excel"

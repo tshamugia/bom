@@ -44,18 +44,3 @@ export async function listExports(filter: ExportsFilter = {}) {
 
   return (conds.length > 0 ? query.where(and(...conds)) : query).orderBy(desc(bomExports.generatedAt));
 }
-
-export async function getExport(id: string) {
-  await requireSession();
-  const [row] = await db
-    .select({
-      id: bomExports.id,
-      fileKey: bomExports.fileKey,
-      fileName: bomExports.fileName,
-      format: bomExports.format,
-    })
-    .from(bomExports)
-    .where(eq(bomExports.id, id))
-    .limit(1);
-  return row ?? null;
-}

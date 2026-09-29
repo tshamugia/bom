@@ -9,6 +9,21 @@ import { toast } from "sonner";
 import { generateExport } from "@/server/actions/exports";
 import type { ExportOpts } from "./export-options-card";
 
+/** Saves a base64 workbook via a blob link — no popup, so nothing for the browser to block. */
+function saveXlsx(base64: string, fileName: string) {
+  const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+  const url = URL.createObjectURL(
+    new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+  );
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 export function GenerateDialog({
   revisionId, projectCode, revisionLetter, lineCount, opts, trigger,
 }: {
@@ -26,17 +41,26 @@ export function GenerateDialog({
 
   function go() {
     start(async () => {
-      const ex = await generateExport({
-        revisionId,
-        options: {
-          columns: opts.columns,
-          groupByVendor: opts.groupByVendor,
-          includeCoverPage: opts.includeCoverPage,
-        },
-      });
+      let res;
+      try {
+        res = await generateExport({
+          revisionId,
+          options: {
+            columns: opts.columns,
+            groupByVendor: opts.groupByVendor,
+            includeCoverPage: opts.includeCoverPage,
+          },
+        });
+      } catch {
+        res = { ok: false as const, error: "Couldn't reach the server. Please try again." };
+      }
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      saveXlsx(res.data, res.fileName);
       setOpen(false);
-      toast.success(`BOM exported — ${ex.fileName}`);
-      window.open(`/api/exports/${ex.id}/download`, "_blank");
+      toast.success(`BOM exported — ${res.fileName}`);
       router.push("/history");
     });
   }

@@ -1,0 +1,1 @@
+ALTER TABLE "bom_export" ALTER COLUMN "file_key" DROP NOT NULL;

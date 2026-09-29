@@ -61,8 +61,7 @@ export function BomSendsTable({ rows }: { rows: BomSend[] }) {
                     {r.exportId ? (
                       <a
                         href={`/api/exports/${r.exportId}/download`}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        download
                         className="btn btn-icon btn-ghost"
                         title={r.exportFileName ?? "Download"}
                         aria-label={`Download ${r.bomName} Rev ${r.revisionLetter}`}
