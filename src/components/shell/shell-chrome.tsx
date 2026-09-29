@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
+import { MobileTabs } from "./mobile-tabs";
+import type { UserRole } from "@/lib/roles";
 
-type ShellUser = { name: string; email: string; role: "owner" | "admin" | "member" };
+type ShellUser = { name: string; email: string; role: UserRole };
 
 export function ShellChrome({ user, children }: { user: ShellUser; children: React.ReactNode }) {
   const [navOpen, setNavOpen] = useState(false);
@@ -43,9 +45,14 @@ export function ShellChrome({ user, children }: { user: ShellUser; children: Rea
         onClick={() => setNavOpen(false)}
       />
       <div className="main">
-        <Topbar onMenuToggle={() => setNavOpen((v) => !v)} navOpen={navOpen} />
+        <Topbar
+          onMenuToggle={() => setNavOpen((v) => !v)}
+          navOpen={navOpen}
+          readOnly={user.role === "viewer"}
+        />
         <div className="content">{children}</div>
       </div>
+      <MobileTabs onMore={() => setNavOpen((v) => !v)} navOpen={navOpen} />
     </div>
   );
 }

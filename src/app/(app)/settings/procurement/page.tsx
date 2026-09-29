@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { isAdmin } from "@/lib/roles";
 import { PageHead } from "@/components/master/page-head";
 import { ProcurementSettingsForm } from "@/components/settings/procurement-settings-form";
 import { getProcurementSettings } from "@/server/queries/system-settings";
@@ -8,8 +9,7 @@ import { getProcurementSettings } from "@/server/queries/system-settings";
 export default async function ProcurementSettingsPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) redirect("/sign-in");
-  const role = (session.user as { role?: "owner" | "admin" | "member" }).role ?? "member";
-  if (role !== "owner" && role !== "admin") redirect("/settings");
+  if (!isAdmin(session.user)) redirect("/settings");
 
   const initial = await getProcurementSettings();
 

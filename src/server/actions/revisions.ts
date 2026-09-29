@@ -5,14 +5,15 @@ import { and, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { boms, bomRevisions, bomLines } from "@/db/schema";
-import { requireSession } from "../auth-context";
+import { EDITOR_ROLES } from "@/lib/roles";
+import { requireRole } from "../auth-context";
 import { audit } from "../audit";
 import { isRevisionImmutable } from "../lib/revision-status";
-import { copyRevisionContentRefreshed } from "../lib/copy-revision";
+import { copyDrawingLinks, copyRevisionContentRefreshed } from "../lib/copy-revision";
 import { touchBom } from "../lib/touch-bom";
 
 async function loadRevision(revisionId: string) {
-  await requireSession();
+  await requireRole(...EDITOR_ROLES);
   const [row] = await db
     .select({
       id: bomRevisions.id,
@@ -45,7 +46,7 @@ export async function commitRevision(input: z.infer<typeof CommitInput>) {
     .where(eq(bomLines.revisionId, revisionId));
   if (n === 0) throw new Error("EMPTY_REVISION");
 
-  const session = await requireSession();
+  const session = await requireRole(...EDITOR_ROLES);
   await db
     .update(bomRevisions)
     .set({
@@ -100,7 +101,7 @@ export async function branchRevision(input: z.infer<typeof BranchInput>): Promis
     .where(and(eq(bomRevisions.bomId, parent.bomId), eq(bomRevisions.status, "draft")));
   if (draftCount > 0) throw new Error("DRAFT_ALREADY_EXISTS");
 
-  const session = await requireSession();
+  const session = await requireRole(...EDITOR_ROLES);
   const existing = await db
     .select({ letter: bomRevisions.letter })
     .from(bomRevisions)
@@ -117,6 +118,7 @@ export async function branchRevision(input: z.infer<typeof BranchInput>): Promis
     }).returning();
 
     await copyRevisionContentRefreshed(tx, parent.id, child.id);
+    await copyDrawingLinks(tx, parent.id, child.id, session.user.id);
     await touchBom(tx, parent.bomId, session.user.id);
     return child.id;
   });
@@ -142,7 +144,7 @@ export async function discardDraft(input: z.infer<typeof DiscardInput>) {
   const rev = await loadRevision(revisionId);
   if (rev.status !== "draft") throw new Error("REVISION_NOT_DRAFT");
 
-  const session = await requireSession();
+  const session = await requireRole(...EDITOR_ROLES);
   await db.delete(bomRevisions).where(eq(bomRevisions.id, revisionId));
 
   await touchBom(db, rev.bomId, session.user.id);

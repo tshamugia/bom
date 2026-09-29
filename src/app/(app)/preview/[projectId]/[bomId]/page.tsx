@@ -5,10 +5,16 @@ import { eq } from "drizzle-orm";
 import { getProject, getActiveRevision, getLines, getSections, getLatestProcurementRevision } from "@/server/queries/projects";
 import { getBom } from "@/server/queries/boms";
 import { getForProject } from "@/server/queries/approvals";
+import { listDrawingLinksForBomRevision } from "@/server/queries/drawing-control";
+import { formatDrawingRevision } from "@/lib/drawing-status";
+import { canEdit } from "@/lib/roles";
+import { requireSession } from "@/server/auth-context";
 import { PreviewShell } from "@/components/preview/preview-shell";
 
 export default async function PreviewPage({ params }: { params: Promise<{ projectId: string; bomId: string }> }) {
   const { projectId, bomId } = await params;
+  const session = await requireSession();
+  const readOnly = !canEdit(session.user);
 
   const project = await getProject(projectId);
   if (!project) notFound();
@@ -19,10 +25,11 @@ export default async function PreviewPage({ params }: { params: Promise<{ projec
   const rev = await getActiveRevision(bomId);
   if (!rev) notFound();
 
-  const [lines, sections, procurementRev] = await Promise.all([
+  const [lines, sections, procurementRev, drawingLinks] = await Promise.all([
     getLines(rev.id),
     getSections(rev.id),
     getLatestProcurementRevision(bomId),
+    listDrawingLinksForBomRevision(rev.id),
   ]);
   const workflow = await getForProject(project.id);
 
@@ -49,6 +56,8 @@ export default async function PreviewPage({ params }: { params: Promise<{ projec
       lines={lines as never}
       sections={sections}
       steps={workflow ? workflow.steps.map(s => ({ position: s.position, role: s.role, status: s.status, assigneeName: s.assigneeName })) : null}
+      readOnly={readOnly}
+      referenceDrawings={drawingLinks.map(l => `${l.code} ${formatDrawingRevision(l.linkedRevisionNumber)}`)}
     />
   );
 }

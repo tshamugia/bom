@@ -38,14 +38,20 @@ Vitest sets `fileParallelism: false` (see `vitest.config.ts`) — tests rely on 
 
 ### Routing & access control
 - `src/app/(app)/*` — authenticated app shell (sidebar + topbar in `(app)/layout.tsx`); the layout calls `auth.api.getSession` and redirects to `/sign-in` if missing.
-- `src/app/(auth)/*` — sign-in only. Public registration is intentionally disabled (`emailAndPassword.disableSignUp: true`); users are created from `/users` by an owner/admin.
+- `src/app/(auth)/*` — sign-in, `/forgot-password` and `/reset-password`. Public registration is intentionally disabled (`emailAndPassword.disableSignUp: true`); users are created from `/users` by an admin.
 - `src/app/api/*` — route handlers (e.g. `api/auth/[...all]` for better-auth, `api/exports/[id]` for signed-URL S3 downloads).
-- `src/proxy.ts` (Next 16's renamed middleware) gates protected paths (`/dashboard`, `/builder`, `/preview`, `/catalog`, `/vendors`, `/approvals`, `/history`, `/users`, `/projects`) with a real `auth.api.getSession` check, not just cookie presence.
+- `src/proxy.ts` (Next 16's renamed middleware) gates protected paths (`/dashboard`, `/builder`, `/preview`, `/catalog`, `/vendors`, `/approvals`, `/history`, `/users`, `/audit`, `/projects`, `/settings`, `/drawings`) with a real `auth.api.getSession` check, not just cookie presence. It also sends viewers from `/builder/*` to the matching `/preview/*` page and from `/catalog/import` to `/catalog`.
 
 ### Single-tenant access control
-The app ships as a single workspace; `organizations` and `memberships` do not exist. Authorization is driven by `user.role` (`owner | admin | member`). `src/server/auth-context.ts` exposes:
+The app ships as a single workspace; `organizations` and `memberships` do not exist. Authorization is driven by `user.role` — `admin | member | viewer` (`owner` was merged into `admin` in migration 0021; `viewer` added in 0022). `src/lib/roles.ts` has `roleOf()` / `isAdmin()` / `canEdit()` and `EDITOR_ROLES` (client-safe; use them instead of casting `session.user`). `src/server/auth-context.ts` exposes:
 - `requireSession()` — throws `UNAUTHENTICATED` when no session, `USER_DISABLED` for soft-disabled users.
-- `requireRole(...roles)` — wraps `requireSession()` and throws `FORBIDDEN` unless the caller's role is one of the given values.
+- `requireRole(...roles)` — wraps `requireSession()` and throws `FORBIDDEN` unless the caller's role is one of the given values. Use `requireRole("admin")` for admin-only flows (tests mock only `requireSession`/`requireRole`, so don't add other helpers there).
+
+**Admin-only:** `/users` (create, role change, disable, password reset), `/audit`, all of Settings except Profile (procurement email, drawing email recipients, reminders, disciplines — including the per-project recipient lists), and deleting/archiving projects, BOMs, vendors and drawings. Members can create and edit everything else. `{ ok, error }`-style actions return `ADMIN_ONLY_ERROR`; throwing actions use `requireRole("admin")`. Hide the matching buttons for members too (pages pass `canDelete` / `readOnly`).
+
+**Viewers are read-only** (site managers, PMs checking progress, often on a phone): they can read every page a member can, download exports/reports and change their own password, but nothing else. Every mutating action must reject them — throwing actions use `requireRole(...EDITOR_ROLES)`, `{ ok, error }` actions return `READ_ONLY_ERROR` when `!canEdit(session.user)`. The only exception is `acknowledgeTransmittal` (a recipient confirming receipt). Pages compute `readOnly = !canEdit(session.user)` and hide write controls; links into the builder go to `/preview/...` for viewers. Viewers can't be a drawing owner or approving engineer (filter `listOwnerCandidates()` by `role`), but can be a project manager or a notification/transmittal recipient.
+
+**Passwords:** everyone changes their own in Settings → Profile (`authClient.changePassword`). Admins who forget theirs use `/forgot-password` (better-auth `sendResetPassword` only emails admins; members are refused silently). Admins reset members with a temporary password (`resetUserPassword`), which revokes the member's sessions. Disabled users can't start a session (`databaseHooks.session.create.before`).
 
 **All server actions and queries must call `requireSession()` (or `requireRole(...)` for admin-only flows) before reading or mutating data.** Domain rows are global to the install; do NOT add an `organizationId` column or filter. The root user is seeded by `npm run db:seed` from `ROOT_USER_EMAIL` / `ROOT_USER_PASSWORD` env vars (defaults: `t.shamugia@insta.ge` / `Password123`).
 
@@ -54,11 +60,12 @@ The app ships as a single workspace; `organizations` and `memberships` do not ex
 - `src/db/schema/*.ts` — one Drizzle schema file per table; `src/db/schema/index.ts` re-exports everything. Drizzle config is `strict: true` (see `drizzle.config.ts`) — schema changes require a generated migration.
 - Domain model: `user` (with `role`); `projects` → `bomRevisions` → `bomSections` → `bomLines` (lines reference `items` which reference `vendors`/`categories`); `bomExports`, `approvals`, and `auditLog` track artifacts and history.
 - Revisions have a status lifecycle; `src/server/lib/revision-status.ts` `isRevisionImmutable` gates writes on locked revisions — use it before any line/section mutation.
+- Engineering drawings (`/drawings`, no files — metadata only): `drawing` (per project, code unique among non-deleted) → `drawing_revision` (`rev1`, `rev2`…; only the latest moves, older ones are locked) → `drawing_event` (created/updated/status/comment timeline). Status rules live in `src/lib/drawing-status.ts` `checkDrawingTransition`: statuses are free except that Awaiting approval and later require a second engineer (not the owner) to approve from Need to be approved. Status changes email the owner, approver and `drawing_notify_recipient` users (global rows have `project_id = null`) via `after()` in `src/server/lib/drawing-notify.ts`; drawing actions return `{ ok, error }` instead of throwing.
 
 ### Server actions vs. queries
 - `src/server/actions/*` — `"use server"` mutations. Always: validate input with Zod → `requireSession()` (or `requireRole`) → mutate → `audit(...)` → `revalidatePath(...)`.
 - `src/server/queries/*` — read-only data loaders called from server components.
-- `src/server/audit.ts` writes to `auditLog`; call it after every mutation.
+- `src/server/audit.ts` writes to `auditLog` (with IP + user agent); call it after every mutation, including deletes. Auth events (sign-in, failed sign-in, password change/reset) are written from better-auth hooks in `src/lib/auth.ts` via `src/server/lib/audit-write.ts`, which must stay free of `server-only` because the seed scripts import `auth`. Security/admin kinds listed in `src/lib/audit-kinds.ts` `ADMIN_ONLY_KINDS` show only on `/audit` (admins); History → Activity shows the rest to everyone. New audit kinds need a label in `src/components/history/activity-table.tsx`.
 
 ### Client state
 Zustand stores in `src/stores/` (`builder-store.ts`, `tweaks-store.ts`) hold ephemeral UI state only — filters, column visibility, etc. Persisted preferences use a versioned migration (see the `v2 migration` in recent commits). Don't put server data in stores; pass it down via server-component props or fetch via server actions.
@@ -75,6 +82,7 @@ Zustand stores in `src/stores/` (`builder-store.ts`, `tweaks-store.ts`) hold eph
 
 ## Tests
 - Unit: `tests/unit/**/*.test.{ts,tsx}` and colocated `src/**/*.test.{ts,tsx}`. `tests/setup.ts` loads `@testing-library/jest-dom`. Vitest aliases `server-only` to `tests/test-helpers/server-only-shim.ts` so server modules can be imported in jsdom.
+- **Server tests TRUNCATE every table** (`tests/test-helpers/db.ts` `resetDb`) in whatever `DATABASE_URL` points at, and Vitest loads `.env.local` (the dev DB). Run them against a throwaway DB instead — dotenv doesn't override an already-set variable: `docker exec bom-postgres psql -U bom -d bom -c "create database bom_test"` once, then `DATABASE_URL=postgres://bom:<pw>@localhost:5432/bom_test npx drizzle-kit migrate` and `DATABASE_URL=… npx vitest run`.
 - E2E: `tests/e2e/*.spec.ts` against the real dev server (Playwright auto-launches `npm run dev`); helpers in `tests/e2e/helpers.ts`.
 
 ## Path aliases

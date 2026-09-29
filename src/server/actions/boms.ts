@@ -5,9 +5,10 @@ import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { boms, bomRevisions, projects } from "@/db/schema";
-import { requireSession } from "../auth-context";
+import { EDITOR_ROLES } from "@/lib/roles";
+import { requireRole } from "../auth-context";
 import { audit } from "../audit";
-import { copyRevisionContent } from "../lib/copy-revision";
+import { copyDrawingLinks, copyRevisionContent } from "../lib/copy-revision";
 
 const BomCreateInput = z.object({
   projectId: z.string().min(1),
@@ -58,7 +59,7 @@ async function loadBom(bomId: string) {
 
 export async function createBom(input: BomCreateInputType): Promise<{ bomId: string; revisionId: string }> {
   const data = BomCreateInput.parse(input);
-  const session = await requireSession();
+  const session = await requireRole(...EDITOR_ROLES);
   await loadProject(data.projectId);
 
   const result = await db.transaction(async tx => {
@@ -92,7 +93,7 @@ export async function createBom(input: BomCreateInputType): Promise<{ bomId: str
 
 export async function renameBom(input: z.infer<typeof BomRenameInput>) {
   const { bomId, name } = BomRenameInput.parse(input);
-  const session = await requireSession();
+  const session = await requireRole(...EDITOR_ROLES);
   const bom = await loadBom(bomId);
 
   await db.update(boms)
@@ -113,7 +114,7 @@ export async function renameBom(input: z.infer<typeof BomRenameInput>) {
 
 export async function deleteBom(input: z.infer<typeof BomDeleteInput>) {
   const { bomId } = BomDeleteInput.parse(input);
-  await requireSession();
+  await requireRole("admin");
   const bom = await loadBom(bomId);
 
   await db.update(boms)
@@ -133,7 +134,7 @@ export async function deleteBom(input: z.infer<typeof BomDeleteInput>) {
 
 export async function duplicateBom(input: BomDuplicateInputType): Promise<{ bomId: string; revisionId: string }> {
   const data = BomDuplicateInput.parse(input);
-  const session = await requireSession();
+  const session = await requireRole(...EDITOR_ROLES);
 
   const sourceBom = await loadBom(data.sourceBomId);
   await loadProject(data.targetProjectId);
@@ -173,6 +174,10 @@ export async function duplicateBom(input: BomDuplicateInputType): Promise<{ bomI
     }).returning();
 
     await copyRevisionContent(tx, sourceRevisionId!, createdRev.id);
+    // Drawings belong to a project, so references only survive a copy within it.
+    if (sourceBom.projectId === data.targetProjectId) {
+      await copyDrawingLinks(tx, sourceRevisionId!, createdRev.id, session.user.id);
+    }
     return { bomId: createdBom.id, revisionId: createdRev.id };
   });
 

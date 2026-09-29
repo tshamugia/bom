@@ -14,7 +14,8 @@ import {
   errorsKey,
   getStagingBuffer,
 } from "@/lib/s3";
-import { requireSession } from "@/server/auth-context";
+import { EDITOR_ROLES } from "@/lib/roles";
+import { requireRole } from "@/server/auth-context";
 import { parseImportBuffer } from "@/server/lib/import-parser";
 import { validateRows } from "@/server/lib/import-validator";
 import { loadValidatorContext } from "@/server/lib/import-validator-context";
@@ -29,7 +30,7 @@ import {
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
 export async function prepareImport(formData: FormData): Promise<PrepareResult> {
-  await requireSession();
+  await requireRole(...EDITOR_ROLES);
 
   const file = formData.get("file");
   if (!(file instanceof File)) return { ok: false, error: "unreadable" };
@@ -55,7 +56,7 @@ export async function prepareImport(formData: FormData): Promise<PrepareResult> 
 }
 
 export async function commitImport(input: { importId: string; duplicates: DuplicatePolicy }): Promise<CommitResult> {
-  await requireSession();
+  await requireRole(...EDITOR_ROLES);
   const policy = DuplicatePolicy.parse(input.duplicates);
 
   const key = stagingKey(input.importId);

@@ -1,23 +1,30 @@
 import "server-only";
-import { desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, notInArray, or, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { auditLog, user, vendors } from "@/db/schema";
+import { auditLog, projectMilestones, projects, user, vendors } from "@/db/schema";
+import { ADMIN_ONLY_KINDS } from "@/lib/audit-kinds";
 import { requireSession } from "../auth-context";
 import { parseLeadTimeDays } from "../lib/lead-time";
 
-export async function getStats() {
+/** `projectId` narrows BOM and approval counts to one project; lead time stays vendor-wide. */
+export async function getStats(opts: { projectId?: string } = {}) {
   await requireSession();
+  const projectId = opts.projectId ?? null;
   const [stats] = await db.execute(sql/* sql */`
     SELECT
       (SELECT COUNT(*)::int FROM "bom" b
        WHERE b.deleted_at IS NULL
+         AND (${projectId}::text IS NULL OR b.project_id = ${projectId})
          AND EXISTS (
            SELECT 1 FROM "bom_revision" r
            WHERE r.bom_id = b.id AND r.status <> 'locked'
          ))
         AS "activeBoms",
       (SELECT COUNT(*)::int FROM "approval_workflow" w
-       WHERE w.status = 'pending')
+       JOIN "bom_revision" r ON r.id = w.revision_id
+       JOIN "bom" b ON b.id = r.bom_id
+       WHERE w.status = 'pending'
+         AND (${projectId}::text IS NULL OR b.project_id = ${projectId}))
         AS "approvalsPending"
   `).then(r => r as unknown as Array<{ activeBoms: number; approvalsPending: number }>);
 
@@ -27,47 +34,56 @@ export async function getStats() {
     ? Math.round((days.reduce((a, b) => a + b, 0) / days.length) * 10) / 10
     : 0;
 
-  const [deadlineRow] = await db.execute(sql/* sql */`
-    SELECT
-      COUNT(*) FILTER (
-        WHERE p.target_date IS NOT NULL
-          AND p.target_date <= (CURRENT_DATE + INTERVAL '14 days')
-      )::int AS "upcoming",
-      COUNT(*) FILTER (
-        WHERE p.target_date IS NOT NULL
-          AND p.target_date < CURRENT_DATE
-      )::int AS "overdue"
-    FROM "project" p
-    WHERE p.deleted_at IS NULL
-  `).then(r => r as unknown as Array<{ upcoming: number; overdue: number }>);
-
   return {
     activeBoms: stats.activeBoms,
     approvalsPending: stats.approvalsPending,
     avgLeadTimeDays,
-    upcomingDeadlines: deadlineRow?.upcoming ?? 0,
-    overdueDeadlines: deadlineRow?.overdue ?? 0,
   };
 }
 
-export async function getUpcomingDeadlines(limit = 5) {
+export type Deadline = {
+  key: string;
+  projectId: string;
+  projectCode: string;
+  projectName: string;
+  /** "Completion" for the project's own date, otherwise the milestone name. */
+  label: string;
+  date: string;
+};
+
+/**
+ * Open milestones and project completion dates, earliest first — overdue ones
+ * included, since they still need attention.
+ */
+export async function listDeadlines(opts: { projectId?: string } = {}): Promise<Deadline[]> {
   await requireSession();
-  return db.execute(sql/* sql */`
-    SELECT p.id, p.code, p.name, p.target_date AS "targetDate",
-      u.name AS "ownerName"
-    FROM "project" p
-    LEFT JOIN "user" u ON u.id = p.owner_id
-    WHERE p.deleted_at IS NULL
-      AND p.target_date IS NOT NULL
-    ORDER BY p.target_date ASC
-    LIMIT ${limit}
-  `).then(r => r as unknown as Array<{
-    id: string; code: string; name: string;
-    targetDate: string; ownerName: string | null;
-  }>);
+  const live = and(isNull(projects.deletedAt), opts.projectId ? eq(projects.id, opts.projectId) : undefined);
+  const [targets, milestones] = await Promise.all([
+    db
+      .select({ projectId: projects.id, projectCode: projects.code, projectName: projects.name, date: projects.targetDate })
+      .from(projects)
+      .where(and(live, sql`${projects.targetDate} IS NOT NULL`)),
+    db
+      .select({
+        id: projectMilestones.id,
+        projectId: projects.id,
+        projectCode: projects.code,
+        projectName: projects.name,
+        label: projectMilestones.name,
+        date: projectMilestones.dueDate,
+      })
+      .from(projectMilestones)
+      .innerJoin(projects, eq(projects.id, projectMilestones.projectId))
+      .where(and(live, isNull(projectMilestones.doneAt)))
+      .orderBy(asc(projectMilestones.dueDate)),
+  ]);
+  return [
+    ...targets.map(t => ({ ...t, key: `target:${t.projectId}`, label: "Completion", date: t.date! })),
+    ...milestones.map(({ id, ...m }) => ({ ...m, key: `milestone:${id}` })),
+  ].sort((a, b) => a.date.localeCompare(b.date) || a.projectCode.localeCompare(b.projectCode));
 }
 
-export async function getRecentActivity(limit = 8) {
+export async function getRecentActivity(limit = 8, projectId?: string) {
   await requireSession();
   return db
     .select({
@@ -79,6 +95,16 @@ export async function getRecentActivity(limit = 8) {
     })
     .from(auditLog)
     .leftJoin(user, eq(user.id, auditLog.actorId))
+    .where(and(
+      // Sign-ins and user/settings changes belong on the admin Audit log only.
+      notInArray(auditLog.kind, [...ADMIN_ONLY_KINDS]),
+      projectId
+        ? or(
+            and(eq(auditLog.refType, "project"), eq(auditLog.refId, projectId)),
+            sql`${auditLog.payload}->>'projectId' = ${projectId}`,
+          )
+        : undefined,
+    ))
     .orderBy(desc(auditLog.createdAt))
     .limit(limit);
 }

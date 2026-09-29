@@ -6,7 +6,9 @@ import { listItems, listCategories } from "@/server/queries/catalog";
 import { listVendors } from "@/server/queries/vendors";
 import { db } from "@/db/client";
 import { subcategories } from "@/db/schema";
+import { listDrawingLinksForBomRevision, listLinkableDrawings } from "@/server/queries/drawing-control";
 import { BuilderShell } from "@/components/builder/builder-shell";
+import { BomDrawingsStrip } from "@/components/builder/bom-drawings-strip";
 import type { Line } from "@/components/builder/sectioned-line-table";
 
 export default async function BuilderPage({ params }: { params: Promise<{ projectId: string; bomId: string }> }) {
@@ -25,10 +27,12 @@ export default async function BuilderPage({ params }: { params: Promise<{ projec
   const rev = await getActiveRevision(bomId);
   if (!rev) notFound();
 
-  const [lines, sections, hasOpenDraft] = await Promise.all([
+  const [lines, sections, hasOpenDraft, drawingLinks, linkableDrawings] = await Promise.all([
     getLines(rev.id),
     getSections(rev.id),
     hasOpenDraftForBom(bomId, rev.id),
+    listDrawingLinksForBomRevision(rev.id),
+    listLinkableDrawings(projectId),
   ]);
 
   const catIds = cats.map(c => c.id);
@@ -83,6 +87,14 @@ export default async function BuilderPage({ params }: { params: Promise<{ projec
         name: b.name,
         activeRevisionLetter: b.activeRevisionLetter,
       }))}
+      drawings={
+        <BomDrawingsStrip
+          bomRevisionId={rev.id}
+          isDraft={rev.status === "draft"}
+          links={drawingLinks}
+          linkable={linkableDrawings}
+        />
+      }
     />
   );
 }

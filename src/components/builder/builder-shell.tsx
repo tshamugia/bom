@@ -46,6 +46,8 @@ type Props = {
   sections: SectionInfo[];
   projectsForDuplicate: { id: string; code: string; name: string }[];
   bomsInProject: SwitcherBom[];
+  /** Linked drawings strip, rendered under the revision header. */
+  drawings?: React.ReactNode;
 };
 
 export function BuilderShell(p: Props) {
@@ -98,6 +100,7 @@ export function BuilderShell(p: Props) {
         hasOpenDraft={p.hasOpenDraft}
         bomsInProject={p.bomsInProject}
       />
+      {p.drawings}
       <div className="mb-5 flex items-center justify-end gap-2">
         <div className="steps">
           <div className="step active"><span className="num">1</span> Build</div>

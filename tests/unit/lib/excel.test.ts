@@ -35,8 +35,8 @@ test("buildBomWorkbook produces a workbook with header and rows", async () => {
   expect(sheet!.getCell("A5").value).toBe("#");
   expect(sheet!.getCell("B5").value).toBe("SKU");
   expect(sheet!.getCell("B6").value).toBe("RES-1");
-  expect(sheet!.getCell("G5").value).toBe("Qty");
-  expect(sheet!.getRow(6).getCell(7).value).toBe(10);
+  expect(sheet!.getCell("E5").value).toBe("Qty");
+  expect(sheet!.getRow(6).getCell(5).value).toBe(10);
 });
 
 test("groupByVendor=true creates per-vendor sheets", async () => {

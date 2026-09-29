@@ -4,12 +4,19 @@ import { PageHead } from "@/components/master/page-head";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
 import { Badge, RevisionStatusBadge } from "@/components/ui/badge";
+import { canEdit } from "@/lib/roles";
+import { requireSession } from "@/server/auth-context";
 
 export default async function PreviewIndex() {
+  const session = await requireSession();
+  const readOnly = !canEdit(session.user);
   const boms = await listAllBoms();
   return (
     <>
-      <PageHead title="Preview & Generate" subtitle="All BOMs across projects. Pick one to preview and export." />
+      <PageHead
+        title={readOnly ? "Preview" : "Preview & Generate"}
+        subtitle={readOnly ? "All BOMs across projects. Pick one to view." : "All BOMs across projects. Pick one to preview and export."}
+      />
       <div className="overflow-x-auto rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
         <table className="w-full text-[12.5px]">
           <thead>
@@ -28,7 +35,7 @@ export default async function PreviewIndex() {
               <tr>
                 <td colSpan={7} className="px-4 py-12 text-center text-[12.5px] text-[var(--color-text-3)]">
                   <div className="text-[13.5px]">No BOMs yet</div>
-                  <div className="mt-1">Create a BOM in Builder first.</div>
+                  <div className="mt-1">{readOnly ? "BOMs appear here once the engineering team creates them." : "Create a BOM in Builder first."}</div>
                 </td>
               </tr>
             ) : (

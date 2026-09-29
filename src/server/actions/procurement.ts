@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireSession } from "../auth-context";
+import { EDITOR_ROLES } from "@/lib/roles";
+import { requireRole } from "../auth-context";
 import { audit } from "../audit";
 import { runExport, type ExportOptionsT } from "../lib/run-export";
 import { getProcurementSettings } from "../queries/system-settings";
@@ -35,7 +36,7 @@ export async function sendBomToProcurement(input: {
   revisionId: string;
   options: ExportOptionsT;
 }): Promise<SendBomToProcurementResult> {
-  const session = await requireSession();
+  const session = await requireRole(...EDITOR_ROLES);
 
   const settings = await getProcurementSettings();
   if (settings.to.length === 0) {

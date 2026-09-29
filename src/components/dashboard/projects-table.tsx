@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Icon } from "@/components/icons";
+import { formatDate } from "@/lib/format";
 
 type Row = {
   id: string;
@@ -7,6 +8,7 @@ type Row = {
   name: string;
   updatedAt: Date;
   targetDate: string | null;
+  clientName: string | null;
   ownerName: string | null;
   revLetter: string | null;
   bomCount: number;
@@ -19,11 +21,11 @@ export function ProjectsTable({ rows }: { rows: Row[] }) {
       <div className="card-head">
         <h3 className="card-title">Projects</h3>
         <span className="muted" style={{ fontSize: 12 }}>{rows.length} active</span>
-        <div className="spacer" />
-        <div className="pill">All teams <Icon.ChevDown className="ico" /></div>
-        <div className="pill">All status <Icon.ChevDown className="ico" /></div>
       </div>
-      <div className="table-wrap">
+      {rows.length === 0 && (
+        <div className="muted" style={{ padding: "20px 16px", fontSize: 12.5, textAlign: "center" }}>No projects yet.</div>
+      )}
+      <div className="table-wrap" style={rows.length ? undefined : { display: "none" }}>
         <table className="tbl">
           <thead>
             <tr>
@@ -45,7 +47,9 @@ export function ProjectsTable({ rows }: { rows: Row[] }) {
                     <Icon.Folder className="ico" />
                     <div>
                       <div style={{ fontWeight: 500 }}>{p.name}</div>
-                      <div className="mono" style={{ fontSize: 11, color: "var(--text-3)" }}>{p.code}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-3)" }}>
+                        <span className="mono">{p.code}</span>{p.clientName && <> · {p.clientName}</>}
+                      </div>
                     </div>
                   </Link>
                 </td>
@@ -54,7 +58,7 @@ export function ProjectsTable({ rows }: { rows: Row[] }) {
                 <td className="num tabular">{p.lineCount}</td>
                 <td className="muted">{p.revLetter ? `Rev ${p.revLetter}` : "—"}</td>
                 <td className="muted">{relativeTime(p.updatedAt)}</td>
-                <td className="muted">{p.targetDate ?? "—"}</td>
+                <td className="muted" style={{ whiteSpace: "nowrap" }}>{p.targetDate ? formatDate(p.targetDate) : "—"}</td>
                 <td>
                   <Link href={`/projects/${p.id}`} className="btn btn-icon btn-ghost"><Icon.Chevron className="ico" /></Link>
                 </td>

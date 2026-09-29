@@ -8,7 +8,7 @@ import { requireSession } from "../auth-context";
 export async function listOwnerCandidates() {
   await requireSession();
   return db
-    .select({ id: user.id, name: user.name, email: user.email })
+    .select({ id: user.id, name: user.name, email: user.email, role: user.role })
     .from(user)
     .where(eq(user.disabled, false))
     .orderBy(asc(user.name));
@@ -31,6 +31,7 @@ export async function listProjects() {
   return db.execute(sql/* sql */`
     SELECT
       p.id, p.code, p.name, p.updated_at AS "updatedAt", p.target_date AS "targetDate",
+      p.client_name AS "clientName", p.start_date AS "startDate",
       u.name AS "ownerName",
       COALESCE(bom_stats.bom_count, 0)::int AS "bomCount",
       COALESCE(line_stats.line_count, 0)::int AS "lineCount",
@@ -61,6 +62,8 @@ export async function listProjects() {
   `).then(r => r as unknown as Array<{
     id: string; code: string; name: string;
     updatedAt: Date; targetDate: string | null;
+    clientName: string | null;
+    startDate: string | null;
     ownerName: string | null;
     bomCount: number;
     lineCount: number;

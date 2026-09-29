@@ -1,35 +1,55 @@
 "use server";
 
 import { z } from "zod";
-import { eq, desc } from "drizzle-orm";
+import { createId } from "@paralleldrive/cuid2";
+import { and, eq, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
-import { user } from "@/db/schema";
-import { requireRole, type UserRole } from "../auth-context";
+import { account, session as sessionTable, user } from "@/db/schema";
+import { auth } from "@/lib/auth";
+import { USER_ROLES } from "@/lib/roles";
+import { requireRole } from "../auth-context";
 import { createUserDirect } from "../lib/create-user-direct";
 import { audit } from "../audit";
-import { sendWelcomeEmail } from "@/lib/mailer";
+import { sendPasswordResetByAdminEmail, sendWelcomeEmail, type SendMailResult } from "@/lib/mailer";
+
+const Password = z.string().min(8).max(128);
 
 const CreateUserInput = z.object({
   email: z.string().email(),
-  password: z.string().min(8).max(128),
+  password: Password,
   name: z.string().trim().min(1).max(120),
-  role: z.enum(["owner", "admin", "member"]),
+  role: z.enum(USER_ROLES),
 });
 
 export type CreateUserInputT = z.infer<typeof CreateUserInput>;
 
+type EmailOutcome = { emailStatus: "sent" | "skipped" | "failed"; emailError?: string };
+
+async function deliver(send: () => Promise<SendMailResult>): Promise<EmailOutcome> {
+  try {
+    const result = await send();
+    if (result.sent) return { emailStatus: "sent" };
+    if (result.reason === "SMTP_NOT_CONFIGURED") return { emailStatus: "skipped" };
+    return { emailStatus: "failed", emailError: result.detail };
+  } catch (err) {
+    return { emailStatus: "failed", emailError: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+async function loadTarget(id: string) {
+  const [target] = await db
+    .select({ id: user.id, role: user.role, email: user.email, name: user.name })
+    .from(user)
+    .where(eq(user.id, id))
+    .limit(1);
+  if (!target) throw new Error("USER_NOT_FOUND");
+  return target;
+}
+
 export async function createUser(input: CreateUserInputT) {
   const data = CreateUserInput.parse(input);
-  const session = await requireRole("owner", "admin");
-  const callerRole = session.user.role as UserRole;
-
-  if (data.role === "owner" && callerRole !== "owner") {
-    throw new Error("FORBIDDEN_ROLE_ASSIGNMENT");
-  }
-  if (data.role === "admin" && callerRole !== "owner") {
-    throw new Error("FORBIDDEN_ROLE_ASSIGNMENT");
-  }
+  await requireRole("admin");
 
   const { id: newUserId } = await createUserDirect({
     email: data.email,
@@ -38,20 +58,9 @@ export async function createUser(input: CreateUserInputT) {
     role: data.role,
   });
 
-  let emailStatus: "sent" | "skipped" | "failed" = "skipped";
-  let emailError: string | undefined;
-  try {
-    const result = await sendWelcomeEmail({
-      to: data.email,
-      name: data.name,
-      password: data.password,
-      role: data.role,
-    });
-    emailStatus = result.sent ? "sent" : "skipped";
-  } catch (err) {
-    emailStatus = "failed";
-    emailError = err instanceof Error ? err.message : String(err);
-  }
+  const email = await deliver(() =>
+    sendWelcomeEmail({ to: data.email, name: data.name, password: data.password, role: data.role }),
+  );
 
   revalidatePath("/users");
   await audit({
@@ -59,18 +68,13 @@ export async function createUser(input: CreateUserInputT) {
     refType: "user",
     refId: newUserId,
     summary: `Created ${data.role} ${data.email}`,
-    payload: {
-      email: data.email,
-      role: data.role,
-      emailStatus,
-      ...(emailError ? { emailError } : {}),
-    },
+    payload: { email: data.email, role: data.role, ...email },
   });
-  return { id: newUserId, emailStatus, emailError };
+  return { id: newUserId, ...email };
 }
 
 export async function listUsers() {
-  await requireRole("owner", "admin");
+  await requireRole("admin");
   return db
     .select({
       id: user.id,
@@ -86,15 +90,15 @@ export async function listUsers() {
 
 export async function setUserDisabled(input: { id: string; disabled: boolean }) {
   const { id, disabled } = z.object({ id: z.string(), disabled: z.boolean() }).parse(input);
-  const session = await requireRole("owner", "admin");
+  const session = await requireRole("admin");
 
   if (id === session.user.id) throw new Error("CANNOT_DISABLE_SELF");
+  const target = await loadTarget(id);
 
-  const [target] = await db.select({ role: user.role, email: user.email }).from(user).where(eq(user.id, id)).limit(1);
-  if (!target) throw new Error("USER_NOT_FOUND");
-  if (target.role === "owner" && session.user.role !== "owner") throw new Error("FORBIDDEN");
+  await db.update(user).set({ disabled, updatedAt: new Date() }).where(eq(user.id, id));
+  // Sign them out everywhere right away instead of waiting for the cookie to expire.
+  if (disabled) await db.delete(sessionTable).where(eq(sessionTable.userId, id));
 
-  await db.update(user).set({ disabled }).where(eq(user.id, id));
   revalidatePath("/users");
   await audit({
     kind: "user.disabled",
@@ -103,4 +107,72 @@ export async function setUserDisabled(input: { id: string; disabled: boolean }) 
     summary: `${disabled ? "Disabled" : "Re-enabled"} ${target.email}`,
     payload: { disabled },
   });
+}
+
+export async function setUserRole(input: { id: string; role: (typeof USER_ROLES)[number] }) {
+  const { id, role } = z.object({ id: z.string(), role: z.enum(USER_ROLES) }).parse(input);
+  const session = await requireRole("admin");
+
+  // Stops the last admin from locking everyone out of user management.
+  if (id === session.user.id) throw new Error("CANNOT_CHANGE_OWN_ROLE");
+  const target = await loadTarget(id);
+  if (target.role === role) return;
+
+  await db.update(user).set({ role, updatedAt: new Date() }).where(eq(user.id, id));
+  revalidatePath("/users");
+  await audit({
+    kind: "user.role.changed",
+    refType: "user",
+    refId: id,
+    summary: `${target.email}: ${target.role} → ${role}`,
+    payload: { from: target.role, to: role },
+  });
+}
+
+/**
+ * Admin sets a new temporary password for someone else, signs them out
+ * everywhere and emails them the password. Admins change their own password
+ * from Settings → Profile (or the sign-in page's "Forgot password?").
+ */
+export async function resetUserPassword(input: { id: string; password: string }) {
+  const { id, password } = z.object({ id: z.string(), password: Password }).parse(input);
+  const session = await requireRole("admin");
+
+  if (id === session.user.id) throw new Error("USE_PROFILE_TO_CHANGE_OWN_PASSWORD");
+  const target = await loadTarget(id);
+
+  const ctx = await auth.$context;
+  const hash = await ctx.password.hash(password);
+
+  await db.transaction(async tx => {
+    const updated = await tx
+      .update(account)
+      .set({ password: hash, updatedAt: new Date() })
+      .where(and(eq(account.userId, id), eq(account.providerId, "credential")))
+      .returning({ id: account.id });
+    if (updated.length === 0) {
+      await tx.insert(account).values({
+        id: createId(),
+        userId: id,
+        accountId: id,
+        providerId: "credential",
+        password: hash,
+      });
+    }
+    await tx.delete(sessionTable).where(eq(sessionTable.userId, id));
+  });
+
+  const email = await deliver(() =>
+    sendPasswordResetByAdminEmail({ to: target.email, name: target.name, password }),
+  );
+
+  revalidatePath("/users");
+  await audit({
+    kind: "user.password.reset",
+    refType: "user",
+    refId: id,
+    summary: `Reset password for ${target.email}`,
+    payload: { via: "admin", ...email },
+  });
+  return email;
 }

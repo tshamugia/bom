@@ -9,6 +9,7 @@ import { Icon } from "@/components/icons";
 import { Badge, RevisionStatusBadge } from "@/components/ui/badge";
 import { RenameBomDialog } from "@/components/boms/rename-bom-dialog";
 import { deleteBom } from "@/server/actions/boms";
+import { formatDateTime } from "@/lib/format";
 
 export type BomRow = {
   id: string;
@@ -22,23 +23,38 @@ export type BomRow = {
   updatedAt: Date | string;
 };
 
-export function BomList({ projectId, rows }: { projectId: string; rows: BomRow[] }) {
+export function BomList({
+  projectId,
+  rows,
+  canDelete,
+  readOnly = false,
+}: {
+  projectId: string;
+  rows: BomRow[];
+  /** Archiving a BOM is admin-only. */
+  canDelete: boolean;
+  /** Viewers open the read-only preview instead of the builder. */
+  readOnly?: boolean;
+}) {
   const router = useRouter();
   const [archiving, startArchive] = useTransition();
+  const openHref = (bomId: string) => `/${readOnly ? "preview" : "builder"}/${projectId}/${bomId}`;
 
   if (rows.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-[var(--color-line)] bg-[var(--color-surface)] p-10 text-center">
         <div className="text-[14px] font-medium">No BOMs yet</div>
-        <div className="mt-1 text-[12.5px] text-[var(--color-text-3)]">
-          Click &quot;New BOM&quot; to add the first parts list to this project.
-        </div>
+        {!readOnly && (
+          <div className="mt-1 text-[12.5px] text-[var(--color-text-3)]">
+            Click &quot;New BOM&quot; to add the first parts list to this project.
+          </div>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
+    <div className="overflow-x-auto rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
       <table className="w-full text-[12.5px]">
         <thead>
           <tr className="bg-[var(--color-surface-2)] text-[11px] uppercase tracking-wider text-[var(--color-text-3)]">
@@ -55,7 +71,7 @@ export function BomList({ projectId, rows }: { projectId: string; rows: BomRow[]
           {rows.map(b => (
             <tr key={b.id} className="border-b border-[var(--color-line-soft)] last:border-0 hover:bg-[var(--color-surface-2)]">
               <td className="px-4 py-2.5">
-                <Link href={`/builder/${projectId}/${b.id}`} className="block font-medium">
+                <Link href={openHref(b.id)} className="block font-medium">
                   {b.name}
                 </Link>
               </td>
@@ -65,7 +81,7 @@ export function BomList({ projectId, rows }: { projectId: string; rows: BomRow[]
                   <div className="flex flex-col">
                     <span>{b.lastModifiedByName}</span>
                     <span className="text-[11px] text-[var(--color-text-3)]">
-                      {new Date(b.updatedAt).toLocaleString()}
+                      {formatDateTime(b.updatedAt)}
                     </span>
                   </div>
                 ) : "—"}
@@ -81,34 +97,38 @@ export function BomList({ projectId, rows }: { projectId: string; rows: BomRow[]
               <td className="px-4 py-2.5 text-right tabular-nums">{b.lineCount}</td>
               <td className="px-4 py-2.5 text-right">
                 <div className="flex items-center justify-end gap-1.5">
-                  <Link href={`/builder/${projectId}/${b.id}`}>
+                  <Link href={openHref(b.id)}>
                     <Button variant="ghost" size="sm"><Icon.Box size={14} className="mr-1" /> Open</Button>
                   </Link>
-                  <RenameBomDialog
-                    bomId={b.id}
-                    currentName={b.name}
-                    trigger={<Button variant="ghost" size="sm" title="Rename"><Icon.Edit size={14} /></Button>}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={archiving}
-                    title="Archive"
-                    onClick={() => {
-                      if (!confirm(`Archive BOM "${b.name}"? It will be hidden from this project.`)) return;
-                      startArchive(async () => {
-                        try {
-                          await deleteBom({ bomId: b.id });
-                          toast.success(`${b.name} archived`);
-                          router.refresh();
-                        } catch (e) {
-                          toast.error(e instanceof Error ? e.message : "Archive failed");
-                        }
-                      });
-                    }}
-                  >
-                    <Icon.Trash size={14} />
-                  </Button>
+                  {!readOnly && (
+                    <RenameBomDialog
+                      bomId={b.id}
+                      currentName={b.name}
+                      trigger={<Button variant="ghost" size="sm" title="Rename"><Icon.Edit size={14} /></Button>}
+                    />
+                  )}
+                  {canDelete && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={archiving}
+                      title="Archive"
+                      onClick={() => {
+                        if (!confirm(`Archive BOM "${b.name}"? It will be hidden from this project.`)) return;
+                        startArchive(async () => {
+                          try {
+                            await deleteBom({ bomId: b.id });
+                            toast.success(`${b.name} archived`);
+                            router.refresh();
+                          } catch (e) {
+                            toast.error(e instanceof Error ? e.message : "Archive failed");
+                          }
+                        });
+                      }}
+                    >
+                      <Icon.Trash size={14} />
+                    </Button>
+                  )}
                 </div>
               </td>
             </tr>

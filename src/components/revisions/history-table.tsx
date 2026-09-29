@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { RevisionStatusBadge } from "@/components/ui/badge";
 import { CloneRevisionButton } from "./clone-revision-button";
+import { formatDateTime } from "@/lib/format";
 
 export type HistoryRow = {
   id: string;
@@ -12,7 +13,9 @@ export type HistoryRow = {
   parentRevisionId: string | null;
 };
 
-export function HistoryTable({ projectId, bomId, rows }: { projectId: string; bomId: string; rows: HistoryRow[] }) {
+export function HistoryTable({
+  projectId, bomId, rows, readOnly = false,
+}: { projectId: string; bomId: string; rows: HistoryRow[]; readOnly?: boolean }) {
   const hasOpenDraft = rows.some(r => r.status === "draft");
   return (
     <div className="overflow-hidden rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)]">
@@ -33,14 +36,14 @@ export function HistoryTable({ projectId, bomId, rows }: { projectId: string; bo
               <td className="p-2 font-semibold">{r.letter}</td>
               <td className="p-2"><RevisionStatusBadge status={r.status} /></td>
               <td className="p-2">{r.committedByName ?? "—"}</td>
-              <td className="p-2">{r.committedAt ? new Date(r.committedAt).toLocaleString() : (r.status === "draft" ? "in progress" : "—")}</td>
+              <td className="p-2">{r.committedAt ? formatDateTime(r.committedAt) : (r.status === "draft" ? "in progress" : "—")}</td>
               <td className="p-2 italic text-[var(--color-text-2)]">{r.commitMessage ?? "—"}</td>
               <td className="p-2 text-right">
                 <div className="flex items-center justify-end gap-3">
                   {r.parentRevisionId
                     ? <Link className="text-[var(--color-info)] hover:underline" href={`/projects/${projectId}/diff?left=${r.parentRevisionId}&right=${r.id}`}>Diff vs parent</Link>
                     : null}
-                  {r.status !== "draft" ? (
+                  {!readOnly && r.status !== "draft" ? (
                     <CloneRevisionButton
                       revisionId={r.id}
                       letter={r.letter}

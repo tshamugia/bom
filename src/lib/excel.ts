@@ -33,6 +33,8 @@ export type BuildInput = {
   rows: BomRow[];
   options: BuildOptions;
   isDraft?: boolean;
+  /** e.g. "ELV-101 rev2" — drawing revisions the BOM revision was built from. */
+  referenceDrawings?: string[];
 };
 
 type ColumnDescriptor = {
@@ -138,8 +140,15 @@ function buildCoverSheet(wb: ExcelJS.Workbook, input: BuildInput) {
     ws.getCell("A6").value = `Target: ${input.project.target}`;
   }
 
-  const groups = groupBySection(input.rows);
+  const drawings = input.referenceDrawings ?? [];
   let row = 8;
+  if (drawings.length > 0) {
+    const at = input.isDraft ? 8 : 7;
+    ws.getCell(`A${at}`).value = `Reference drawings: ${drawings.join(", ")}`;
+    row = at + 2;
+  }
+
+  const groups = groupBySection(input.rows);
   if (groups.length > 0) {
     ws.getCell(`A${row}`).value = "Sections";
     ws.getCell(`A${row}`).font = { bold: true, size: 12 };
@@ -184,6 +193,12 @@ function buildMainSheet(wb: ExcelJS.Workbook, input: BuildInput, name = "BOM") {
   ws.mergeCells(`A3:${lastColLetter}3`);
   ws.getCell("A3").value = `Owner: ${input.project.owner}   Target: ${input.project.target}`;
   ws.getCell("A3").font = { color: { argb: "FF6B7180" }, size: 10 };
+
+  if (input.referenceDrawings?.length) {
+    ws.mergeCells(`A4:${lastColLetter}4`);
+    ws.getCell("A4").value = `Reference drawings: ${input.referenceDrawings.join(", ")}`;
+    ws.getCell("A4").font = { color: { argb: "FF6B7180" }, size: 10 };
+  }
 
   const headerRow = ws.getRow(5);
   headers.forEach((h, i) => {

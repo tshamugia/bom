@@ -5,12 +5,13 @@ import { usePathname } from "next/navigation";
 import { Icon } from "@/components/icons";
 import { NAV } from "./nav-config";
 import { UserMenu } from "./user-menu";
+import type { UserRole } from "@/lib/roles";
 
 export function Sidebar({
   user,
   onNavigate,
 }: {
-  user: { name: string; email: string; role: "owner" | "admin" | "member" } | null;
+  user: { name: string; email: string; role: UserRole } | null;
   onNavigate?: () => void;
 }) {
   const path = usePathname();
@@ -23,7 +24,7 @@ export function Sidebar({
         <div className="sb-logo">B</div>
         <div>
           <div className="sb-name">BOM Studio</div>
-          <div className="sb-name-sub">Halcyon Robotics</div>
+          <div className="sb-name-sub">Insta</div>
         </div>
       </div>
 
@@ -47,7 +48,7 @@ export function Sidebar({
                     onClick={onNavigate}
                   >
                     <I className="ico" />
-                    <span>{it.label}</span>
+                    <span>{role === "viewer" && it.viewerLabel ? it.viewerLabel : it.label}</span>
                     {it.badge && <span className="badge">{it.badge}</span>}
                   </Link>
                 );

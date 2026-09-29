@@ -32,7 +32,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <div className="sb-logo" style={{ width: 38, height: 38, fontSize: 16 }}>B</div>
           <div>
             <div className="text-[15px] font-semibold tracking-tight text-[var(--sb-text)]">BOM Studio</div>
-            <div className="text-[12px] text-[var(--sb-text-3)]">Halcyon Robotics</div>
+            <div className="text-[12px] text-[var(--sb-text-3)]">Insta</div>
           </div>
         </div>
 
@@ -111,7 +111,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               <div className="sb-logo" style={{ width: 34, height: 34 }}>B</div>
               <div className="leading-tight">
                 <div className="text-[15px] font-semibold tracking-tight text-[var(--color-text)]">BOM Studio</div>
-                <div className="text-[11px] text-[var(--color-text-3)]">Halcyon Robotics</div>
+                <div className="text-[11px] text-[var(--color-text-3)]">Insta</div>
               </div>
             </div>
 

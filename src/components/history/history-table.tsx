@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/icons";
+import { formatDateTime } from "@/lib/format";
 
 type Row = {
   id: string;
@@ -52,7 +53,7 @@ export function HistoryTable({ rows }: { rows: Row[] }) {
                   <div style={{ fontWeight: 500 }}>{r.bomName ?? r.projectName}</div>
                   <div className="mono muted" style={{ fontSize: 11 }}>{r.projectCode} · Rev. {r.revisionLetter}</div>
                 </td>
-                <td className="muted">{new Date(r.generatedAt).toLocaleString()}</td>
+                <td className="muted">{formatDateTime(r.generatedAt)}</td>
                 <td>{r.generatedByName ?? "—"}</td>
                 <td className="mono" style={{ fontSize: 11.5 }}>{r.fileName}</td>
                 <td className="num tabular">{(r.byteSize / 1024).toFixed(1)} KB</td>
@@ -66,7 +67,6 @@ export function HistoryTable({ rows }: { rows: Row[] }) {
                     <a href={`/api/exports/${r.id}/download`} target="_blank" rel="noopener noreferrer" className="btn btn-icon btn-ghost" title="Re-download">
                       <Icon.Download className="ico" />
                     </a>
-                    <button className="btn btn-icon btn-ghost" title="More"><Icon.More className="ico" /></button>
                   </div>
                 </td>
               </tr>

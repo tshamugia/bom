@@ -1,9 +1,27 @@
 import "server-only";
 import { eq } from "drizzle-orm";
 import type { db as Db } from "@/db/client";
-import { bomLines, bomSections, items, vendors } from "@/db/schema";
+import { bomLines, bomRevisionDrawings, bomSections, items, vendors } from "@/db/schema";
 
 type Tx = Parameters<Parameters<typeof Db.transaction>[0]>[0];
+
+/**
+ * Carries drawing references over unchanged — the new revision then shows
+ * any drawing that moved on since as outdated.
+ */
+export async function copyDrawingLinks(
+  tx: Tx,
+  sourceRevisionId: string,
+  targetRevisionId: string,
+  createdById: string,
+): Promise<void> {
+  const links = await tx
+    .select({ drawingId: bomRevisionDrawings.drawingId, drawingRevisionId: bomRevisionDrawings.drawingRevisionId })
+    .from(bomRevisionDrawings)
+    .where(eq(bomRevisionDrawings.bomRevisionId, sourceRevisionId));
+  if (links.length === 0) return;
+  await tx.insert(bomRevisionDrawings).values(links.map(l => ({ ...l, bomRevisionId: targetRevisionId, createdById })));
+}
 
 export async function copyRevisionContent(
   tx: Tx,

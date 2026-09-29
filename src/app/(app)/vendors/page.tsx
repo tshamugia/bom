@@ -3,8 +3,12 @@ import { PageHead } from "@/components/master/page-head";
 import { VendorStatusBadge } from "@/components/ui/badge";
 import { VendorDialog } from "@/components/master/vendor-dialog";
 import { Icon } from "@/components/icons";
+import { canEdit } from "@/lib/roles";
+import { requireSession } from "@/server/auth-context";
 
 export default async function VendorsPage() {
+  const session = await requireSession();
+  const readOnly = !canEdit(session.user);
   const [list, stats] = await Promise.all([listVendors(), vendorStats()]);
 
   return (
@@ -15,7 +19,9 @@ export default async function VendorsPage() {
         actions={
           <>
             <a href="/api/exports/vendors.xlsx" className="btn"><Icon.Download className="ico" /> Export</a>
-            <VendorDialog trigger={<button type="button" className="btn btn-primary"><Icon.Plus className="ico" /> Add vendor</button>} />
+            {!readOnly && (
+              <VendorDialog trigger={<button type="button" className="btn btn-primary"><Icon.Plus className="ico" /> Add vendor</button>} />
+            )}
           </>
         }
       />
@@ -30,8 +36,6 @@ export default async function VendorsPage() {
       <div className="card">
         <div className="card-head">
           <h3 className="card-title">All vendors</h3>
-          <div className="spacer" />
-          <button className="btn btn-sm"><Icon.Filter className="ico" /> Filter</button>
         </div>
         <div className="table-wrap">
           <table className="tbl">
@@ -61,7 +65,9 @@ export default async function VendorsPage() {
                   </td>
                   <td><VendorStatusBadge status={v.status} /></td>
                   <td>
-                    <VendorDialog existing={v as React.ComponentProps<typeof VendorDialog>["existing"]} trigger={<button type="button" className="btn btn-icon btn-ghost"><Icon.More className="ico" /></button>} />
+                    {!readOnly && (
+                      <VendorDialog existing={v as React.ComponentProps<typeof VendorDialog>["existing"]} trigger={<button type="button" className="btn btn-icon btn-ghost"><Icon.More className="ico" /></button>} />
+                    )}
                   </td>
                 </tr>
               ))}

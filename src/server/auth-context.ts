@@ -1,8 +1,9 @@
 import "server-only";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { roleOf, type UserRole } from "@/lib/roles";
 
-export type UserRole = "owner" | "admin" | "member";
+export type { UserRole };
 
 export async function requireSession() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -13,7 +14,7 @@ export async function requireSession() {
 
 export async function requireRole(...roles: UserRole[]) {
   const session = await requireSession();
-  const role = (session.user as { role?: UserRole }).role ?? "member";
+  const role = roleOf(session.user);
   if (!roles.includes(role)) throw new Error("FORBIDDEN");
   return { ...session, user: { ...session.user, role } };
 }

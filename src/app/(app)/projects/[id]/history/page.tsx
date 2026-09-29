@@ -4,13 +4,15 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { boms, bomRevisions, projects, user } from "@/db/schema";
 import { requireSession } from "@/server/auth-context";
+import { canEdit } from "@/lib/roles";
 import { HistoryTable, type HistoryRow } from "@/components/revisions/history-table";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
 
 export default async function HistoryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  await requireSession();
+  const session = await requireSession();
+  const readOnly = !canEdit(session.user);
 
   const [project] = await db
     .select({ id: projects.id, code: projects.code, name: projects.name })
@@ -76,7 +78,7 @@ export default async function HistoryPage({ params }: { params: Promise<{ id: st
               <div key={b.id}>
                 <div className="mb-2 flex items-center justify-between">
                   <h2 className="text-[14px] font-semibold tracking-tight">{b.name}</h2>
-                  <Link href={`/builder/${project.id}/${b.id}`}>
+                  <Link href={`/${readOnly ? "preview" : "builder"}/${project.id}/${b.id}`}>
                     <Button variant="ghost" size="sm"><Icon.Box size={14} className="mr-1" /> Open</Button>
                   </Link>
                 </div>
@@ -85,7 +87,7 @@ export default async function HistoryPage({ params }: { params: Promise<{ id: st
                     No revisions yet.
                   </div>
                 ) : (
-                  <HistoryTable projectId={id} bomId={b.id} rows={rows} />
+                  <HistoryTable projectId={id} bomId={b.id} rows={rows} readOnly={readOnly} />
                 )}
               </div>
             );

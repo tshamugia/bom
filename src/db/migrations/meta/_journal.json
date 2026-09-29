@@ -127,6 +127,41 @@
       "when": 1778248897025,
       "tag": "0017_petite_spitfire",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790602856203,
+      "tag": "0018_drawings",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1790670585441,
+      "tag": "0019_drawing_control",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1790674729769,
+      "tag": "0020_project_passport",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1790681560865,
+      "tag": "0021_user_roles_audit",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1790686167345,
+      "tag": "0022_viewer_role",
+      "breakpoints": true
     }
   ]
 }

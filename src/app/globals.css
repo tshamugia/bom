@@ -9,8 +9,17 @@
    "BOM Studio" prototype styles.css exactly)
    ──────────────────────────────────────────── */
 @theme {
-  --font-sans: "Geist", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  --font-mono: "Geist Mono", "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  /* --font-geist* / --font-georgian come from next/font in app/layout.tsx.
+     Geist has no Georgian glyphs, so Noto Sans Georgian sits right behind it
+     and picks up any Georgian text (project names, notes) per character. */
+  --font-sans: var(--font-geist, "Geist"), var(--font-georgian, "Noto Sans Georgian"), -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: var(--font-geist-mono, "Geist Mono"), var(--font-georgian, "Noto Sans Georgian"), "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+
+  /* The root font-size is 13.5px, so Tailwind's rem-based text-xs/text-sm
+     (used by the shadcn primitives) would render at ~10px/~12px. Pin them to
+     the design's px scale instead. */
+  --text-xs: 11px;
+  --text-sm: 12.5px;
 
   /* Surfaces */
   --color-bg: #f6f7fb;
@@ -78,7 +87,6 @@ html, body {
   background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-sans);
-  font-feature-settings: "cv11", "ss01";
   font-size: 13.5px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -87,7 +95,6 @@ html, body {
 
 @theme inline {
   --font-heading: var(--font-sans);
-  --font-sans: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -274,8 +281,8 @@ html, body {
   --shadow-pop: 0 8px 28px rgba(20, 22, 26, 0.12), 0 2px 6px rgba(20, 22, 26, 0.06);
 
   /* Type */
-  --ff-sans: "Geist", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  --ff-mono: "Geist Mono", "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  --ff-sans: var(--font-sans);
+  --ff-mono: var(--font-mono);
 }
 
 @layer components {
@@ -820,6 +827,8 @@ html, body {
 
   /* ── Vendor / catalog cards ────────────────── */
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  /* Dashboard: main column + a narrow side column (deadlines, activity). */
+  .dash-main { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
   .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 
   .kv { display: grid; grid-template-columns: 130px 1fr; gap: 8px 16px; font-size: 12.5px; }
@@ -984,7 +993,9 @@ html, body {
   }
 
   .row-actions { display: flex; gap: 2px; opacity: 0; transition: opacity 0.1s; }
-  .list-table tbody tr:hover .row-actions { opacity: 1; }
+  .list-table tbody tr:hover .row-actions,
+  .tbl tbody tr:hover .row-actions,
+  .row-actions:focus-within { opacity: 1; }
 }
 
 @keyframes toast-in { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
@@ -1002,6 +1013,7 @@ html, body {
 .nav-scrim { display: none; }
 
 @media (max-width: 960px) {
+  .dash-main { grid-template-columns: minmax(0, 1fr); }
   /* Single-column shell; sidebar becomes an off-canvas drawer. */
   .app { grid-template-columns: 1fr; }
 
@@ -1065,7 +1077,7 @@ html, body {
   /* Dense grids collapse. */
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
   .grid-3 { grid-template-columns: repeat(2, 1fr); }
-  .grid-2 { grid-template-columns: 1fr; }
+  .grid-2 { grid-template-columns: minmax(0, 1fr); }
   .summary-bar { grid-template-columns: repeat(2, 1fr); }
 
   /* Steps wrap instead of overflowing the viewport. */
@@ -1076,12 +1088,19 @@ html, body {
   .dropdown-row { grid-template-columns: 1fr auto; row-gap: 2px; }
   .dropdown-row .desc { grid-column: 1 / -1; }
 
-  /* Doc preview loses its wide print padding on small screens. */
-  .doc-preview { padding: 20px 18px; }
+  /* Doc preview loses its wide print padding on small screens; the line
+     table scrolls inside the document instead of widening the page. */
+  .doc-preview { padding: 20px 18px; min-width: 0; }
+  .doc-table-wrap { overflow-x: auto; }
+  .doc-head { flex-wrap: wrap; gap: 8px; }
   .doc-totals { width: 100%; }
+}
 
-  /* Hide the low-priority "What's new" action to save room. */
-  .tb-actions > .btn-sm { display: none; }
+/* Touch screens have no hover: keep row actions visible, and bump form
+   fields to 16px so iOS Safari doesn't zoom the page on focus. */
+@media (hover: none) and (pointer: coarse) {
+  .row-actions { opacity: 1; }
+  input:not([type="checkbox"]):not([type="radio"]), select, textarea { font-size: 16px; }
 }
 
 @media (max-width: 480px) {
@@ -1092,4 +1111,47 @@ html, body {
   .doc-preview { padding: 16px 14px; }
   .kv { grid-template-columns: 1fr; gap: 2px 0; }
   .kv dt { margin-top: 8px; }
+}
+
+/* Installed PWA on iOS uses a translucent status bar (and there's a home
+   indicator), so keep the chrome clear of the safe areas. env() is 0 elsewhere. */
+.topbar { height: calc(56px + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); }
+.sb-brand { padding-top: calc(16px + env(safe-area-inset-top)); }
+
+/* Phone tab bar — the quick way around for people who mostly look things up. */
+.m-tabs { display: none; }
+
+@media (max-width: 700px) {
+  .m-tabs {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 50;
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -4px 16px rgba(15, 18, 38, 0.06);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .m-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    height: 56px;
+    border: 0;
+    background: none;
+    color: var(--text-3);
+    font-size: 10.5px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .m-tab .ico { width: 20px; height: 20px; }
+  .m-tab.active { color: var(--accent); font-weight: 600; }
+
+  /* Keep the last row of content above the tab bar. */
+  .content { padding-bottom: calc(14px + 56px + env(safe-area-inset-bottom)); }
 }

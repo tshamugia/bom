@@ -1,12 +1,16 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { PageHead } from "@/components/master/page-head";
 import { UploadZone } from "@/components/import/upload-zone";
 import { PreviewLoader } from "./preview-loader";
 import { getDryRun } from "@/server/queries/import";
+import { canEdit } from "@/lib/roles";
+import { requireSession } from "@/server/auth-context";
 
 export default async function ImportPage({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
   const sp = await searchParams;
+  if (!canEdit((await requireSession()).user)) redirect("/catalog");
   const head = (
     <PageHead
       title="Import catalog"

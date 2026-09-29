@@ -9,6 +9,12 @@ export const projects = pgTable(
     code: text("code").notNull(),
     name: text("name").notNull(),
     ownerId: text("owner_id").references(() => user.id, { onDelete: "set null" }),
+    // Passport: who the project is for, where, and under which contract.
+    clientName: text("client_name"),
+    contractNo: text("contract_no"),
+    siteAddress: text("site_address"),
+    description: text("description"),
+    startDate: date("start_date"),
     targetDate: date("target_date"),
     deletedAt: timestamp("deleted_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),

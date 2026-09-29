@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { account, user } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import type { UserRole } from "@/lib/roles";
 
 /**
  * Create a user with a hashed password, bypassing better-auth's `disableSignUp`
@@ -14,7 +15,7 @@ export async function createUserDirect(input: {
   email: string;
   password: string;
   name: string;
-  role: "owner" | "admin" | "member";
+  role: UserRole;
 }) {
   const ctx = await auth.$context;
   const hash = await ctx.password.hash(input.password);

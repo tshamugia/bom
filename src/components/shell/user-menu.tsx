@@ -13,11 +13,12 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "./theme-toggle";
+import type { UserRole } from "@/lib/roles";
 
 type User = {
   name: string;
   email: string;
-  role: "owner" | "admin" | "member";
+  role: UserRole;
 };
 
 export function UserMenu({ user }: { user: User | null }) {

@@ -9,18 +9,29 @@ const CRUMBS: Record<string, [string, string]> = {
   "/projects": ["Workspace", "Projects"],
   "/builder": ["Workspace", "BOM Builder"],
   "/preview": ["Workspace", "Preview & Generate"],
+  "/drawings": ["Workspace", "Drawings"],
   "/history": ["Workspace", "History"],
   "/catalog": ["Master Data", "Item Catalog"],
   "/vendors": ["Master Data", "Vendors"],
   "/approvals": ["Process", "Approvals"],
   "/users": ["Admin", "Users"],
+  "/audit": ["Admin", "Audit log"],
   "/settings": ["Account", "Settings"],
 };
 
-export function Topbar({ onMenuToggle, navOpen }: { onMenuToggle?: () => void; navOpen?: boolean }) {
+export function Topbar({
+  onMenuToggle,
+  navOpen,
+  readOnly = false,
+}: {
+  onMenuToggle?: () => void;
+  navOpen?: boolean;
+  readOnly?: boolean;
+}) {
   const path = usePathname();
   const key = Object.keys(CRUMBS).find(k => path === k || path.startsWith(`${k}/`)) ?? "/projects";
-  const [section, here] = CRUMBS[key];
+  const [section, crumb] = CRUMBS[key];
+  const here = readOnly && key === "/preview" ? "BOMs" : crumb;
 
   return (
     <header className="topbar">
@@ -42,13 +53,6 @@ export function Topbar({ onMenuToggle, navOpen }: { onMenuToggle?: () => void; n
 
       <div className="tb-actions">
         <CommandPalette />
-
-        <button className="btn btn-icon btn-ghost" aria-label="Notifications" title="Notifications">
-          <Icon.Bell className="ico" />
-        </button>
-        <button className="btn btn-ghost btn-sm">
-          <Icon.Spark className="ico" /> What&apos;s new
-        </button>
       </div>
     </header>
   );

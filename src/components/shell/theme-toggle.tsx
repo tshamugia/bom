@@ -24,10 +24,10 @@ function subscribe(callback: () => void) {
 
 function getSnapshot(): Mode {
   const v = window.localStorage.getItem(STORAGE_KEY);
-  return v === "light" || v === "dark" || v === "system" ? v : "system";
+  return v === "light" || v === "dark" || v === "system" ? v : "light";
 }
 
-const getServerSnapshot = (): Mode => "system";
+const getServerSnapshot = (): Mode => "light";
 
 export function ThemeToggle() {
   const mode = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);

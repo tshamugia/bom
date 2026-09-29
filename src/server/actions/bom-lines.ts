@@ -5,13 +5,14 @@ import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { boms, bomLines, bomRevisions, bomSections, items, vendors } from "@/db/schema";
-import { requireSession } from "../auth-context";
+import { EDITOR_ROLES } from "@/lib/roles";
+import { requireRole } from "../auth-context";
 import { audit } from "../audit";
 import { isRevisionImmutable } from "../lib/revision-status";
 import { touchBom } from "../lib/touch-bom";
 
 async function ensureRevisionWritable(revisionId: string) {
-  await requireSession();
+  await requireRole(...EDITOR_ROLES);
   const [row] = await db
     .select({
       id: bomRevisions.id,
@@ -48,7 +49,7 @@ export async function addLine(input: { revisionId: string; itemId: string; qty?:
       sectionId: z.string().nullable().optional(),
     })
     .parse(input);
-  const session = await requireSession();
+  const session = await requireRole(...EDITOR_ROLES);
   const rev = await ensureRevisionWritable(revisionId);
 
   const [item] = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
@@ -117,7 +118,7 @@ async function loadLineRevision(lineId: string) {
 
 export async function updateLineQty(input: { id: string; qty: number }) {
   const { id, qty } = z.object({ id: z.string(), qty: z.number().int().nonnegative() }).parse(input);
-  const session = await requireSession();
+  const session = await requireRole(...EDITOR_ROLES);
   const line = await loadLineRevision(id);
   if (!line) throw new Error("LINE_NOT_FOUND");
   if (isRevisionImmutable(line.status)) throw new Error("REVISION_LOCKED");
@@ -139,7 +140,7 @@ export async function updateLineQty(input: { id: string; qty: number }) {
 }
 
 export async function removeLine(input: { id: string }) {
-  const session = await requireSession();
+  const session = await requireRole(...EDITOR_ROLES);
   const line = await loadLineRevision(input.id);
   if (!line) throw new Error("LINE_NOT_FOUND");
   if (isRevisionImmutable(line.status)) throw new Error("REVISION_LOCKED");
@@ -168,7 +169,7 @@ export async function moveLineToSection(input: { lineId: string; sectionId: stri
       position: z.number().int().nonnegative().optional(),
     })
     .parse(input);
-  const session = await requireSession();
+  const session = await requireRole(...EDITOR_ROLES);
 
   const line = await loadLineRevision(lineId);
   if (!line) throw new Error("LINE_NOT_FOUND");
