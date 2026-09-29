@@ -18,8 +18,8 @@ export function BomUsageCard({
 
   return (
     <div className="card">
-      <div className="card-head">
-        <div>
+      <div className="card-head max-[701px]:flex-wrap">
+        <div className="min-w-0">
           <h3 className="card-title">Used in BOMs</h3>
           <p className="card-sub">BOM revisions that were built from this drawing.</p>
         </div>
@@ -32,7 +32,7 @@ export function BomUsageCard({
         </div>
       ) : (
         <div className="table-wrap" style={{ maxHeight: 320 }}>
-          <table className="tbl">
+          <table className="tbl tbl-list">
             <thead>
               <tr>
                 <th>BOM</th>
@@ -45,7 +45,7 @@ export function BomUsageCard({
                 const stale = l.isCurrentBomRevision && l.drawingRevisionNumber < latestRevisionNumber;
                 return (
                   <tr key={l.linkId} style={l.isCurrentBomRevision ? undefined : { opacity: 0.6 }}>
-                    <td>
+                    <td className="l-title">
                       <Link
                         href={`/${readOnly ? "preview" : "builder"}/${l.projectId}/${l.bomId}`}
                         style={{ color: "inherit", fontWeight: 500 }}
@@ -54,11 +54,12 @@ export function BomUsageCard({
                       </Link>
                       {!l.isCurrentBomRevision && <div className="muted" style={{ fontSize: 11 }}>older revision</div>}
                     </td>
-                    <td style={{ whiteSpace: "nowrap" }}>
+                    <td className="l-meta" style={{ whiteSpace: "nowrap" }}>
                       <span className="mono">Rev {l.bomRevisionLetter}</span>{" "}
                       <RevisionStatusBadge status={l.bomRevisionStatus} />
                     </td>
-                    <td style={{ whiteSpace: "nowrap" }}>
+                    <td className="l-aside" style={{ whiteSpace: "nowrap" }}>
+                      <span className="min-[701px]:hidden">Built from </span>
                       <span className="mono">{formatDrawingRevision(l.drawingRevisionNumber)}</span>
                       {stale && (
                         <div style={{ marginTop: 2 }}>

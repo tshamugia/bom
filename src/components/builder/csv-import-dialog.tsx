@@ -45,7 +45,7 @@ export function CsvImportDialog({ revisionId }: { revisionId: string }) {
         <DialogHeader><DialogTitle>Import CSV</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <p className="text-[12.5px] text-[var(--color-text-3)]">CSV needs columns <code>sku</code> and <code>qty</code>. Unknown SKUs are skipped and reported.</p>
-          <input type="file" accept=".csv" onChange={onFile} className="text-[12.5px]" />
+          <input type="file" accept=".csv" onChange={onFile} className="max-w-full text-[12.5px]" />
           {rows.length > 0 && <p className="text-[12.5px]">{rows.length} rows ready to import.</p>}
         </div>
         <DialogFooter>

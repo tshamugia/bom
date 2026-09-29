@@ -36,7 +36,7 @@ export function ProjectCreateButton({ owners = [] }: { owners?: OwnerCandidate[]
                 id="project-owner"
                 value={ownerId}
                 onChange={e => setOwnerId(e.target.value)}
-                className="h-9 w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 text-[13px]"
+                className="h-9 w-full min-w-0 rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 text-[13px]"
               >
                 <option value="">— Assign to me —</option>
                 {owners.map(o => (

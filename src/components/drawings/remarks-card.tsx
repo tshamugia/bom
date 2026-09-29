@@ -54,7 +54,7 @@ function AddRemarkForm({ revisions, onDone }: { revisions: RevisionOption[]; onD
         placeholder="What needs to change? e.g. Move camera C-12 to the east wall"
         autoFocus
       />
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
         <Button size="sm" variant="outline" onClick={onDone} disabled={pending}>Cancel</Button>
         <Button size="sm" onClick={submit} disabled={pending || !body.trim()}>{pending ? "Adding…" : "Add remark"}</Button>
       </div>
@@ -93,7 +93,7 @@ function OpenRemark({ r, readOnly }: { r: RemarkRow; readOnly: boolean }) {
           </button>
         )}
       </div>
-      <div className="whitespace-pre-line text-[13px]">{r.body}</div>
+      <div className="whitespace-pre-line text-[13px] [overflow-wrap:anywhere]">{r.body}</div>
       {resolving && (
         <div className="grid gap-2">
           <textarea
@@ -144,9 +144,9 @@ function ResolvedRemark({ r, readOnly }: { r: RemarkRow; readOnly: boolean }) {
           </button>
         )}
       </div>
-      <div className="whitespace-pre-line text-[12.5px] text-[var(--color-text-2)]">{r.body}</div>
+      <div className="whitespace-pre-line text-[12.5px] text-[var(--color-text-2)] [overflow-wrap:anywhere]">{r.body}</div>
       {r.resolution && (
-        <div className="whitespace-pre-line rounded-md bg-[var(--color-surface-2)] px-2.5 py-1.5 text-[12.5px]">{r.resolution}</div>
+        <div className="whitespace-pre-line rounded-md bg-[var(--color-surface-2)] px-2.5 py-1.5 text-[12.5px] [overflow-wrap:anywhere]">{r.resolution}</div>
       )}
     </div>
   );
@@ -167,8 +167,8 @@ export function RemarksCard({
 
   return (
     <div className="card">
-      <div className="card-head">
-        <div>
+      <div className="card-head max-[701px]:flex-wrap">
+        <div className="min-w-0">
           <h3 className="card-title">Remarks</h3>
           <p className="card-sub">Comments from the client, the site or the team that the drawing has to address.</p>
         </div>

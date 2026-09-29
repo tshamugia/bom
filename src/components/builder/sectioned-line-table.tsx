@@ -193,7 +193,9 @@ export function SectionedLineTable({
                       colSpan={visibleColCount}
                       className="px-3 py-3 text-center text-[12px] italic text-[var(--color-text-3)]"
                     >
-                      No items in this section yet. {activeSectionId === section.id ? "Add items via search above, or drag a line here." : "Set this section active or drag a line here."}
+                      <div className="max-[701px]:sticky max-[701px]:left-3 max-[701px]:max-w-[calc(100vw-52px)] max-[701px]:text-left">
+                        No items in this section yet. {activeSectionId === section.id ? "Add items via search above, or drag a line here." : "Set this section active or drag a line here."}
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -325,22 +327,22 @@ function LineRow({
       <td className="px-3 py-2 text-[11px] tabular-nums text-[var(--color-text-3)]">
         {String(index).padStart(2, "0")}
       </td>
-      {columns.sku && <td className="px-3 py-2 font-mono text-[11.5px]">{it.sku}</td>}
+      {columns.sku && <td className="px-3 py-2 font-mono text-[11.5px] max-[701px]:whitespace-nowrap">{it.sku}</td>}
       {columns.desc && (
-        <td className="px-3 py-2">{it.description}</td>
+        <td className="px-3 py-2 max-[701px]:min-w-[200px]">{it.description}</td>
       )}
       {columns.cat && (
-        <td className="px-3 py-2 text-[var(--color-text-3)]">
+        <td className="px-3 py-2 text-[var(--color-text-3)] max-[701px]:min-w-[110px]">
           {it.subcategoryName ?? it.categoryName ?? "—"}
         </td>
       )}
-      {columns.vendor && <td className="px-3 py-2">{it.vendorName ?? "—"}</td>}
+      {columns.vendor && <td className="px-3 py-2 max-[701px]:min-w-[110px]">{it.vendorName ?? "—"}</td>}
       {columns.mfr && (
-        <td className="px-3 py-2 text-[var(--color-text-3)]">
+        <td className="px-3 py-2 text-[var(--color-text-3)] max-[701px]:min-w-[110px]">
           {it.manufacturer || "—"}
         </td>
       )}
-      {columns.unit && <td className="px-3 py-2 text-[var(--color-text-3)]">{it.unit}</td>}
+      {columns.unit && <td className="px-3 py-2 text-[var(--color-text-3)] max-[701px]:whitespace-nowrap">{it.unit}</td>}
       {columns.qty && (
         <td className="px-3 py-2 text-right">
           {readOnly ? (

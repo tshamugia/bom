@@ -33,8 +33,8 @@ export function PassportCard({
   const manager = users.find(u => u.id === project.ownerId);
   return (
     <div className="card">
-      <div className="card-head">
-        <div>
+      <div className="card-head max-[701px]:flex-wrap">
+        <div className="min-w-0">
           <h3 className="card-title">Project passport</h3>
           <p className="card-sub">Client, contract, site and dates.</p>
         </div>
@@ -80,7 +80,7 @@ export function PassportCard({
         {project.description && (
           <div className="md:col-span-2">
             <div className="field-label mb-1">Scope / notes</div>
-            <div className="whitespace-pre-line text-[12.5px]">{project.description}</div>
+            <div className="whitespace-pre-line text-[12.5px] [overflow-wrap:anywhere]">{project.description}</div>
           </div>
         )}
       </div>

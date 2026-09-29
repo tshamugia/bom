@@ -52,7 +52,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
           <span className="muted" style={{ fontSize: 12 }}>{results.length} results</span>
         </div>
         <div className="table-wrap">
-          <table className="tbl">
+          <table className="tbl tbl-cards">
             <thead>
               <tr>
                 <th>SKU</th><th>Description</th><th>Category</th><th>Manufacturer</th>
@@ -62,12 +62,12 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
             <tbody>
               {results.slice(0, MAX_ROWS).map((it) => (
                 <tr key={it.id}>
-                  <td className="mono" style={{ fontSize: 11.5 }}>{it.sku}</td>
-                  <td><div style={{ fontWeight: 500 }}>{it.description}</div></td>
-                  <td className="muted">{it.subcategoryName ?? it.categoryName ?? "—"}</td>
-                  <td>{it.manufacturer}</td>
-                  <td>{it.vendorName ?? "—"}</td>
-                  <td className="muted">{it.unit}</td>
+                  <td className="mono td-full" style={{ fontSize: 11.5 }}>{it.sku}</td>
+                  <td className="td-main"><div style={{ fontWeight: 500 }}>{it.description}</div></td>
+                  <td className="muted" data-label="Category">{it.subcategoryName ?? it.categoryName ?? "—"}</td>
+                  <td data-label="Manufacturer">{it.manufacturer}</td>
+                  <td data-label="Vendor">{it.vendorName ?? "—"}</td>
+                  <td className="muted" data-label="Unit">{it.unit}</td>
                 </tr>
               ))}
               {results.length === 0 && (

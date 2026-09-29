@@ -7,6 +7,7 @@ import {
   Activity, AlertTriangle, LogOut, Users as UsersIcon,
   User, Sun, Moon, Monitor, Palette, Mail, Menu,
   DraftingCompass, MessageSquare, GitBranch, ShieldCheck, KeyRound,
+  Hourglass, Inbox, Flag,
 } from "lucide-react";
 
 export const Icon = {
@@ -18,6 +19,7 @@ export const Icon = {
   User, Sun, Moon, Monitor, Palette, Mail, Menu,
   Drawing: DraftingCompass, Comment: MessageSquare, Branch: GitBranch,
   Shield: ShieldCheck, Key: KeyRound,
+  Hourglass, Inbox, Flag,
 } as const;
 
 export type IconName = keyof typeof Icon;

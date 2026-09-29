@@ -9,7 +9,16 @@ import type { UserRole } from "@/lib/roles";
 
 type ShellUser = { name: string; email: string; role: UserRole };
 
-export function ShellChrome({ user, children }: { user: ShellUser; children: React.ReactNode }) {
+export function ShellChrome({
+  user,
+  pendingReceipts = 0,
+  children,
+}: {
+  user: ShellUser;
+  /** Drawing revisions issued to this user that they haven't confirmed yet. */
+  pendingReceipts?: number;
+  children: React.ReactNode;
+}) {
   const [navOpen, setNavOpen] = useState(false);
   const pathname = usePathname();
 
@@ -36,7 +45,7 @@ export function ShellChrome({ user, children }: { user: ShellUser; children: Rea
 
   return (
     <div className="app" data-nav-open={navOpen || undefined}>
-      <Sidebar user={user} onNavigate={() => setNavOpen(false)} />
+      <Sidebar user={user} pendingReceipts={pendingReceipts} onNavigate={() => setNavOpen(false)} />
       <button
         type="button"
         className="nav-scrim"
@@ -52,7 +61,12 @@ export function ShellChrome({ user, children }: { user: ShellUser; children: Rea
         />
         <div className="content">{children}</div>
       </div>
-      <MobileTabs onMore={() => setNavOpen((v) => !v)} navOpen={navOpen} />
+      <MobileTabs
+        onMore={() => setNavOpen((v) => !v)}
+        navOpen={navOpen}
+        role={user.role}
+        badge={user.role === "viewer" ? pendingReceipts : 0}
+      />
     </div>
   );
 }

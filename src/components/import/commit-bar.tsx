@@ -18,9 +18,9 @@ export function CommitBar({
   onSubmit: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-4 py-3">
       <DuplicatePolicyRadio value={duplicates} onChange={onDuplicatesChange} disabled={pending} />
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 max-[701px]:ml-auto">
         <Link href="/catalog"><Button variant="outline" disabled={pending}>Cancel</Button></Link>
         <Button onClick={onSubmit} disabled={pending || disabled}>{pending ? "Importing…" : "Import"}</Button>
       </div>

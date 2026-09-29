@@ -48,7 +48,7 @@ export function SearchAddCombo({
   }
 
   return (
-    <div ref={ref} className="search-combo">
+    <div ref={ref} className="search-combo max-[701px]:basis-full">
       <Icon.Search className="ico" />
       <input
         className="input"
@@ -68,11 +68,10 @@ export function SearchAddCombo({
               <div
                 key={it.id}
                 className="dropdown-row"
-                style={{ gridTemplateColumns: "130px 1fr auto" }}
                 onClick={() => !inBom && add(it.id)}
               >
                 <span className="mono" style={{ fontSize: 11.5 }}>{it.sku}</span>
-                <span className="desc">{it.description}</span>
+                <span className="desc max-[701px]:order-last max-[701px]:whitespace-normal">{it.description}</span>
                 {inBom ? (
                   <span className="badge b-green"><Icon.Check className="ico" /> In BOM</span>
                 ) : (

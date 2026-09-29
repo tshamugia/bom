@@ -18,7 +18,7 @@ export default async function PreviewIndex() {
         subtitle={readOnly ? "All BOMs across projects. Pick one to view." : "All BOMs across projects. Pick one to preview and export."}
       />
       <div className="overflow-x-auto rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
-        <table className="w-full text-[12.5px]">
+        <table className="tbl-list w-full text-[12.5px]">
           <thead>
             <tr className="bg-[var(--color-surface-2)] text-[11px] uppercase tracking-wider text-[var(--color-text-3)]">
               <th className="px-4 py-2.5 text-left font-medium">BOM</th>
@@ -41,28 +41,31 @@ export default async function PreviewIndex() {
             ) : (
               boms.map(b => (
                 <tr key={b.id} className="border-b border-[var(--color-line-soft)] last:border-0 hover:bg-[var(--color-surface-2)]">
-                  <td className="px-4 py-2.5">
+                  <td className="l-title px-4 py-2.5">
                     <Link href={`/preview/${b.projectId}/${b.id}`} className="block font-medium">
                       {b.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-2.5">
-                    <Link href={`/projects/${b.projectId}`} className="block">
-                      <div className="font-medium">{b.projectName}</div>
-                      <div className="font-mono text-[11px] text-[var(--color-text-3)]">{b.projectCode}</div>
+                  <td className="l-meta px-4 py-2.5">
+                    <Link href={`/projects/${b.projectId}`} className="block max-[701px]:inline" title={b.projectName}>
+                      <div className="font-medium max-[701px]:hidden">{b.projectName}</div>
+                      <div className="font-mono text-[11px] text-[var(--color-text-3)] max-[701px]:inline max-[701px]:text-[12px]">{b.projectCode}</div>
                     </Link>
                   </td>
-                  <td className="px-4 py-2.5">{b.ownerName ?? "—"}</td>
-                  <td className="px-4 py-2.5">
+                  <td className="l-hide px-4 py-2.5">{b.ownerName ?? "—"}</td>
+                  <td className="l-aside px-4 py-2.5">
                     {b.activeRevisionStatus
                       ? <RevisionStatusBadge status={b.activeRevisionStatus as "draft" | "committed" | "in-progress" | "review" | "approved" | "locked"} />
                       : <Badge tone="gray">—</Badge>}
                   </td>
-                  <td className="px-4 py-2.5 font-mono text-[11px] text-[var(--color-text-3)]">
+                  <td className="l-meta px-4 py-2.5 font-mono text-[11px] text-[var(--color-text-3)]">
                     {b.activeRevisionLetter ? `Rev ${b.activeRevisionLetter}` : "—"}
                   </td>
-                  <td className="px-4 py-2.5 text-right tabular-nums">{b.lineCount}</td>
-                  <td className="px-4 py-2.5 text-right">
+                  <td className="l-meta px-4 py-2.5 text-right tabular-nums">
+                    {b.lineCount}
+                    <span className="min-[701px]:hidden"> line{b.lineCount === 1 ? "" : "s"}</span>
+                  </td>
+                  <td className="l-end px-4 py-2.5 text-right">
                     <Link href={`/preview/${b.projectId}/${b.id}`}>
                       <Button variant="ghost" size="sm"><Icon.Eye size={14} className="mr-1" /> Preview</Button>
                     </Link>

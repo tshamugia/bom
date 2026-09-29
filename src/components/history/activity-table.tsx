@@ -129,7 +129,7 @@ export function ActivityTable({ rows, readOnly = false }: { rows: ActivityRow[];
   return (
     <div className="card">
       <div className="table-wrap">
-        <table className="tbl">
+        <table className="tbl tbl-list">
           <thead>
             <tr>
               <th>When</th>
@@ -153,15 +153,15 @@ export function ActivityTable({ rows, readOnly = false }: { rows: ActivityRow[];
               const href = refHref(r.refType, r.refId, r.payload as Record<string, unknown> | null | undefined, readOnly);
               return (
                 <tr key={r.id}>
-                  <td className="muted" style={{ verticalAlign: "top", whiteSpace: "nowrap" }}>
+                  <td className="muted l-meta" style={{ verticalAlign: "top", whiteSpace: "nowrap" }}>
                     {formatDateTime(r.createdAt)}
                   </td>
-                  <td style={{ verticalAlign: "top" }}>{r.actorName ?? "system"}</td>
-                  <td style={{ verticalAlign: "top" }}>
+                  <td className="l-meta" style={{ verticalAlign: "top" }}>{r.actorName ?? "system"}</td>
+                  <td className="l-aside" style={{ verticalAlign: "top" }}>
                     <Badge tone={meta.tone}>{meta.label}</Badge>
                   </td>
-                  <td style={{ verticalAlign: "top" }}>{r.summary}</td>
-                  <td style={{ verticalAlign: "top", textAlign: "right" }}>
+                  <td className="l-title max-[701px]:text-[13px]! max-[701px]:[overflow-wrap:anywhere]" style={{ verticalAlign: "top" }}>{r.summary}</td>
+                  <td className={href ? "l-meta" : "l-hide"} style={{ verticalAlign: "top", textAlign: "right" }}>
                     {href && (
                       r.refType === "export" ? (
                         <a href={href} target="_blank" rel="noopener noreferrer">Open</a>

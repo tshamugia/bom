@@ -8,7 +8,7 @@ export function HistoryTabs({ active, query }: { active: HistoryTab; query: stri
     { id: "activity", label: "Activity" },
   ];
   return (
-    <div className="tabs">
+    <div className="tabs tabs-scroll">
       {tabs.map(t => {
         const params = new URLSearchParams(query);
         params.set("tab", t.id);

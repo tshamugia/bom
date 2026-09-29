@@ -9,7 +9,7 @@ export function DryRunCounts({ result }: { result: DryRunResult }) {
     { label: "Errors", value: counts.errored },
   ];
   return (
-    <div className="grid grid-cols-4 gap-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
+    <div className="grid grid-cols-4 gap-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-4 max-[701px]:grid-cols-2">
       {items.map(i => (
         <div key={i.label}>
           <div className="text-[11px] uppercase tracking-wider text-[var(--color-text-3)]">{i.label}</div>

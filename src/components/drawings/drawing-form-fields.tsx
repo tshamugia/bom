@@ -19,7 +19,7 @@ export type DrawingFormValue = {
 };
 
 export const SELECT_CLASS =
-  "h-9 w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 text-[13px]";
+  "h-9 w-full min-w-0 rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 text-[13px]";
 export const TEXTAREA_CLASS =
   "min-h-[72px] w-full resize-y rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] p-2 text-[13px]";
 
@@ -65,7 +65,7 @@ export function DrawingFormFields({
           ))}
         </select>
       </div>
-      <div className="grid grid-cols-[140px_1fr] gap-3">
+      <div className="grid grid-cols-[140px_1fr] gap-3 max-[480px]:grid-cols-1">
         <div className="grid gap-1.5">
           <Label htmlFor={id("code")}>Code</Label>
           <Input id={id("code")} value={value.code} maxLength={64} placeholder="e.g. ELV-101" onChange={e => set("code", e.target.value)} />

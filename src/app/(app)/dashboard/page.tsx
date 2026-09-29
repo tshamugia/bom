@@ -19,6 +19,8 @@ import { roundHours } from "@/lib/drawing-meta";
 import { formatDate } from "@/lib/format";
 import { canEdit } from "@/lib/roles";
 import { requireSession } from "@/server/auth-context";
+import { getAwaitingSince, getStatusFeed } from "@/server/queries/status-overview";
+import { ViewerOverview } from "@/components/overview/viewer-overview";
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return <h2 className="mb-2 text-[15px] font-semibold tracking-tight">{children}</h2>;
@@ -45,6 +47,30 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const [session, data] = await Promise.all([requireSession(), getDashboardData(sp.project)]);
   const readOnly = !canEdit(session.user);
   const { today, project, projectOptions, stats, projects, deadlines, drawingData, summary: s } = data;
+
+  // Viewers (site managers, PMs) get a status page instead of the working dashboard:
+  // what was sent, what is waiting for approval and how far the drawings are.
+  if (readOnly) {
+    const [feed, awaitingSince] = await Promise.all([
+      getStatusFeed({ projectId: project?.id }),
+      getAwaitingSince(drawingData.drawings.filter(d => d.status === "awaiting-approval").map(d => d.id)),
+    ]);
+    return (
+      <ViewerOverview
+        userId={session.user.id}
+        userName={session.user.name ?? ""}
+        today={today}
+        project={project}
+        projectOptions={projectOptions}
+        drawings={drawingData.drawings}
+        summary={s}
+        deadlines={deadlines}
+        feed={feed}
+        awaitingSince={awaitingSince}
+      />
+    );
+  }
+
   const activity = await getRecentActivity(8, project?.id);
   const t = s.totals;
   const { upcoming: upcomingDates, overdue: overdueDates } = countDeadlines(deadlines, today);
@@ -66,7 +92,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             <a href={`/reports/dashboard${qs}`} target="_blank" rel="noopener" className="btn">
               <Icon.Print className="ico" /> PDF
             </a>
-            {!readOnly && <NewProjectDialog />}
+            <NewProjectDialog />
           </>
         }
       />
@@ -125,7 +151,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <div className="dash-main">
           <ProjectsTable rows={projects} />
           <div style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>
-            <DeadlinesCard deadlines={deadlines} today={today} readOnly={readOnly} />
+            <DeadlinesCard deadlines={deadlines} today={today} />
             <ActivityTimeline items={activity as React.ComponentProps<typeof ActivityTimeline>["items"]} />
           </div>
         </div>
@@ -183,7 +209,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <div className="card">
             <div className="muted" style={{ padding: "24px 16px", textAlign: "center", fontSize: 12.5 }}>
               No drawings {project ? `in ${project.code}` : "yet"}
-              {!readOnly && <> — add them from the <Link href="/drawings" className="underline">drawing register</Link></>}.
+              {" "}— add them from the <Link href="/drawings" className="underline">drawing register</Link>.
             </div>
           </div>
         )}

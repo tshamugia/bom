@@ -27,7 +27,7 @@ const COPY: Record<Kind, { title: string; body: string; href: string; cta: strin
 export function PreviewEmpty({ kind }: { kind: Kind }) {
   const c = COPY[kind];
   return (
-    <div className="grid place-items-center rounded-lg border border-dashed border-[var(--color-line)] bg-[var(--color-surface)] px-6 py-20 text-center">
+    <div className="grid place-items-center rounded-lg border border-dashed border-[var(--color-line)] bg-[var(--color-surface)] px-6 py-20 text-center max-[701px]:py-12">
       <div className="mb-3 grid h-11 w-11 place-items-center rounded-full bg-[var(--color-surface-2)] text-[var(--color-text-3)]">
         <Icon.Doc size={20} />
       </div>

@@ -42,7 +42,7 @@ export function BomList({
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-[var(--color-line)] bg-[var(--color-surface)] p-10 text-center">
+      <div className="rounded-lg border border-dashed border-[var(--color-line)] bg-[var(--color-surface)] p-10 text-center max-[701px]:p-6">
         <div className="text-[14px] font-medium">No BOMs yet</div>
         {!readOnly && (
           <div className="mt-1 text-[12.5px] text-[var(--color-text-3)]">
@@ -55,7 +55,7 @@ export function BomList({
 
   return (
     <div className="overflow-x-auto rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
-      <table className="w-full text-[12.5px]">
+      <table className="tbl-list w-full text-[12.5px]">
         <thead>
           <tr className="bg-[var(--color-surface-2)] text-[11px] uppercase tracking-wider text-[var(--color-text-3)]">
             <th className="px-4 py-2.5 text-left font-medium">BOM</th>
@@ -70,32 +70,35 @@ export function BomList({
         <tbody>
           {rows.map(b => (
             <tr key={b.id} className="border-b border-[var(--color-line-soft)] last:border-0 hover:bg-[var(--color-surface-2)]">
-              <td className="px-4 py-2.5">
+              <td className="l-title px-4 py-2.5">
                 <Link href={openHref(b.id)} className="block font-medium">
                   {b.name}
                 </Link>
               </td>
-              <td className="px-4 py-2.5">{b.ownerName ?? "—"}</td>
-              <td className="px-4 py-2.5">
+              <td className="l-hide px-4 py-2.5">{b.ownerName ?? "—"}</td>
+              <td className={`${b.lastModifiedByName ? "l-meta" : "l-hide"} px-4 py-2.5`}>
                 {b.lastModifiedByName ? (
-                  <div className="flex flex-col">
+                  <div className="flex flex-col max-[701px]:inline-flex max-[701px]:flex-row max-[701px]:flex-wrap max-[701px]:gap-x-1">
                     <span>{b.lastModifiedByName}</span>
-                    <span className="text-[11px] text-[var(--color-text-3)]">
+                    <span className="text-[11px] text-[var(--color-text-3)] max-[701px]:text-[12px]">
                       {formatDateTime(b.updatedAt)}
                     </span>
                   </div>
                 ) : "—"}
               </td>
-              <td className="px-4 py-2.5">
+              <td className="l-aside px-4 py-2.5">
                 {b.activeRevisionStatus
                   ? <RevisionStatusBadge status={b.activeRevisionStatus} />
                   : <Badge tone="gray">—</Badge>}
               </td>
-              <td className="px-4 py-2.5 font-mono text-[11px] text-[var(--color-text-3)]">
+              <td className="l-meta px-4 py-2.5 font-mono text-[11px] text-[var(--color-text-3)]">
                 {b.activeRevisionLetter ? `Rev ${b.activeRevisionLetter}` : "—"}
               </td>
-              <td className="px-4 py-2.5 text-right tabular-nums">{b.lineCount}</td>
-              <td className="px-4 py-2.5 text-right">
+              <td className="l-meta px-4 py-2.5 text-right tabular-nums">
+                {b.lineCount}
+                <span className="min-[701px]:hidden"> line{b.lineCount === 1 ? "" : "s"}</span>
+              </td>
+              <td className="l-end px-4 py-2.5 text-right">
                 <div className="flex items-center justify-end gap-1.5">
                   <Link href={openHref(b.id)}>
                     <Button variant="ghost" size="sm"><Icon.Box size={14} className="mr-1" /> Open</Button>

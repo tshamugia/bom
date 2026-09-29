@@ -26,7 +26,7 @@ export function ProjectsTable({ rows }: { rows: Row[] }) {
         <div className="muted" style={{ padding: "20px 16px", fontSize: 12.5, textAlign: "center" }}>No projects yet.</div>
       )}
       <div className="table-wrap" style={rows.length ? undefined : { display: "none" }}>
-        <table className="tbl">
+        <table className="tbl tbl-list">
           <thead>
             <tr>
               <th>Project</th>
@@ -42,7 +42,7 @@ export function ProjectsTable({ rows }: { rows: Row[] }) {
           <tbody>
             {rows.map((p) => (
               <tr key={p.id} style={{ cursor: "pointer" }}>
-                <td>
+                <td className="l-title">
                   <Link href={`/projects/${p.id}`} style={{ display: "flex", alignItems: "center", gap: 10, color: "inherit" }}>
                     <Icon.Folder className="ico" />
                     <div>
@@ -53,14 +53,16 @@ export function ProjectsTable({ rows }: { rows: Row[] }) {
                     </div>
                   </Link>
                 </td>
-                <td>{p.ownerName ?? "—"}</td>
-                <td className="num tabular">{p.bomCount}</td>
-                <td className="num tabular">{p.lineCount}</td>
-                <td className="muted">{p.revLetter ? `Rev ${p.revLetter}` : "—"}</td>
-                <td className="muted">{relativeTime(p.updatedAt)}</td>
-                <td className="muted" style={{ whiteSpace: "nowrap" }}>{p.targetDate ? formatDate(p.targetDate) : "—"}</td>
-                <td>
-                  <Link href={`/projects/${p.id}`} className="btn btn-icon btn-ghost"><Icon.Chevron className="ico" /></Link>
+                <td className={p.ownerName ? "l-meta" : "l-hide"}>{p.ownerName ?? "—"}</td>
+                <td className="num tabular l-meta">{p.bomCount}<span className="min-[701px]:hidden"> BOM{p.bomCount === 1 ? "" : "s"}</span></td>
+                <td className="num tabular l-hide">{p.lineCount}</td>
+                <td className="muted l-hide">{p.revLetter ? `Rev ${p.revLetter}` : "—"}</td>
+                <td className="muted l-meta">{relativeTime(p.updatedAt)}</td>
+                <td className={`muted ${p.targetDate ? "l-meta" : "l-hide"}`} style={{ whiteSpace: "nowrap" }}>
+                  {p.targetDate ? <><span className="min-[701px]:hidden">Due </span>{formatDate(p.targetDate)}</> : "—"}
+                </td>
+                <td className="l-aside">
+                  <Link href={`/projects/${p.id}`} className="btn btn-icon btn-ghost" aria-label={`Open ${p.name}`}><Icon.Chevron className="ico" /></Link>
                 </td>
               </tr>
             ))}

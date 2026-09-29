@@ -33,13 +33,13 @@ export function RevisionHeader(p: RevisionHeaderProps) {
   const isDraft = r.status === "draft";
 
   return (
-    <div className="mb-5 flex items-start justify-between gap-4">
-      <div>
-        <div className="flex items-center gap-2.5">
+    <div className="mb-5 flex items-start justify-between gap-4 max-[701px]:flex-col max-[701px]:gap-3">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
           <InlineProjectName key={p.projectName} projectId={p.projectId} initialName={p.projectName} />
           <span className="rounded-full bg-[var(--color-surface-3)] px-2 py-px font-mono text-[11px] text-[var(--color-text-2)]">{p.projectCode}</span>
         </div>
-        <div className="mt-1 flex items-center gap-2.5">
+        <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1">
           {p.bomsInProject ? (
             <BomSwitcher
               projectId={p.projectId}
@@ -58,7 +58,7 @@ export function RevisionHeader(p: RevisionHeaderProps) {
           <RevisionStatusBadge status={r.status} />
           <Badge tone="gray">Rev {r.letter}</Badge>
         </div>
-        <div className="mt-1 text-[12px] text-[var(--color-text-3)]">
+        <div className="mt-1 text-[12px] text-[var(--color-text-3)] [overflow-wrap:anywhere]">
           {isDraft ? (
             <>
               Owner: {r.ownerName ?? "—"}
@@ -73,7 +73,7 @@ export function RevisionHeader(p: RevisionHeaderProps) {
           )}
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Link href={`/projects/${p.projectId}/history`} className="text-[12px] text-[var(--color-text-2)] hover:underline">History</Link>
         {isDraft ? (
           <>

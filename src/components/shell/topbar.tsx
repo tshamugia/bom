@@ -13,7 +13,7 @@ const CRUMBS: Record<string, [string, string]> = {
   "/history": ["Workspace", "History"],
   "/catalog": ["Master Data", "Item Catalog"],
   "/vendors": ["Master Data", "Vendors"],
-  "/approvals": ["Process", "Approvals"],
+  "/approvals": ["Process", "Sent"],
   "/users": ["Admin", "Users"],
   "/audit": ["Admin", "Audit log"],
   "/settings": ["Account", "Settings"],
@@ -31,7 +31,7 @@ export function Topbar({
   const path = usePathname();
   const key = Object.keys(CRUMBS).find(k => path === k || path.startsWith(`${k}/`)) ?? "/projects";
   const [section, crumb] = CRUMBS[key];
-  const here = readOnly && key === "/preview" ? "BOMs" : crumb;
+  const here = !readOnly ? crumb : key === "/dashboard" ? "Overview" : key === "/preview" ? "BOMs" : crumb;
 
   return (
     <header className="topbar">
@@ -52,7 +52,7 @@ export function Topbar({
       </nav>
 
       <div className="tb-actions">
-        <CommandPalette />
+        <CommandPalette viewer={readOnly} />
       </div>
     </header>
   );

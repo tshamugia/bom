@@ -20,7 +20,7 @@ export function ApproversCard({ steps }: { steps: Step[] | null }) {
               <div className="avatar" style={{ width: 24, height: 24, fontSize: 10 }}>
                 {(s.assigneeName ?? "?").split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase()}
               </div>
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div>{s.assigneeName ?? "Unassigned"}</div>
                 <div className="text-[11px] text-[var(--color-text-3)]">{s.role}</div>
               </div>

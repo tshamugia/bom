@@ -15,7 +15,7 @@ export default async function ImportPage({ searchParams }: { searchParams: Promi
     <PageHead
       title="Import catalog"
       subtitle="Upload an XLSX following the template. Review the dry-run before committing."
-      actions={<Link href="/catalog"><Button variant="outline">Back to catalog</Button></Link>}
+      actions={<Link href="/catalog"><Button variant="outline" className="w-full">Back to catalog</Button></Link>}
     />
   );
 

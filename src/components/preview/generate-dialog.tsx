@@ -47,7 +47,7 @@ export function GenerateDialog({
       <DialogContent>
         <DialogHeader>
           <div className="flex items-center gap-2.5">
-            <div className="grid h-8 w-8 place-items-center rounded-lg bg-[var(--color-accent-soft)] text-[var(--color-accent)]">
+            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[var(--color-accent-soft)] text-[var(--color-accent)]">
               <Icon.Sheet size={16} />
             </div>
             <div>
@@ -56,9 +56,9 @@ export function GenerateDialog({
             </div>
           </div>
         </DialogHeader>
-        <dl className="grid grid-cols-[140px_1fr] gap-y-2 gap-x-4 p-1 text-[12.5px]">
+        <dl className="grid grid-cols-[140px_minmax(0,1fr)] gap-y-2 gap-x-4 p-1 text-[12.5px] max-[480px]:grid-cols-[104px_minmax(0,1fr)] max-[480px]:gap-x-3">
           <dt className="text-[var(--color-text-3)]">File name</dt>
-          <dd className="m-0 font-mono text-[12px]">{fileName}</dd>
+          <dd className="m-0 font-mono text-[12px] [overflow-wrap:anywhere]">{fileName}</dd>
           <dt className="text-[var(--color-text-3)]">Project</dt>
           <dd className="m-0">{projectCode}</dd>
           <dt className="text-[var(--color-text-3)]">Format</dt>

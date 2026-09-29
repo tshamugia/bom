@@ -30,7 +30,7 @@ function EventItem({ e, revisionLabel }: { e: DrawingEventRow; revisionLabel: st
           <div className="tl-dot" />
           <div className="tl-title">Details updated</div>
           {meta}
-          <div className="mt-1 whitespace-pre-line text-[12.5px] text-[var(--color-text-2)]">{e.body}</div>
+          <div className="mt-1 whitespace-pre-line text-[12.5px] text-[var(--color-text-2)] [overflow-wrap:anywhere]">{e.body}</div>
         </div>
       );
     case "status":
@@ -45,7 +45,7 @@ function EventItem({ e, revisionLabel }: { e: DrawingEventRow; revisionLabel: st
             {e.toStatus && <DrawingStatusBadge status={e.toStatus} />}
           </div>
           {e.body && (
-            <div className="mt-1.5 whitespace-pre-line rounded-md bg-[var(--color-surface-2)] px-2.5 py-1.5 text-[12.5px]">{e.body}</div>
+            <div className="mt-1.5 whitespace-pre-line rounded-md bg-[var(--color-surface-2)] px-2.5 py-1.5 text-[12.5px] [overflow-wrap:anywhere]">{e.body}</div>
           )}
         </div>
       );
@@ -55,7 +55,7 @@ function EventItem({ e, revisionLabel }: { e: DrawingEventRow; revisionLabel: st
           <div className="tl-dot" />
           <div className="tl-title">Comment</div>
           {meta}
-          <div className="mt-1.5 whitespace-pre-line rounded-md bg-[var(--color-surface-2)] px-2.5 py-1.5 text-[12.5px]">{e.body}</div>
+          <div className="mt-1.5 whitespace-pre-line rounded-md bg-[var(--color-surface-2)] px-2.5 py-1.5 text-[12.5px] [overflow-wrap:anywhere]">{e.body}</div>
         </div>
       );
   }
@@ -76,7 +76,7 @@ function RevisionCard({
   return (
     <>
       <div className="grid gap-1 px-4 pt-3 text-[12.5px]">
-        <div className="italic text-[var(--color-text-2)]">&ldquo;{rev.commitMessage}&rdquo;</div>
+        <div className="italic text-[var(--color-text-2)] [overflow-wrap:anywhere]">&ldquo;{rev.commitMessage}&rdquo;</div>
         <div className="muted">
           Created by {rev.createdByName ?? "—"} · {formatDateTime(rev.createdAt)}
           {rev.reviewedAt && <> · Approved internally by {rev.reviewedByName ?? "—"} · {formatDateTime(rev.reviewedAt)}</>}

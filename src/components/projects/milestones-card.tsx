@@ -103,7 +103,7 @@ function MilestoneRow({ m, today, readOnly }: { m: ProjectMilestoneRow; today: s
         />
       )}
       <div className="min-w-0 flex-1">
-        <div className="text-[13px]" style={done ? { textDecoration: "line-through", color: "var(--text-3)" } : undefined}>{m.name}</div>
+        <div className="text-[13px] [overflow-wrap:anywhere]" style={done ? { textDecoration: "line-through", color: "var(--text-3)" } : undefined}>{m.name}</div>
         <div className="muted text-[11.5px]">{formatDate(m.dueDate)}</div>
       </div>
       <DueBadge date={m.dueDate} today={today} done={done} />
@@ -161,8 +161,8 @@ export function MilestonesCard({
 
   return (
     <div className="card" style={{ minWidth: 0 }}>
-      <div className="card-head">
-        <div>
+      <div className="card-head max-[701px]:flex-wrap">
+        <div className="min-w-0">
           <h3 className="card-title">Key dates</h3>
           <p className="card-sub">Start, completion and the milestones in between.</p>
         </div>
@@ -181,7 +181,7 @@ export function MilestonesCard({
         </div>
         <div>
           <div className="field-label">Completion</div>
-          <div className="mt-0.5 flex items-center gap-2">
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
             {targetDate ? (
               <>
                 {formatDate(targetDate)} <DueBadge date={targetDate} today={today} done={false} />

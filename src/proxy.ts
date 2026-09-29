@@ -1,19 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { canEdit } from "@/lib/roles";
+import { viewerRedirect } from "@/lib/viewer-routes";
 
 const PROTECTED = ["/dashboard", "/builder", "/preview", "/catalog", "/vendors", "/approvals", "/history", "/users", "/audit", "/projects", "/settings", "/drawings", "/reports"];
 
-/** Editing surfaces a viewer is sent away from, to the read-only page that shows the same data. */
-function viewerRedirect(path: string): string | null {
-  if (path === "/builder" || path.startsWith("/builder/")) return `/preview${path.slice("/builder".length)}`;
-  if (path === "/catalog/import" || path.startsWith("/catalog/import/")) return "/catalog";
-  return null;
-}
+const under = (path: string, base: string) => path === base || path.startsWith(`${base}/`);
 
 export async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
-  if (!PROTECTED.some(p => path === p || path.startsWith(`${p}/`))) {
+  if (!PROTECTED.some(p => under(path, p))) {
     return NextResponse.next();
   }
 

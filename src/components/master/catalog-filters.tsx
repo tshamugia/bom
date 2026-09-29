@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Icon } from "@/components/icons";
 
@@ -26,14 +27,29 @@ export function CatalogTabs({
 }) {
   const { params, go } = useCatalogNav();
   const activeCat = params.get("cat") ?? "all";
+  const activeRef = useRef<HTMLButtonElement>(null);
+
+  // On phones the tabs scroll sideways; keep the selected one in view.
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [activeCat]);
 
   return (
-    <div className="tabs">
-      <button className={`tab ${activeCat === "all" ? "active" : ""}`} onClick={() => go({ cat: undefined })}>
+    <div className="tabs tabs-scroll">
+      <button
+        ref={activeCat === "all" ? activeRef : undefined}
+        className={`tab ${activeCat === "all" ? "active" : ""}`}
+        onClick={() => go({ cat: undefined })}
+      >
         All <span className="muted">· {totalCount}</span>
       </button>
       {categories.map((c) => (
-        <button key={c.id} className={`tab ${activeCat === c.id ? "active" : ""}`} onClick={() => go({ cat: c.id })}>
+        <button
+          key={c.id}
+          ref={activeCat === c.id ? activeRef : undefined}
+          className={`tab ${activeCat === c.id ? "active" : ""}`}
+          onClick={() => go({ cat: c.id })}
+        >
           {c.name} <span className="muted">· {c.itemCount}</span>
         </button>
       ))}
@@ -45,7 +61,7 @@ export function CatalogSearch() {
   const { params, go } = useCatalogNav();
   const search = params.get("q") ?? "";
   return (
-    <div className="search-combo" style={{ flex: 1, maxWidth: 360, position: "relative" }}>
+    <div className="search-combo" style={{ flex: 1, minWidth: 0, maxWidth: 360, position: "relative" }}>
       <Icon.Search className="ico" />
       <input
         className="input"

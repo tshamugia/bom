@@ -87,7 +87,7 @@ function EditDisciplinesDialog({
             {options.map(d => {
               const on = picked.has(d.id);
               return (
-                <div key={d.id} className="grid grid-cols-[1fr_220px] items-center gap-3 rounded px-2 py-1.5 hover:bg-[var(--color-surface-2)]">
+                <div key={d.id} className="grid grid-cols-[1fr_220px] items-center gap-3 rounded px-2 py-1.5 hover:bg-[var(--color-surface-2)] max-[480px]:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] max-[480px]:gap-2">
                   <label className="flex cursor-pointer items-center gap-2 text-[13px]">
                     <input type="checkbox" checked={on} onChange={e => toggle(d.id, e.target.checked)} />
                     {d.name}
@@ -138,8 +138,8 @@ export function DisciplinesCard({
 
   return (
     <div className="card" style={{ minWidth: 0 }}>
-      <div className="card-head">
-        <div>
+      <div className="card-head max-[701px]:flex-wrap">
+        <div className="min-w-0">
           <h3 className="card-title">Disciplines</h3>
           <p className="card-sub">Scope of the project, who leads each discipline, and drawing progress.</p>
         </div>
@@ -154,7 +154,7 @@ export function DisciplinesCard({
         </div>
       ) : (
         <div className="table-wrap">
-          <table className="tbl">
+          <table className="tbl tbl-list">
             <thead>
               <tr>
                 <th>Discipline</th>
@@ -173,14 +173,23 @@ export function DisciplinesCard({
                 const pct = st.total ? Math.round((st.closed / st.total) * 100) : 0;
                 return (
                   <tr key={row.id}>
-                    <td>
+                    <td className="l-title">
                       <span style={{ fontWeight: 500 }}>{row.name}</span>
                       {!row.inScope && <div className="muted" style={{ fontSize: 11 }}>has drawings, not in scope</div>}
                     </td>
-                    <td>{row.lead ?? <span className="muted">—</span>}</td>
-                    <td className="num">{st.total}</td>
-                    <td className="num" style={st.overdue ? { color: "var(--red)", fontWeight: 600 } : undefined}>{st.overdue}</td>
-                    <td>
+                    <td className={row.lead ? "l-meta" : "l-hide"}>
+                      <span className="min-[701px]:hidden">Lead </span>
+                      {row.lead ?? <span className="muted">—</span>}
+                    </td>
+                    <td className="num l-meta">
+                      {st.total}
+                      <span className="min-[701px]:hidden"> drawing{st.total === 1 ? "" : "s"}</span>
+                    </td>
+                    <td className={`num ${st.overdue ? "l-meta" : "l-hide"}`} style={st.overdue ? { color: "var(--red)", fontWeight: 600 } : undefined}>
+                      {st.overdue}
+                      <span className="min-[701px]:hidden"> overdue</span>
+                    </td>
+                    <td className={st.total ? "l-line" : "l-hide"}>
                       {st.total ? (
                         <div className="flex items-center gap-2">
                           <div style={{ flex: 1 }}>

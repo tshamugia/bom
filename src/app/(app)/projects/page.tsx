@@ -19,7 +19,7 @@ export default async function ProjectsListPage() {
         actions={readOnly ? undefined : <NewProjectDialog />}
       />
       <div className="overflow-x-auto rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
-        <table className="w-full text-[12.5px]">
+        <table className="tbl-list w-full text-[12.5px]">
           <thead>
             <tr className="bg-[var(--color-surface-2)] text-[11px] uppercase tracking-wider text-[var(--color-text-3)]">
               <th className="px-4 py-2.5 text-left font-medium">Project</th>
@@ -41,18 +41,24 @@ export default async function ProjectsListPage() {
             ) : (
               list.map(p => (
                 <tr key={p.id} className="border-b border-[var(--color-line-soft)] last:border-0 hover:bg-[var(--color-surface-2)]">
-                  <td className="px-4 py-2.5">
+                  <td className="l-title px-4 py-2.5">
                     <Link href={`/projects/${p.id}`} className="block">
                       <div className="font-medium">{p.name}</div>
                       <div className="font-mono text-[11px] text-[var(--color-text-3)]">{p.code}</div>
                     </Link>
                   </td>
-                  <td className="px-4 py-2.5">{p.clientName ?? <span className="text-[var(--color-text-3)]">—</span>}</td>
-                  <td className="px-4 py-2.5">{p.ownerName ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-right tabular-nums">{p.bomCount}</td>
-                  <td className="whitespace-nowrap px-4 py-2.5 text-[var(--color-text-3)]">{p.targetDate ? formatDate(p.targetDate) : "—"}</td>
-                  <td className="px-4 py-2.5 text-right tabular-nums">{p.lineCount}</td>
-                  <td className="px-4 py-2.5 text-right">
+                  <td className={`px-4 py-2.5 ${p.clientName ? "l-meta" : "l-hide"}`}>
+                    {p.clientName ?? <span className="text-[var(--color-text-3)]">—</span>}
+                  </td>
+                  <td className={`px-4 py-2.5 ${p.ownerName ? "l-meta" : "l-hide"}`}>{p.ownerName ?? "—"}</td>
+                  <td className="l-meta px-4 py-2.5 text-right tabular-nums">
+                    {p.bomCount}<span className="min-[701px]:hidden"> BOM{p.bomCount === 1 ? "" : "s"}</span>
+                  </td>
+                  <td className={`whitespace-nowrap px-4 py-2.5 text-[var(--color-text-3)] ${p.targetDate ? "l-meta" : "l-hide"}`}>
+                    {p.targetDate ? <><span className="min-[701px]:hidden">Due </span>{formatDate(p.targetDate)}</> : "—"}
+                  </td>
+                  <td className="l-hide px-4 py-2.5 text-right tabular-nums">{p.lineCount}</td>
+                  <td className="l-aside px-4 py-2.5 text-right">
                     <ProjectRowActions id={p.id} code={p.code} canDelete={admin} readOnly={readOnly} />
                   </td>
                 </tr>

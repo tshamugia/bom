@@ -61,7 +61,7 @@ export default async function DrawingsPage({ searchParams }: { searchParams: Pro
         actions={
           <>
             <Link href={sp.project ? `/dashboard?project=${sp.project}` : "/dashboard"} className="btn">
-              <Icon.Activity className="ico" /> Dashboard
+              <Icon.Activity className="ico" /> {readOnly ? "Overview" : "Dashboard"}
             </Link>
             {!readOnly && (
               <NewDrawingDialog
@@ -80,13 +80,14 @@ export default async function DrawingsPage({ searchParams }: { searchParams: Pro
 
       <div className="card">
         <div className="card-head" style={{ flexWrap: "wrap" }}>
-          <DrawingFilterBar projects={projects} disciplines={disciplines} users={users} />
+          <DrawingFilterBar projects={projects} disciplines={disciplines} users={engineers} viewer={readOnly} />
           <div className="spacer" />
           <span className="muted" style={{ fontSize: 12 }}>{visible.length} drawing{visible.length === 1 ? "" : "s"}</span>
         </div>
         <DrawingsTable
           rows={visible}
           today={today}
+          showHours={!readOnly}
           emptyText={rows.length === 0 && !sp.q && !sp.project && !sp.discipline && !sp.owner && !sp.received
             ? readOnly ? "No drawings yet." : "No drawings yet — click “New drawing” to add the first one."
             : "No drawings match these filters."}

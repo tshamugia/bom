@@ -18,8 +18,7 @@ export function StatusBars({ counts, total }: { counts: StatusCounts; total: num
         return (
           <div
             key={s}
-            className="grid items-center gap-3"
-            style={{ gridTemplateColumns: "minmax(150px, 190px) 1fr 64px" }}
+            className="grid grid-cols-[minmax(0,auto)_minmax(40px,1fr)_60px] items-center gap-3 min-[481px]:grid-cols-[minmax(150px,190px)_1fr_64px]"
             title={`${DRAWING_STATUS_LABEL[s]}: ${n} drawing${n === 1 ? "" : "s"} (${share}%)`}
           >
             <div><DrawingStatusBadge status={s} /></div>
@@ -55,7 +54,7 @@ function Empty({ cols, text }: { cols: number; text: string }) {
 
 function DrawingCell({ d }: { d: { id: string; code: string; name: string; projectCode: string; revisionNumber: number } }) {
   return (
-    <td>
+    <td className="l-title">
       <Link href={`/drawings/${d.id}`} style={{ color: "inherit" }}>
         <span className="mono" style={{ fontWeight: 600 }}>{d.code}</span>{" "}
         <span className="mono muted">{formatDrawingRevision(d.revisionNumber)}</span>
@@ -68,7 +67,7 @@ function DrawingCell({ d }: { d: { id: string; code: string; name: string; proje
 export function ProjectTable({ groups, projectHref }: { groups: GroupSummary[]; projectHref: (id: string) => string }) {
   return (
     <div className="table-wrap">
-      <table className="tbl">
+      <table className="tbl tbl-cards cards-4">
         <thead>
           <tr>
             <th>Project</th>
@@ -89,23 +88,23 @@ export function ProjectTable({ groups, projectHref }: { groups: GroupSummary[]; 
             const pct = g.total ? Math.round((g.closed / g.total) * 100) : 0;
             return (
               <tr key={g.key}>
-                <td>
+                <td className="td-main">
                   <Link href={projectHref(g.key)} style={{ color: "inherit" }}>
                     <span className="mono" style={{ fontWeight: 600 }}>{g.label}</span>
                     {g.sublabel && <div className="muted" style={{ fontSize: 11.5 }}>{g.sublabel}</div>}
                   </Link>
                 </td>
-                <td className="num">{g.total}</td>
-                <td className="num">{g.byStatus["in-progress"] + g.byStatus.paused}</td>
-                <td className="num">{g.byStatus["need-approval"]}</td>
-                <td className="num">{g.byStatus["awaiting-approval"]}</td>
-                <td className="num">{g.closed}</td>
-                <td className="num" style={g.overdue ? { color: "var(--red)", fontWeight: 600 } : undefined}>{g.overdue}</td>
-                <td className="num">{g.openRemarks}</td>
-                <td className="num" style={{ whiteSpace: "nowrap" }}>
+                <td className="num" data-label="Drawings">{g.total}</td>
+                <td className="num" data-label="In progress">{g.byStatus["in-progress"] + g.byStatus.paused}</td>
+                <td className="num" data-label="Internal">{g.byStatus["need-approval"]}</td>
+                <td className="num" data-label="Awaiting">{g.byStatus["awaiting-approval"]}</td>
+                <td className="num" data-label="Approved">{g.closed}</td>
+                <td className="num" data-label="Overdue" style={g.overdue ? { color: "var(--red)", fontWeight: 600 } : undefined}>{g.overdue}</td>
+                <td className="num" data-label="Remarks">{g.openRemarks}</td>
+                <td className="num" data-label="Hours" style={{ whiteSpace: "nowrap" }}>
                   {roundHours(g.loggedHours)}<span className="muted"> / {roundHours(g.estimatedHours)}</span>
                 </td>
-                <td>
+                <td className="td-full">
                   <div className="flex items-center gap-2">
                     <div style={{ flex: 1 }}>
                       <Meter value={g.closed} max={g.total} label={`${g.label}: ${g.closed} of ${g.total} drawings approved (${pct}%)`} />
@@ -125,7 +124,7 @@ export function ProjectTable({ groups, projectHref }: { groups: GroupSummary[]; 
 export function GroupTable({ groups, title }: { groups: GroupSummary[]; title: string }) {
   return (
     <div className="table-wrap">
-      <table className="tbl">
+      <table className="tbl tbl-cards cards-4">
         <thead>
           <tr>
             <th>{title}</th>
@@ -139,12 +138,13 @@ export function GroupTable({ groups, title }: { groups: GroupSummary[]; title: s
           {groups.length === 0 && <Empty cols={5} text="Nothing to show." />}
           {groups.map(g => (
             <tr key={g.key || "none"}>
-              <td>{g.label}</td>
-              <td className="num">{g.total - g.closed}</td>
-              <td className="num" style={g.overdue ? { color: "var(--red)", fontWeight: 600 } : undefined}>{g.overdue}</td>
-              <td className="num">{g.closed}</td>
+              <td className="td-main">{g.label}</td>
+              <td className="num" data-label="Open">{g.total - g.closed}</td>
+              <td className="num" data-label="Overdue" style={g.overdue ? { color: "var(--red)", fontWeight: 600 } : undefined}>{g.overdue}</td>
+              <td className="num" data-label="Approved">{g.closed}</td>
               <td
                 className="num"
+                data-label="Hours"
                 style={{ whiteSpace: "nowrap", color: g.estimatedHours && g.loggedHours > g.estimatedHours ? "var(--red)" : undefined }}
               >
                 {roundHours(g.loggedHours)} / {roundHours(g.estimatedHours)}
@@ -160,7 +160,7 @@ export function GroupTable({ groups, title }: { groups: GroupSummary[]; title: s
 export function OverdueTable({ rows }: { rows: DrawingSummary["overdue"] }) {
   return (
     <div className="table-wrap" style={{ maxHeight: 360 }}>
-      <table className="tbl">
+      <table className="tbl tbl-list">
         <thead>
           <tr><th>Drawing</th><th>Owner</th><th>Due</th><th className="num">Late</th></tr>
         </thead>
@@ -169,9 +169,9 @@ export function OverdueTable({ rows }: { rows: DrawingSummary["overdue"] }) {
           {rows.map(d => (
             <tr key={d.id}>
               <DrawingCell d={d} />
-              <td>{d.ownerName ?? "—"}</td>
-              <td style={{ whiteSpace: "nowrap" }}>{formatDate(d.dueDate!)}</td>
-              <td className="num" style={{ color: "var(--red)", fontWeight: 600 }}>{d.daysLate}d</td>
+              <td className="l-meta">{d.ownerName ?? "—"}</td>
+              <td className="l-meta" style={{ whiteSpace: "nowrap" }}><span className="min-[701px]:hidden">Due </span>{formatDate(d.dueDate!)}</td>
+              <td className="num l-aside" style={{ color: "var(--red)", fontWeight: 600 }}>{d.daysLate}d<span className="min-[701px]:hidden"> late</span></td>
             </tr>
           ))}
         </tbody>
@@ -183,7 +183,7 @@ export function OverdueTable({ rows }: { rows: DrawingSummary["overdue"] }) {
 export function DueSoonTable({ rows }: { rows: DrawingSummary["dueSoon"] }) {
   return (
     <div className="table-wrap" style={{ maxHeight: 360 }}>
-      <table className="tbl">
+      <table className="tbl tbl-list">
         <thead>
           <tr><th>Drawing</th><th>Status</th><th>Due</th></tr>
         </thead>
@@ -192,10 +192,10 @@ export function DueSoonTable({ rows }: { rows: DrawingSummary["dueSoon"] }) {
           {rows.map(d => (
             <tr key={d.id}>
               <DrawingCell d={d} />
-              <td><DrawingStatusBadge status={d.status} /></td>
-              <td style={{ whiteSpace: "nowrap" }}>
-                {formatDate(d.dueDate!)}
-                <div className="muted" style={{ fontSize: 11 }}>{d.daysLeft === 0 ? "today" : `in ${d.daysLeft}d`}</div>
+              <td className="l-aside"><DrawingStatusBadge status={d.status} /></td>
+              <td className="l-meta" style={{ whiteSpace: "nowrap" }}>
+                <span className="min-[701px]:hidden">Due </span>{formatDate(d.dueDate!)}
+                <div className="muted max-[701px]:ml-1 max-[701px]:inline" style={{ fontSize: 11 }}>{d.daysLeft === 0 ? "today" : `in ${d.daysLeft}d`}</div>
               </td>
             </tr>
           ))}
@@ -208,7 +208,7 @@ export function DueSoonTable({ rows }: { rows: DrawingSummary["dueSoon"] }) {
 export function ReviewQueueTable({ rows }: { rows: DrawingSummary["reviewQueue"] }) {
   return (
     <div className="table-wrap" style={{ maxHeight: 360 }}>
-      <table className="tbl">
+      <table className="tbl tbl-list">
         <thead>
           <tr><th>Drawing</th><th>Approving engineer</th><th className="num">Waiting</th></tr>
         </thead>
@@ -217,9 +217,9 @@ export function ReviewQueueTable({ rows }: { rows: DrawingSummary["reviewQueue"]
           {rows.map(d => (
             <tr key={d.id}>
               <DrawingCell d={d} />
-              <td>{d.reviewerName ?? "—"}</td>
-              <td className="num" style={d.daysWaiting >= 3 ? { color: "var(--red)", fontWeight: 600 } : undefined}>
-                {d.daysWaiting}d
+              <td className="l-meta"><span className="min-[701px]:hidden">With </span>{d.reviewerName ?? "—"}</td>
+              <td className="num l-aside" style={d.daysWaiting >= 3 ? { color: "var(--red)", fontWeight: 600 } : undefined}>
+                {d.daysWaiting}d<span className="min-[701px]:hidden"> waiting</span>
               </td>
             </tr>
           ))}
@@ -232,7 +232,7 @@ export function ReviewQueueTable({ rows }: { rows: DrawingSummary["reviewQueue"]
 export function OverBudgetTable({ rows }: { rows: DrawingSummary["overBudget"] }) {
   return (
     <div className="table-wrap" style={{ maxHeight: 360 }}>
-      <table className="tbl">
+      <table className="tbl tbl-list">
         <thead>
           <tr><th>Drawing</th><th className="num">Estimated</th><th className="num">Logged</th><th className="num">Over</th></tr>
         </thead>
@@ -241,9 +241,9 @@ export function OverBudgetTable({ rows }: { rows: DrawingSummary["overBudget"] }
           {rows.map(d => (
             <tr key={d.id}>
               <DrawingCell d={d} />
-              <td className="num">{formatHours(d.estimatedHours)}</td>
-              <td className="num">{formatHours(d.loggedHours)}</td>
-              <td className="num" style={{ color: "var(--red)", fontWeight: 600 }}>
+              <td className="num l-meta"><span className="min-[701px]:hidden">Estimated </span>{formatHours(d.estimatedHours)}</td>
+              <td className="num l-meta"><span className="min-[701px]:hidden">Logged </span>{formatHours(d.loggedHours)}</td>
+              <td className="num l-aside" style={{ color: "var(--red)", fontWeight: 600 }}>
                 +{Math.round((d.overBy / d.estimatedHours!) * 100)}%
               </td>
             </tr>
@@ -257,7 +257,7 @@ export function OverBudgetTable({ rows }: { rows: DrawingSummary["overBudget"] }
 export function OutdatedBomTable({ rows }: { rows: OutdatedBomReference[] }) {
   return (
     <div className="table-wrap" style={{ maxHeight: 360 }}>
-      <table className="tbl">
+      <table className="tbl tbl-list">
         <thead>
           <tr><th>BOM</th><th>Drawing</th><th>Built from</th><th>Current</th></tr>
         </thead>
@@ -265,13 +265,13 @@ export function OutdatedBomTable({ rows }: { rows: OutdatedBomReference[] }) {
           {rows.length === 0 && <Empty cols={4} text="Every BOM uses the latest drawing revisions." />}
           {rows.map(r => (
             <tr key={`${r.bomId}:${r.drawingId}`}>
-              <td>
+              <td className="l-title">
                 <Link href={`/builder/${r.projectId}/${r.bomId}`} style={{ color: "inherit", fontWeight: 500 }}>{r.bomName}</Link>
                 <div className="muted" style={{ fontSize: 11.5 }}>{r.projectCode} · Rev {r.bomRevisionLetter}</div>
               </td>
-              <td className="mono"><Link href={`/drawings/${r.drawingId}`} style={{ color: "inherit" }}>{r.code}</Link></td>
-              <td className="mono" style={{ color: "var(--red)" }}>{formatDrawingRevision(r.linkedNumber)}</td>
-              <td className="mono">{formatDrawingRevision(r.latestNumber)}</td>
+              <td className="mono l-meta"><Link href={`/drawings/${r.drawingId}`} style={{ color: "inherit" }}>{r.code}</Link></td>
+              <td className="mono l-meta" style={{ color: "var(--red)" }}><span className="min-[701px]:hidden">built from </span>{formatDrawingRevision(r.linkedNumber)}</td>
+              <td className="mono l-meta"><span className="min-[701px]:hidden">current </span>{formatDrawingRevision(r.latestNumber)}</td>
             </tr>
           ))}
         </tbody>
