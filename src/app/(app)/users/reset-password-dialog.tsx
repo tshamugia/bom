@@ -10,12 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Icon } from "@/components/icons";
+import { PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 import { resetUserPassword } from "@/server/actions/users";
 
 // No look-alike characters (0/O, 1/l/I) — people type this from an email.
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
 
-export function generateTempPassword(length = 12): string {
+export function generateTempPassword(length = PASSWORD_MIN_LENGTH + 2): string {
   const bytes = crypto.getRandomValues(new Uint32Array(length));
   return Array.from(bytes, b => ALPHABET[b % ALPHABET.length]).join("");
 }
@@ -29,7 +30,7 @@ export function ResetPasswordDialog({ userId, name, email }: { userId: string; n
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (password.length < 8) return setError("Use at least 8 characters.");
+    if (password.length < PASSWORD_MIN_LENGTH) return setError(`Use at least ${PASSWORD_MIN_LENGTH} characters.`);
     start(async () => {
       try {
         const r = await resetUserPassword({ id: userId, password });
@@ -71,7 +72,7 @@ export function ResetPasswordDialog({ userId, name, email }: { userId: string; n
           <DialogHeader>
             <DialogTitle>Reset password</DialogTitle>
             <DialogDescription>
-              {name} ({email}) gets this temporary password by email and is signed out on every device.
+              {name} ({email}) gets this temporary password by email, is signed out on every device and has to pick a new one at the next sign-in.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-1.5">
@@ -83,7 +84,7 @@ export function ResetPasswordDialog({ userId, name, email }: { userId: string; n
                 autoComplete="off"
                 spellCheck={false}
                 value={password}
-                minLength={8}
+                minLength={PASSWORD_MIN_LENGTH}
                 maxLength={128}
                 onChange={e => setPassword(e.target.value)}
                 disabled={pending}
@@ -99,7 +100,7 @@ export function ResetPasswordDialog({ userId, name, email }: { userId: string; n
           {error && <p role="alert" className="text-[12.5px] text-[var(--color-danger)]">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
-            <Button type="submit" disabled={pending || password.length < 8}>
+            <Button type="submit" disabled={pending || password.length < PASSWORD_MIN_LENGTH}>
               {pending ? "Resetting…" : "Reset password"}
             </Button>
           </DialogFooter>

@@ -56,6 +56,9 @@ export function PreviewShell(p: Props) {
           case "SMTP_NOT_CONFIGURED":
             toast.error("Email is not configured on the server. Ask an admin to set up SMTP.");
             break;
+          case "REVISION_NOT_COMMITTED":
+            toast.error(res.message);
+            break;
           case "SMTP_SEND_FAILED":
             toast.error(`Email failed to send: ${res.message}`);
             break;

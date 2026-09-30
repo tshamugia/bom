@@ -9,6 +9,7 @@ export const user = pgTable("user", {
   image: text("image"),
   role: userRoleEnum("role").notNull().default("member"),
   disabled: boolean("disabled").notNull().default(false),
+  mustChangePassword: boolean("must_change_password").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

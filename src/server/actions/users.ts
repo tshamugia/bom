@@ -7,13 +7,14 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { account, session as sessionTable, user } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 import { USER_ROLES } from "@/lib/roles";
 import { requireRole } from "../auth-context";
 import { createUserDirect } from "../lib/create-user-direct";
 import { audit } from "../audit";
 import { sendPasswordResetByAdminEmail, sendWelcomeEmail, type SendMailResult } from "@/lib/mailer";
 
-const Password = z.string().min(8).max(128);
+const Password = z.string().min(PASSWORD_MIN_LENGTH).max(PASSWORD_MAX_LENGTH);
 
 const CreateUserInput = z.object({
   email: z.string().email(),
@@ -131,8 +132,9 @@ export async function setUserRole(input: { id: string; role: (typeof USER_ROLES)
 
 /**
  * Admin sets a new temporary password for someone else, signs them out
- * everywhere and emails them the password. Admins change their own password
- * from Settings → Profile (or the sign-in page's "Forgot password?").
+ * everywhere and emails them the password, which they must replace on their
+ * next sign-in. Admins change their own password from Settings → Profile (or
+ * the sign-in page's "Forgot password?").
  */
 export async function resetUserPassword(input: { id: string; password: string }) {
   const { id, password } = z.object({ id: z.string(), password: Password }).parse(input);
@@ -159,6 +161,7 @@ export async function resetUserPassword(input: { id: string; password: string })
         password: hash,
       });
     }
+    await tx.update(user).set({ mustChangePassword: true, updatedAt: new Date() }).where(eq(user.id, id));
     await tx.delete(sessionTable).where(eq(sessionTable.userId, id));
   });
 

@@ -15,11 +15,13 @@ export type AuditRow = {
   userAgent?: string | null;
 };
 
-/** Where the request came from. Railway puts the client first in X-Forwarded-For. */
+/**
+ * Where the request came from. Railway's edge sets X-Real-IP; X-Forwarded-For
+ * arrives as the client sent it, so it is only a fallback outside Railway.
+ */
 export function clientInfo(h: Headers | null | undefined): { ip: string | null; userAgent: string | null } {
   if (!h) return { ip: null, userAgent: null };
-  const forwarded = h.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const ip = forwarded || h.get("x-real-ip")?.trim() || null;
+  const ip = h.get("x-real-ip")?.trim() || h.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
   const userAgent = h.get("user-agent")?.slice(0, 400) || null;
   return { ip, userAgent };
 }

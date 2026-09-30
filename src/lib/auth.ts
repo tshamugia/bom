@@ -1,13 +1,25 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { createAuthMiddleware, isAPIError } from "better-auth/api";
+import { APIError, createAuthMiddleware, isAPIError } from "better-auth/api";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { user as userTable } from "@/db/schema";
 import { clientInfo, writeAudit } from "@/server/lib/audit-write";
+import { ACCOUNT_LOCKED_CODE, SIGN_IN_LOCK_WINDOW_MS, isSignInLocked } from "@/server/lib/sign-in-lockout";
 import { env } from "./env";
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "./password-policy";
 
 const RESET_TOKEN_TTL_SECONDS = 60 * 60;
+
+const signInEmailOf = (body: unknown) => {
+  const email = (body as { email?: unknown } | undefined)?.email;
+  return typeof email === "string" ? email.trim().toLowerCase() : "";
+};
+
+/** The user picked a password themselves, so the temporary one is gone. */
+async function clearMustChangePassword(userId: string) {
+  await db.update(userTable).set({ mustChangePassword: false }).where(eq(userTable.id, userId));
+}
 
 async function findAccountState(where: { id: string } | { email: string }) {
   const [row] = await db
@@ -31,10 +43,18 @@ export const auth = betterAuth({
           "http://192.168.*.*:3000",
           "http://10.*.*.*:3000",
         ],
+  // Per client IP (see `advanced.ipAddress`); on in production only, in memory.
+  rateLimit: {
+    customRules: {
+      "/sign-in/email": { window: 60, max: 10 },
+    },
+  },
   emailAndPassword: {
     enabled: true,
     autoSignIn: true,
     disableSignUp: true,
+    minPasswordLength: PASSWORD_MIN_LENGTH,
+    maxPasswordLength: PASSWORD_MAX_LENGTH,
     resetPasswordTokenExpiresIn: RESET_TOKEN_TTL_SECONDS,
     revokeSessionsOnPasswordReset: true,
     // Only admins can reset their own password by email; members ask an admin
@@ -74,6 +94,7 @@ export const auth = betterAuth({
       });
     },
     onPasswordReset: async ({ user }, request) => {
+      await clearMustChangePassword(user.id);
       await writeAudit({
         kind: "user.password.reset",
         actorId: user.id,
@@ -89,6 +110,8 @@ export const auth = betterAuth({
     additionalFields: {
       role: { type: "string", required: false, defaultValue: "member", input: false },
       disabled: { type: "boolean", required: false, defaultValue: false, input: false },
+      /** Set when an admin creates the account or resets its password; cleared once the user picks their own. */
+      mustChangePassword: { type: "boolean", required: false, defaultValue: false, input: false },
     },
   },
   databaseHooks: {
@@ -103,6 +126,26 @@ export const auth = betterAuth({
     },
   },
   hooks: {
+    // Per-account lock on top of the per-IP rate limit, so a password can't be
+    // guessed slowly from many addresses. Refused attempts are logged with their
+    // own code and don't count, so the lock ends when the window passes.
+    before: createAuthMiddleware(async ctx => {
+      if (ctx.path !== "/sign-in/email") return;
+      const email = signInEmailOf(ctx.body);
+      if (!email || !(await isSignInLocked(email))) return;
+
+      await writeAudit({
+        kind: "auth.signin.failed",
+        actorId: null,
+        summary: `Sign-in refused for ${email} — too many failed attempts`,
+        payload: { email, code: ACCOUNT_LOCKED_CODE },
+        ...clientInfo(ctx.headers ?? ctx.request?.headers),
+      });
+      throw new APIError("TOO_MANY_REQUESTS", {
+        code: ACCOUNT_LOCKED_CODE,
+        message: `Too many failed sign-in attempts. Try again in ${SIGN_IN_LOCK_WINDOW_MS / 60_000} minutes.`,
+      });
+    }),
     after: createAuthMiddleware(async ctx => {
       const info = clientInfo(ctx.headers ?? ctx.request?.headers);
 
@@ -121,7 +164,7 @@ export const auth = betterAuth({
         }
         const returned = ctx.context.returned;
         if (isAPIError(returned)) {
-          const email = typeof ctx.body?.email === "string" ? ctx.body.email.trim().toLowerCase() : "";
+          const email = signInEmailOf(ctx.body);
           const known = email ? await findAccountState({ email }) : null;
           await writeAudit({
             kind: "auth.signin.failed",
@@ -141,6 +184,7 @@ export const auth = betterAuth({
       if (ctx.path === "/change-password" && !isAPIError(ctx.context.returned)) {
         const me = ctx.context.session?.user;
         if (me) {
+          await clearMustChangePassword(me.id);
           await writeAudit({
             kind: "user.password.changed",
             actorId: me.id,
@@ -154,6 +198,10 @@ export const auth = betterAuth({
     }),
   },
   advanced: {
+    // Railway's edge sets X-Real-IP to the client address; X-Forwarded-For is
+    // passed through from the client, so keying on it would let anyone pick
+    // their own rate-limit bucket.
+    ipAddress: { ipAddressHeaders: ["x-real-ip"] },
     cookies: {
       session_token: { name: "better-auth.session_token" },
     },

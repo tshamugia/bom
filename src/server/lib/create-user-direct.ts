@@ -9,7 +9,8 @@ import type { UserRole } from "@/lib/roles";
  * Create a user with a hashed password, bypassing better-auth's `disableSignUp`
  * gate. Used by the seed script and the admin `createUser` action — both run
  * server-side with explicit authorization and need to provision users while
- * public registration is closed.
+ * public registration is closed. The password is temporary: the user has to
+ * pick their own on first sign-in.
  */
 export async function createUserDirect(input: {
   email: string;
@@ -28,6 +29,7 @@ export async function createUserDirect(input: {
       email: input.email,
       emailVerified: true,
       role: input.role,
+      mustChangePassword: true,
     });
     await tx.insert(account).values({
       id: createId(),

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { PASSWORD_MIN_LENGTH } from "@/lib/password-policy";
 import { USER_ROLES, type UserRole } from "@/lib/roles";
 import { createUser, setUserDisabled, setUserRole } from "@/server/actions/users";
 import { ResetPasswordDialog, generateTempPassword } from "./reset-password-dialog";
@@ -104,7 +105,7 @@ export function UsersClient({ callerId, users }: { callerId: string; users: User
               autoComplete="off"
               spellCheck={false}
               required
-              minLength={8}
+              minLength={PASSWORD_MIN_LENGTH}
               value={form.password}
               onChange={e => setForm({ ...form, password: e.target.value })}
             />
