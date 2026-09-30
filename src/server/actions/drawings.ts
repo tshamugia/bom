@@ -9,9 +9,11 @@ import { drawings, drawingDisciplines, drawingEvents, drawingRevisions, projects
 import {
   DRAWING_STATUSES,
   DRAWING_STATUS_LABEL,
+  OWNER_IS_REVIEWER_MESSAGE,
   TRANSITION_ERROR_MESSAGE,
   checkDrawingTransition,
   formatDrawingRevision,
+  isOwnerChangeBlocked,
 } from "@/lib/drawing-status";
 import { MAX_ESTIMATE_HOURS, formatHours } from "@/lib/drawing-meta";
 import { ADMIN_ONLY_ERROR, READ_ONLY_ERROR, canEdit, isAdmin } from "@/lib/roles";
@@ -86,7 +88,13 @@ async function isCodeTaken(projectId: string, code: string, exceptId?: string) {
 
 async function latestRevision(drawingId: string) {
   const [rev] = await db
-    .select({ id: drawingRevisions.id, number: drawingRevisions.number })
+    .select({
+      id: drawingRevisions.id,
+      number: drawingRevisions.number,
+      status: drawingRevisions.status,
+      reviewerId: drawingRevisions.reviewerId,
+      reviewedById: drawingRevisions.reviewedById,
+    })
     .from(drawingRevisions)
     .where(eq(drawingRevisions.drawingId, drawingId))
     .orderBy(desc(drawingRevisions.number))
@@ -215,6 +223,9 @@ export async function updateDrawing(input: z.infer<typeof UpdateInput>): Promise
 
   const rev = await latestRevision(id);
   if (!rev) return fail("Drawing has no revisions.");
+  if (current.ownerId !== data.ownerId && isOwnerChangeBlocked({ newOwnerId: data.ownerId, ...rev })) {
+    return fail(OWNER_IS_REVIEWER_MESSAGE);
+  }
 
   try {
     await db.transaction(async tx => {

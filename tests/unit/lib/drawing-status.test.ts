@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   checkDrawingTransition,
   isDrawingOverdue,
+  isOwnerChangeBlocked,
   todayIso,
   type TransitionInput,
 } from "@/lib/drawing-status";
@@ -41,6 +42,15 @@ describe("checkDrawingTransition", () => {
     expect(t({ to: "need-approval" })).toEqual({ ok: false, error: "REVIEWER_REQUIRED" });
     expect(t({ to: "need-approval", nextReviewerId: OWNER })).toEqual({ ok: false, error: "REVIEWER_IS_OWNER" });
     expect(t({ to: "need-approval", nextReviewerId: REVIEWER })).toMatchObject({ ok: true, kind: "request" });
+  });
+
+  test("whoever asks for the approval can't be the approving engineer", () => {
+    // Hand the drawing to someone else, then ask yourself to approve it — refused.
+    expect(t({ ownerId: OTHER, actorId: REVIEWER, to: "need-approval", nextReviewerId: REVIEWER }))
+      .toEqual({ ok: false, error: "REVIEWER_IS_REQUESTER" });
+    // A non-owner can still ask a third engineer.
+    expect(t({ ownerId: OWNER, actorId: OTHER, to: "need-approval", nextReviewerId: REVIEWER }))
+      .toMatchObject({ ok: true, kind: "request" });
   });
 
   test("the approval gate cannot be skipped", () => {
@@ -84,6 +94,25 @@ describe("checkDrawingTransition", () => {
     expect(t({ ...reviewed, from: "awaiting-approval", to: "approved-b" })).toMatchObject({ ok: true });
     expect(t({ ...reviewed, from: "approved-b", to: "as-built" })).toMatchObject({ ok: true });
     expect(t({ ...reviewed, from: "paused", to: "awaiting-approval" })).toMatchObject({ ok: true });
+  });
+});
+
+describe("isOwnerChangeBlocked", () => {
+  const base = { status: "in-progress" as const, reviewerId: null, reviewedById: null };
+
+  test("the engineer checking the revision can't take it over", () => {
+    expect(isOwnerChangeBlocked({ ...base, status: "need-approval", reviewerId: REVIEWER, newOwnerId: REVIEWER })).toBe(true);
+    expect(isOwnerChangeBlocked({ ...base, status: "need-approval", reviewerId: REVIEWER, newOwnerId: OTHER })).toBe(false);
+  });
+
+  test("the engineer who signed it off can't become its owner afterwards", () => {
+    expect(isOwnerChangeBlocked({ ...base, status: "approved-a", reviewerId: REVIEWER, reviewedById: REVIEWER, newOwnerId: REVIEWER })).toBe(true);
+  });
+
+  test("a reviewer sent back or on an older revision no longer blocks", () => {
+    // Sent back for rework: reviewerId stays on the row but the sign-off was cleared.
+    expect(isOwnerChangeBlocked({ ...base, status: "in-progress", reviewerId: REVIEWER, newOwnerId: REVIEWER })).toBe(false);
+    expect(isOwnerChangeBlocked({ ...base, newOwnerId: REVIEWER })).toBe(false);
   });
 });
 

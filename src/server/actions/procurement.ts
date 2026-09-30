@@ -1,6 +1,9 @@
 "use server";
 
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { db } from "@/db/client";
+import { bomRevisions } from "@/db/schema";
 import { EDITOR_ROLES } from "@/lib/roles";
 import { requireRole } from "../auth-context";
 import { audit } from "../audit";
@@ -29,7 +32,7 @@ function applyTemplate(template: string, vars: Record<string, string>): string {
 
 export type SendBomToProcurementResult =
   | { ok: true; exportId: string; workflowId: string }
-  | { ok: false; code: "PROCUREMENT_RECIPIENTS_NOT_CONFIGURED" | "SMTP_NOT_CONFIGURED"; message: string }
+  | { ok: false; code: "PROCUREMENT_RECIPIENTS_NOT_CONFIGURED" | "SMTP_NOT_CONFIGURED" | "REVISION_NOT_COMMITTED"; message: string }
   | { ok: false; code: "SMTP_SEND_FAILED" | "EXPORT_FAILED" | "APPROVAL_FAILED"; message: string };
 
 export async function sendBomToProcurement(input: {
@@ -37,6 +40,21 @@ export async function sendBomToProcurement(input: {
   options: ExportOptionsT;
 }): Promise<SendBomToProcurementResult> {
   const session = await requireRole(...EDITOR_ROLES);
+
+  // Checked before anything is emailed: only a committed revision can start an
+  // approval, and a draft or one already under review must not reach procurement.
+  const [rev] = await db
+    .select({ status: bomRevisions.status })
+    .from(bomRevisions)
+    .where(eq(bomRevisions.id, input.revisionId))
+    .limit(1);
+  if (rev?.status !== "committed") {
+    return {
+      ok: false,
+      code: "REVISION_NOT_COMMITTED",
+      message: "Only a committed revision that hasn't been sent yet can go to procurement.",
+    };
+  }
 
   const settings = await getProcurementSettings();
   if (settings.to.length === 0) {

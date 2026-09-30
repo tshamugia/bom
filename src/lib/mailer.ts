@@ -102,7 +102,7 @@ export async function sendWelcomeEmail(args: {
     ``,
     `Sign in: ${signInUrl}`,
     ``,
-    `Please change your password after your first sign-in (Settings → Profile).`,
+    `This password is temporary — you'll be asked to choose your own when you first sign in.`,
     ``,
     `On your phone, open the sign-in link and choose "Add to Home Screen" to install BOM Studio as an app.`,
   ].join("\n");
@@ -126,7 +126,7 @@ export async function sendPasswordResetByAdminEmail(args: {
     ``,
     `Sign in: ${signInUrl}`,
     ``,
-    `Please change it after signing in (Settings → Profile).`,
+    `This password is temporary — you'll be asked to choose your own when you sign in.`,
   ].join("\n");
   return sendMail({ to: args.to, subject: "Your BOM Studio password was reset", text });
 }

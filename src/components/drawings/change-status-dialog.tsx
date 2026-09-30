@@ -43,7 +43,7 @@ export function ChangeStatusDialog({
   const [pending, start] = useTransition();
   const router = useRouter();
 
-  const reviewers = users.filter(u => u.id !== ownerId);
+  const reviewers = users.filter(u => u.id !== ownerId && u.id !== currentUserId);
   const check = to
     ? checkDrawingTransition({
         from: status,
@@ -143,7 +143,7 @@ export function ChangeStatusDialog({
                 ))}
               </select>
               <p className="text-[12px] text-[var(--color-text-3)]">
-                Must be someone other than the drawing owner. Only this engineer can approve the revision.
+                Must be someone other than the drawing owner and you. Only this engineer can approve the revision.
               </p>
             </div>
           )}

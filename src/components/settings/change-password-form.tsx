@@ -1,15 +1,17 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
+import { PASSWORD_MIN_LENGTH as MIN_LENGTH } from "@/lib/password-policy";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const MIN_LENGTH = 8;
-
-export function ChangePasswordForm() {
+/** `required`: the current password is a temporary one from an admin — the app opens once it's replaced. */
+export function ChangePasswordForm({ required = false }: { required?: boolean }) {
+  const router = useRouter();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -41,6 +43,8 @@ export function ChangePasswordForm() {
       setNext("");
       setConfirm("");
       toast.success("Password changed. Other devices were signed out.");
+      if (required) router.replace("/");
+      router.refresh();
     });
   }
 

@@ -5,10 +5,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AlertCircle, ArrowLeft, Loader2, Lock } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
+import { PASSWORD_MIN_LENGTH as MIN_LENGTH } from "@/lib/password-policy";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-const MIN_LENGTH = 8;
 
 export default function ResetPasswordPage() {
   return (

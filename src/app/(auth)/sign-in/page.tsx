@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { AlertCircle, CheckCircle2, Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import { signIn } from "@/lib/auth-client";
+import { safeNextPath } from "@/lib/safe-redirect";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -37,7 +38,7 @@ function SignInForm() {
   const router = useRouter();
   const params = useSearchParams();
   // "/" sends each role to its landing page (viewers → dashboard).
-  const next = params.get("next") || "/";
+  const next = safeNextPath(params.get("next"));
   const justReset = params.get("reset") === "1";
 
   const [email, setEmail] = useState("");
@@ -59,7 +60,12 @@ function SignInForm() {
     start(async () => {
       const r = await signIn.email({ email: email.trim(), password });
       if (r.error) {
-        setError("Invalid email or password.");
+        // 429 is either the per-IP limit or the per-account lock; neither says whether the email exists.
+        setError(
+          r.error.status === 429
+            ? "Too many sign-in attempts. Wait a few minutes and try again."
+            : "Invalid email or password.",
+        );
         return;
       }
       router.push(next);

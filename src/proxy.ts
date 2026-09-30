@@ -7,6 +7,8 @@ const PROTECTED = ["/dashboard", "/builder", "/preview", "/catalog", "/vendors",
 
 const under = (path: string, base: string) => path === base || path.startsWith(`${base}/`);
 
+const PROFILE = "/settings/profile";
+
 export async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
   if (!PROTECTED.some(p => under(path, p))) {
@@ -18,6 +20,15 @@ export async function proxy(req: NextRequest) {
     const url = req.nextUrl.clone();
     url.pathname = "/sign-in";
     url.searchParams.set("next", path);
+    return NextResponse.redirect(url);
+  }
+
+  // An admin set this password (new account or reset) and emailed it; nothing
+  // else opens until the user replaces it.
+  if (session.user.mustChangePassword && !under(path, PROFILE)) {
+    const url = req.nextUrl.clone();
+    url.pathname = PROFILE;
+    url.search = "";
     return NextResponse.redirect(url);
   }
 

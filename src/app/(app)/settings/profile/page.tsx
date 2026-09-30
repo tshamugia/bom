@@ -18,9 +18,20 @@ export default async function ProfilePage() {
     .slice(0, 2)
     .toUpperCase();
 
+  const mustChange = !!session.user.mustChangePassword;
+
   return (
     <>
       <PageHead title="Profile" subtitle="Your account information and password." />
+
+      {mustChange && (
+        <div
+          role="alert"
+          className="mb-5 max-w-xl rounded-lg border border-[var(--color-warning)]/30 bg-[var(--color-warning-soft)] px-4 py-3 text-[13px] text-[var(--color-text)]"
+        >
+          <strong className="font-semibold">Set your own password to continue.</strong> The one you signed in with was set by an admin and is temporary.
+        </div>
+      )}
 
       <div className="max-w-xl rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)] max-[701px]:p-4">
         <div className="flex items-center gap-4 border-b border-[var(--color-line-soft)] pb-4">
@@ -62,7 +73,7 @@ export default async function ProfilePage() {
         <p className="mt-0.5 mb-4 text-[12.5px] text-[var(--color-text-3)]">
           Changing it signs you out on your other devices.
         </p>
-        <ChangePasswordForm />
+        <ChangePasswordForm required={mustChange} />
       </div>
     </>
   );

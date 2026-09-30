@@ -37,26 +37,40 @@ test("resetUserPassword sets the new password, signs the user out and is audited
   await mockSession("admin");
   const target = await memberWithSession();
 
-  const r = await resetUserPassword({ id: target, password: "BrandNew123" });
+  const r = await resetUserPassword({ id: target, password: "BrandNew12345" });
   expect(r.emailStatus).toBe("sent");
 
   const ctx = await auth.$context;
   const hash = await passwordHash(target);
-  expect(await ctx.password.verify({ hash: hash!, password: "BrandNew123" })).toBe(true);
+  expect(await ctx.password.verify({ hash: hash!, password: "BrandNew12345" })).toBe(true);
   expect(await ctx.password.verify({ hash: hash!, password: "OldPassword1" })).toBe(false);
   expect(await db.select().from(sessionTable).where(eq(sessionTable.userId, target))).toHaveLength(0);
+  const [flag] = await db.select({ must: user.mustChangePassword }).from(user).where(eq(user.id, target));
+  expect(flag.must).toBe(true);
 
   const [row] = await db.select().from(auditLog).where(eq(auditLog.kind, "user.password.reset"));
   expect(row.refId).toBe(target);
 });
 
+test("resetUserPassword refuses a password shorter than 12 characters", async () => {
+  await mockSession("admin");
+  const target = await memberWithSession();
+  await expect(resetUserPassword({ id: target, password: "Short12345" })).rejects.toThrow();
+});
+
+test("new accounts start with a temporary password", async () => {
+  const id = await memberWithSession();
+  const [row] = await db.select({ must: user.mustChangePassword }).from(user).where(eq(user.id, id));
+  expect(row.must).toBe(true);
+});
+
 test("resetUserPassword: members can't, and admins use Profile for their own", async () => {
   const target = await memberWithSession();
   await mockSession("member");
-  await expect(resetUserPassword({ id: target, password: "BrandNew123" })).rejects.toThrow(/FORBIDDEN/);
+  await expect(resetUserPassword({ id: target, password: "BrandNew12345" })).rejects.toThrow(/FORBIDDEN/);
 
   const { user: me } = await mockSession("admin");
-  await expect(resetUserPassword({ id: me.id, password: "BrandNew123" })).rejects.toThrow(/USE_PROFILE/);
+  await expect(resetUserPassword({ id: me.id, password: "BrandNew12345" })).rejects.toThrow(/USE_PROFILE/);
 });
 
 test("setUserRole promotes a member and refuses to change your own role", async () => {

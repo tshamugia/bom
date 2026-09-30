@@ -63,6 +63,7 @@ export type TransitionError =
   | "SAME_STATUS"
   | "REVIEWER_REQUIRED"
   | "REVIEWER_IS_OWNER"
+  | "REVIEWER_IS_REQUESTER"
   | "ONLY_REVIEWER_CAN_APPROVE"
   | "REVIEW_REQUIRED"
   | "COMMENT_REQUIRED";
@@ -78,6 +79,7 @@ export const TRANSITION_ERROR_MESSAGE: Record<TransitionError, string> = {
   SAME_STATUS: "The drawing already has this status.",
   REVIEWER_REQUIRED: "Pick the engineer who will approve this revision.",
   REVIEWER_IS_OWNER: "The approving engineer must be someone other than the drawing owner.",
+  REVIEWER_IS_REQUESTER: "You can't pick yourself — another engineer has to approve what you send for approval.",
   ONLY_REVIEWER_CAN_APPROVE: "Only the assigned engineer can approve this revision.",
   REVIEW_REQUIRED: "This revision has to be approved by a second engineer first.",
   COMMENT_REQUIRED: "Add a comment explaining why the revision is sent back.",
@@ -85,9 +87,10 @@ export const TRANSITION_ERROR_MESSAGE: Record<TransitionError, string> = {
 
 /**
  * Status changes are free, with one gate: a revision reaches Awaiting approval
- * (and everything after it) only once a second engineer — not the owner —
- * approved it from Need to be approved. Going back to In Progress means the
- * drawing is being reworked, so that sign-off is cleared.
+ * (and everything after it) only once a second engineer — neither the owner nor
+ * the person who asked for the approval — approved it from Need to be approved.
+ * Going back to In Progress means the drawing is being reworked, so that
+ * sign-off is cleared.
  */
 export function checkDrawingTransition(i: TransitionInput): TransitionResult {
   if (!i.isLatest) return { ok: false, error: "REVISION_LOCKED" };
@@ -112,12 +115,33 @@ export function checkDrawingTransition(i: TransitionInput): TransitionResult {
   if (i.to === "need-approval") {
     if (!i.nextReviewerId) return { ok: false, error: "REVIEWER_REQUIRED" };
     if (i.nextReviewerId === i.ownerId) return { ok: false, error: "REVIEWER_IS_OWNER" };
+    // Otherwise anyone could hand the drawing to someone else, request the
+    // approval from themselves and sign it off alone.
+    if (i.nextReviewerId === i.actorId) return { ok: false, error: "REVIEWER_IS_REQUESTER" };
     return { ok: true, kind: "request", resetsReview };
   }
 
   if (POST_REVIEW.has(i.to) && !i.reviewed) return { ok: false, error: "REVIEW_REQUIRED" };
 
   return { ok: true, kind: "plain", resetsReview };
+}
+
+export const OWNER_IS_REVIEWER_MESSAGE =
+  "This engineer is approving the latest revision, so they can't own the drawing. Create a new revision first.";
+
+/**
+ * The engineer checking the latest revision (or who already signed it off)
+ * can't become the drawing's owner — the owner and the approver must stay two
+ * different people. A new revision starts without a reviewer.
+ */
+export function isOwnerChangeBlocked(i: {
+  newOwnerId: string;
+  status: DrawingStatus;
+  reviewerId: string | null;
+  reviewedById: string | null;
+}): boolean {
+  if (i.reviewedById && i.newOwnerId === i.reviewedById) return true;
+  return i.status === "need-approval" && i.newOwnerId === i.reviewerId;
 }
 
 const tbilisiDay = new Intl.DateTimeFormat("en-CA", {
