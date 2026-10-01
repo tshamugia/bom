@@ -6,6 +6,7 @@ import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { MobileTabs } from "./mobile-tabs";
 import type { UserRole } from "@/lib/roles";
+import { recordPathname } from "@/lib/nav-history";
 
 type ShellUser = { name: string; email: string; role: UserRole };
 
@@ -22,8 +23,10 @@ export function ShellChrome({
   const [navOpen, setNavOpen] = useState(false);
   const pathname = usePathname();
 
-  // Close the mobile drawer whenever the route changes (sync UI to the router).
+  // Close the mobile drawer whenever the route changes (sync UI to the router),
+  // and remember the page we came from for the "← Back" links.
   useEffect(() => {
+    recordPathname(pathname);
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reacting to external router state
     setNavOpen(false);
   }, [pathname]);

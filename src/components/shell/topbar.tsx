@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Icon } from "@/components/icons";
 import { HelpTip } from "@/components/help/help-tip";
 import { CommandPalette } from "./command-palette";
+import { ThemeButton } from "./theme-toggle";
 
 const CRUMBS: Record<string, [string, string]> = {
   "/dashboard": ["Workspace", "Dashboard"],
@@ -61,6 +62,7 @@ export function Topbar({
             <HelpTip topic="roles" />
           </span>
         )}
+        <ThemeButton />
         <Link
           href="/help"
           className="btn btn-icon btn-ghost"

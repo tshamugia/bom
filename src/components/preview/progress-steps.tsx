@@ -23,11 +23,11 @@ export function ProgressSteps({ steps }: { steps: Step[] }) {
 function StepBadge({ step, index }: { step: Step; index: number }) {
   const dot =
     step.state === "done" ? (
-      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-success)] text-white">
+      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--green-fill)] text-white">
         <Icon.Check size={10} strokeWidth={3} />
       </span>
     ) : step.state === "active" ? (
-      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-accent)] text-[10px] font-semibold text-white">
+      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-accent)] text-[10px] font-semibold text-[var(--on-accent)]">
         {index + 1}
       </span>
     ) : (

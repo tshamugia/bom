@@ -8,6 +8,7 @@ import { canEdit } from "@/lib/roles";
 import { HistoryTable, type HistoryRow } from "@/components/revisions/history-table";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
+import { PageHead } from "@/components/master/page-head";
 
 export default async function HistoryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -61,10 +62,11 @@ export default async function HistoryPage({ params }: { params: Promise<{ id: st
 
   return (
     <div>
-      <div className="mb-4">
-        <h1 className="text-[20px] font-semibold tracking-tight [overflow-wrap:anywhere]">{project.name} — history</h1>
-        <p className="text-[13px] text-[var(--color-text-3)]">All revisions across the BOMs of {project.code}.</p>
-      </div>
+      <PageHead
+        back={{ href: `/projects/${project.id}`, label: project.name }}
+        title={`${project.name} — history`}
+        subtitle={`All revisions across the BOMs of ${project.code}.`}
+      />
 
       {bomRows.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[var(--color-line)] bg-[var(--color-surface)] p-10 text-center text-[13px] text-[var(--color-text-3)] max-[701px]:p-6">

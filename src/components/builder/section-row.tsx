@@ -105,12 +105,12 @@ export function SectionRow({
             </button>
           )}
 
-          <span className="shrink-0 rounded-full bg-[var(--color-surface-3)] px-2 py-px font-mono text-[11px] text-[var(--color-text-3)]">
+          <span className="shrink-0 rounded-[var(--r-1)] bg-[var(--color-surface-3)] px-1.5 py-px font-mono text-[11px] text-[var(--color-text-3)]">
             {lineCount}
           </span>
 
           {isActive && (
-            <span className="shrink-0 whitespace-nowrap rounded-full bg-[var(--color-accent-soft)] px-2 py-px text-[11px] font-medium text-[var(--color-accent)]">
+            <span className="shrink-0 whitespace-nowrap rounded-[var(--r-1)] bg-[var(--color-accent-soft)] px-1.5 py-px text-[11px] font-medium text-[var(--color-accent-text)]">
               ● Active
             </span>
           )}

@@ -118,7 +118,7 @@ export function ProcurementSettingsForm({ initial }: { initial: ProcurementSetti
   return (
     <form
       onSubmit={onSubmit}
-      className="grid max-w-2xl gap-5 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)] max-[701px]:p-4"
+      className="grid gap-5 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)] max-[701px]:p-4"
     >
       <EmailListEditor
         label="TO recipients"

@@ -116,6 +116,7 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
   return (
     <>
       <PageHead
+        back={{ href: "/drawings", label: "Drawings" }}
         title={`${drawing.code} — ${drawing.name}`}
         subtitle={`${drawing.projectCode} · ${drawing.projectName}`}
         actions={

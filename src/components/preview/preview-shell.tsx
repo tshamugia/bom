@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icons";
+import { BackLink } from "@/components/master/back-link";
 import { DocumentPreview } from "./document-preview";
 import { SummaryCard } from "./summary-card";
 import { ExportOptionsCard, DEFAULT_EXPORT_OPTS, type ExportOpts } from "./export-options-card";
@@ -95,8 +96,12 @@ export function PreviewShell(p: Props) {
 
   return (
     <>
+      {/* Viewers have no BOM list; their way in is the project page. */}
+      {p.readOnly
+        ? <BackLink href={`/projects/${p.projectId}`} label={p.projectName} />
+        : <BackLink href="/preview" label="Preview & Generate" />}
       <div className="page-head">
-        <div>
+        <div className="min-w-0">
           <h1 className="page-title">{p.readOnly ? "Preview" : <>Preview &amp; Generate</>}</h1>
           <p className="page-sub">
             {p.projectCode} · {p.bomName} — {p.readOnly

@@ -1,84 +1,78 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import { Icon } from "@/components/icons";
+import {
+  isDarkApplied, readThemeMode, setThemeMode, subscribeTheme, type ResolvedTheme, type ThemeMode,
+} from "@/lib/theme";
 
-type Mode = "light" | "dark" | "system";
-
-const STORAGE_KEY = "theme";
-
-function applyMode(mode: Mode) {
-  const resolved =
-    mode === "system"
-      ? window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light"
-      : mode;
-  document.documentElement.classList.toggle("dark", resolved === "dark");
+/** The saved choice and the theme actually showing. Server render assumes light. */
+export function useTheme(): { mode: ThemeMode; resolved: ResolvedTheme } {
+  const mode = useSyncExternalStore(subscribeTheme, readThemeMode, () => "light" as const);
+  const dark = useSyncExternalStore(subscribeTheme, isDarkApplied, () => false);
+  return { mode, resolved: dark ? "dark" : "light" };
 }
 
-function subscribe(callback: () => void) {
-  window.addEventListener("storage", callback);
-  return () => window.removeEventListener("storage", callback);
-}
+const OPTIONS: { value: ThemeMode; label: string; icon: "Sun" | "Moon" | "Monitor" }[] = [
+  { value: "light", label: "Light", icon: "Sun" },
+  { value: "dark", label: "Dark", icon: "Moon" },
+  { value: "system", label: "System", icon: "Monitor" },
+];
 
-function getSnapshot(): Mode {
-  const v = window.localStorage.getItem(STORAGE_KEY);
-  return v === "light" || v === "dark" || v === "system" ? v : "light";
-}
-
-const getServerSnapshot = (): Mode => "light";
-
+/** Light / Dark / System picker for the account menu. */
 export function ThemeToggle() {
-  const mode = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-
-  useEffect(() => {
-    if (mode !== "system") return;
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = () => applyMode("system");
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, [mode]);
-
-  function pick(next: Mode) {
-    window.localStorage.setItem(STORAGE_KEY, next);
-    applyMode(next);
-    window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY }));
-  }
-
-  const options: { value: Mode; label: string; icon: keyof typeof Icon }[] = [
-    { value: "light", label: "Light", icon: "Sun" },
-    { value: "dark", label: "Dark", icon: "Moon" },
-    { value: "system", label: "System", icon: "Monitor" },
-  ];
+  const { mode } = useTheme();
 
   return (
-    <div className="px-1 py-1">
-      <div className="px-1.5 pb-1 text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground">
+    <div className="px-1.5 py-1.5">
+      <div className="pb-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground">
         Theme
       </div>
-      <div className="grid grid-cols-3 gap-1">
-        {options.map((o) => {
+      <div
+        role="radiogroup"
+        aria-label="Theme"
+        className="grid grid-cols-3 rounded-[var(--r-2)] border border-[var(--line)] bg-[var(--surface-2)] p-0.5"
+      >
+        {OPTIONS.map((o) => {
           const I = Icon[o.icon];
           const active = mode === o.value;
           return (
             <button
               key={o.value}
               type="button"
-              onClick={() => pick(o.value)}
-              aria-pressed={active}
-              className={`flex flex-col items-center gap-1 rounded-md px-2 py-1.5 text-[11px] transition-colors ${
+              role="radio"
+              aria-checked={active}
+              onClick={() => setThemeMode(o.value)}
+              className={`flex items-center justify-center gap-1.5 rounded-[3px] px-2 py-1.5 text-[11.5px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-[var(--accent)] ${
                 active
-                  ? "bg-primary font-medium text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "bg-[var(--surface)] text-foreground shadow-[var(--shadow-1)] ring-1 ring-[var(--line)]"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <I size={14} />
+              <I size={13} aria-hidden />
               <span>{o.label}</span>
             </button>
           );
         })}
       </div>
     </div>
+  );
+}
+
+/** Top-bar shortcut: flips between light and dark (leaving "system" behind). */
+export function ThemeButton() {
+  const { resolved } = useTheme();
+  const next = resolved === "dark" ? "light" : "dark";
+  const I = resolved === "dark" ? Icon.Sun : Icon.Moon;
+  return (
+    <button
+      type="button"
+      className="btn btn-icon btn-ghost"
+      aria-label={`Switch to ${next} theme`}
+      title={`Switch to ${next} theme`}
+      onClick={() => setThemeMode(next)}
+    >
+      <I className="ico" aria-hidden />
+    </button>
   );
 }

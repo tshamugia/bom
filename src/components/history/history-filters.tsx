@@ -58,7 +58,7 @@ export function HistoryFilters({ projects }: { projects: ProjectOption[] }) {
         <Icon.Filter size={14} className="mr-1.5" />
         Filter
         {activeCount > 0 && (
-          <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--color-accent)] px-1 text-[10px] font-semibold text-white">
+          <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--color-accent)] px-1 text-[10px] font-semibold text-[var(--on-accent)]">
             {activeCount}
           </span>
         )}

@@ -21,27 +21,26 @@ export default async function ProfilePage() {
   const mustChange = !!session.user.mustChangePassword;
 
   return (
-    <>
-      <PageHead title="Profile" subtitle="Your account information and password." />
+    <div className="page-narrow">
+      <PageHead
+        // Until they set their own password the proxy keeps them on this page anyway.
+        back={mustChange ? undefined : { href: "/settings", label: "Settings" }}
+        title="Profile"
+        subtitle="Your account information and password."
+      />
 
       {mustChange && (
         <div
           role="alert"
-          className="mb-5 max-w-xl rounded-lg border border-[var(--color-warning)]/30 bg-[var(--color-warning-soft)] px-4 py-3 text-[13px] text-[var(--color-text)]"
+          className="mb-5 rounded-lg border border-[var(--color-warning)]/30 bg-[var(--color-warning-soft)] px-4 py-3 text-[13px] text-[var(--color-text)]"
         >
           <strong className="font-semibold">Set your own password to continue.</strong> The one you signed in with was set by an admin and is temporary.
         </div>
       )}
 
-      <div className="max-w-xl rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)] max-[701px]:p-4">
+      <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)] max-[701px]:p-4">
         <div className="flex items-center gap-4 border-b border-[var(--color-line-soft)] pb-4">
-          <div
-            className="grid h-14 w-14 shrink-0 place-items-center rounded-full text-[18px] font-semibold text-white"
-            style={{
-              background:
-                "linear-gradient(135deg, var(--color-cat-indigo) 0%, var(--color-cat-violet) 100%)",
-            }}
-          >
+          <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-[18px] font-semibold text-[var(--on-accent)]">
             {initials}
           </div>
           <div className="min-w-0">
@@ -68,13 +67,13 @@ export default async function ProfilePage() {
         </dl>
       </div>
 
-      <div className="mt-5 max-w-xl rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)] max-[701px]:p-4">
+      <div className="mt-5 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)] max-[701px]:p-4">
         <h2 className="text-[14px] font-semibold tracking-tight">Password</h2>
         <p className="mt-0.5 mb-4 text-[12.5px] text-[var(--color-text-3)]">
           Changing it signs you out on your other devices.
         </p>
         <ChangePasswordForm required={mustChange} />
       </div>
-    </>
+    </div>
   );
 }

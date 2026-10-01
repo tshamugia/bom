@@ -128,13 +128,13 @@ export function CommandPalette({ viewer = false }: { viewer?: boolean }) {
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-black/20 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-start justify-center bg-[var(--scrim)]"
           onClick={closePalette}
         >
           <div
             role="dialog"
             aria-label="Command palette"
-            className="mt-[max(12px,env(safe-area-inset-top))] w-[min(640px,calc(100%-1.5rem))] sm:mt-[18vh] overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]"
+            className="mt-[max(12px,env(safe-area-inset-top))] w-[min(640px,calc(100%-1.5rem))] sm:mt-[18vh] overflow-hidden rounded-[var(--r-4)] border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-pop)]"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center gap-2 border-b border-[var(--color-line)] px-3 py-2.5">

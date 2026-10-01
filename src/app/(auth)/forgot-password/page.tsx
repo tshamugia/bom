@@ -91,8 +91,7 @@ export default function ForgotPasswordPage() {
       <button
         type="submit"
         disabled={pending || !email.trim()}
-        className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg text-[14px] font-medium text-white transition-all hover:brightness-[1.06] focus-visible:ring-3 focus-visible:ring-[var(--color-accent)]/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-70"
-        style={{ backgroundImage: "linear-gradient(135deg, #5562ff 0%, #8a5cff 100%)" }}
+        className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-[var(--r-2)] bg-[var(--accent)] text-[14px] font-medium text-[var(--on-accent)] transition-colors hover:bg-[var(--accent-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-70"
       >
         {pending ? (
           <>

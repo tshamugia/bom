@@ -12,7 +12,7 @@ export default async function SettingsPage() {
   const admin = isAdmin(session.user);
 
   return (
-    <>
+    <div className="page-narrow">
       <PageHead
         title="Settings"
         subtitle="Workspace preferences and account."
@@ -20,15 +20,9 @@ export default async function SettingsPage() {
       <div className="grid gap-3 sm:grid-cols-2">
         <Link
           href="/settings/profile"
-          className="flex items-start gap-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)] transition-colors hover:bg-[var(--color-surface-2)]"
+          className="flex items-start gap-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)] transition-colors hover:border-[var(--color-line-strong)] hover:bg-[var(--color-surface-2)]"
         >
-          <div
-            className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-lg text-white"
-            style={{
-              background:
-                "linear-gradient(135deg, var(--color-cat-indigo) 0%, var(--color-cat-violet) 100%)",
-            }}
-          >
+          <div className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-[var(--r-2)] bg-[var(--accent-soft)] text-[var(--accent-text)]">
             <Icon.User size={16} />
           </div>
           <div className="min-w-0">
@@ -44,15 +38,9 @@ export default async function SettingsPage() {
         {admin && (
           <Link
             href="/settings/drawings"
-            className="flex items-start gap-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)] transition-colors hover:bg-[var(--color-surface-2)]"
+            className="flex items-start gap-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)] transition-colors hover:border-[var(--color-line-strong)] hover:bg-[var(--color-surface-2)]"
           >
-            <div
-              className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-lg text-white"
-              style={{
-                background:
-                  "linear-gradient(135deg, var(--color-cat-amber, #d97706) 0%, var(--color-cat-violet) 100%)",
-              }}
-            >
+            <div className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-[var(--r-2)] bg-[var(--accent-soft)] text-[var(--accent-text)]">
               <Icon.Drawing size={16} />
             </div>
             <div className="min-w-0">
@@ -69,15 +57,9 @@ export default async function SettingsPage() {
         {admin && (
           <Link
             href="/settings/procurement"
-            className="flex items-start gap-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)] transition-colors hover:bg-[var(--color-surface-2)]"
+            className="flex items-start gap-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)] transition-colors hover:border-[var(--color-line-strong)] hover:bg-[var(--color-surface-2)]"
           >
-            <div
-              className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-lg text-white"
-              style={{
-                background:
-                  "linear-gradient(135deg, var(--color-cat-teal, #0ea5a4) 0%, var(--color-cat-indigo) 100%)",
-              }}
-            >
+            <div className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-[var(--r-2)] bg-[var(--accent-soft)] text-[var(--accent-text)]">
               <Icon.Mail size={16} />
             </div>
             <div className="min-w-0">
@@ -91,6 +73,6 @@ export default async function SettingsPage() {
           </Link>
         )}
       </div>
-    </>
+    </div>
   );
 }
