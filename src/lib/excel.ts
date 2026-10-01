@@ -68,7 +68,7 @@ function selectedColumns(opts: BuildOptions): ColumnDescriptor[] {
 
 export async function buildBomWorkbook(input: BuildInput): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = "BOM Studio";
+  wb.creator = "Revline";
   wb.created = new Date();
 
   if (input.options.includeCoverPage) buildCoverSheet(wb, input);
@@ -292,7 +292,7 @@ export type CatalogExportRow = {
 
 export async function buildCatalogWorkbook(rows: CatalogExportRow[]): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = "BOM Studio";
+  wb.creator = "Revline";
   wb.created = new Date();
 
   const ws = wb.addWorksheet("Catalog");
@@ -338,7 +338,7 @@ export type VendorExportRow = {
 
 export async function buildVendorWorkbook(rows: VendorExportRow[]): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = "BOM Studio";
+  wb.creator = "Revline";
   wb.created = new Date();
 
   const ws = wb.addWorksheet("Vendors");

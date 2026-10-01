@@ -14,12 +14,13 @@ export default async function ProcurementSettingsPage() {
   const initial = await getProcurementSettings();
 
   return (
-    <>
+    <div className="page-narrow">
       <PageHead
+        back={{ href: "/settings", label: "Settings" }}
         title="Procurement email"
         subtitle="Recipients and template used when a BOM is sent to procurement."
       />
       <ProcurementSettingsForm initial={initial} />
-    </>
+    </div>
   );
 }

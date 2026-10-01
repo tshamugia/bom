@@ -4,7 +4,7 @@ import { TEMPLATE_COLUMNS } from "@/lib/schemas/import";
 
 export async function buildTemplate(): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = "BOM Studio";
+  wb.creator = "Revline";
   const ws = wb.addWorksheet("items");
   ws.addRow([...TEMPLATE_COLUMNS]);
   ws.getRow(1).font = { bold: true };

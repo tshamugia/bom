@@ -107,7 +107,7 @@ function FacetTrigger({ label, count, width = "w-56", children }: {
           <Button variant="outline" size="sm">
             {label}
             {count > 0 && (
-              <span className="ml-1 rounded-full bg-[var(--color-accent)]/15 px-1.5 text-[10px] font-semibold tabular-nums text-[var(--color-accent)]">
+              <span className="ml-1 rounded-[var(--r-1)] bg-[var(--color-accent-soft)] px-1.5 text-[10px] font-semibold tabular-nums text-[var(--color-accent-text)]">
                 {count}
               </span>
             )}

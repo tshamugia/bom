@@ -4,7 +4,7 @@ import { roleOf } from "@/lib/roles";
 import { PageHead } from "@/components/master/page-head";
 import { HELP_GROUPS, sectionsFor } from "@/components/help/help-sections";
 
-export const metadata: Metadata = { title: "Help — BOM Studio" };
+export const metadata: Metadata = { title: "Help — Revline" };
 
 export default async function HelpPage() {
   const session = await requireSession();
@@ -34,7 +34,7 @@ export default async function HelpPage() {
     <>
       <PageHead
         title="Help"
-        subtitle="How BOM Studio works — what connects to what, and how to get the common jobs done. Look for the (?) next to a rule in the app for the short version."
+        subtitle="How Revline works — what connects to what, and how to get the common jobs done. Look for the (?) next to a rule in the app for the short version."
       />
       <div className="help-layout">
         <details className="card help-toc-mobile">

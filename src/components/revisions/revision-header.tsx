@@ -38,7 +38,7 @@ export function RevisionHeader(p: RevisionHeaderProps) {
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
           <InlineProjectName key={p.projectName} projectId={p.projectId} initialName={p.projectName} />
-          <span className="rounded-full bg-[var(--color-surface-3)] px-2 py-px font-mono text-[11px] text-[var(--color-text-2)]">{p.projectCode}</span>
+          <span className="rounded-[var(--r-1)] bg-[var(--color-surface-3)] px-1.5 py-px font-mono text-[11px] text-[var(--color-text-2)]">{p.projectCode}</span>
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1">
           {p.bomsInProject ? (

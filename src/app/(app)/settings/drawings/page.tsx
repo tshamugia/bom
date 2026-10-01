@@ -33,12 +33,13 @@ export default async function DrawingSettingsPage() {
     : null;
 
   return (
-    <>
+    <div className="page-narrow">
       <PageHead
+        back={{ href: "/settings", label: "Settings" }}
         title="Drawings"
         subtitle="Status emails, daily reminders, drawing PDFs, and the disciplines drawings are grouped by."
       />
-      <div className="grid max-w-3xl gap-5">
+      <div className="grid gap-5">
         <div className="card">
           <div className="card-head">
             <div>
@@ -107,6 +108,6 @@ export default async function DrawingSettingsPage() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

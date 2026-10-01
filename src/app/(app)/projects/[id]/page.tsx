@@ -54,6 +54,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   return (
     <>
       <PageHead
+        back={{ href: "/projects", label: "Projects" }}
         title={project.name}
         subtitle={[project.code, project.clientName].filter(Boolean).join(" · ")}
         actions={

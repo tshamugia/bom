@@ -196,16 +196,9 @@ function SignInForm() {
       <button
         type="submit"
         disabled={pending}
-        className="group relative inline-flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-lg text-[14px] font-medium text-white shadow-[0_1px_0_rgba(255,255,255,0.18)_inset,0_1px_2px_rgba(15,18,34,0.12),0_4px_14px_-4px_rgba(85,98,255,0.6)] transition-all hover:brightness-[1.06] hover:shadow-[0_1px_0_rgba(255,255,255,0.22)_inset,0_2px_4px_rgba(15,18,34,0.14),0_8px_22px_-6px_rgba(138,92,255,0.7)] focus-visible:ring-3 focus-visible:ring-[var(--color-accent)]/40 focus-visible:outline-none active:translate-y-px disabled:cursor-not-allowed disabled:opacity-80"
-        style={{
-          backgroundImage: "linear-gradient(135deg, #5562ff 0%, #8a5cff 100%)",
-        }}
+        className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-[var(--r-2)] bg-[var(--accent)] text-[14px] font-medium text-[var(--on-accent)] transition-colors hover:bg-[var(--accent-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-70"
       >
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent opacity-90"
-        />
-        <span className="relative inline-flex items-center gap-2">
+        <span className="inline-flex items-center gap-2">
           {pending ? (
             <>
               <Loader2 className="size-4 animate-spin" aria-hidden />

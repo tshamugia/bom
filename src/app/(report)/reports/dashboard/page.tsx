@@ -7,11 +7,11 @@ import { DRAWING_STATUSES, DRAWING_STATUS_LABEL, formatDrawingRevision } from "@
 import { formatDate, formatDateTime } from "@/lib/format";
 import { roundHours } from "@/lib/drawing-meta";
 
-export const metadata: Metadata = { title: "Dashboard report — BOM Studio" };
+export const metadata: Metadata = { title: "Dashboard report — Revline" };
 
 // Fixed light palette: this page is for paper/PDF, whatever theme the app is in.
 const CSS = `
-  html, body { background: #fff !important; color: #1c1f26; }
+  html, body { background: #fff !important; color: #1c1f26; color-scheme: light !important; }
   .report { max-width: 1120px; margin: 0 auto; padding: 24px 28px 48px; font-size: 11.5px; line-height: 1.45; }
   .report h1 { font-size: 22px; margin: 0; letter-spacing: -0.02em; }
   .report h2 { font-size: 13.5px; margin: 22px 0 8px; }

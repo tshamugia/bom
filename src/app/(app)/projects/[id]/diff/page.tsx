@@ -2,20 +2,23 @@ import { notFound } from "next/navigation";
 import { Badge, RevisionStatusBadge } from "@/components/ui/badge";
 import { DiffTable } from "@/components/revisions/diff-table";
 import { getRevisionDiff } from "@/server/queries/revisions";
+import { BackLink } from "@/components/master/back-link";
 
 export default async function DiffPage({
+  params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ left?: string; right?: string }>;
 }) {
-  const sp = await searchParams;
+  const [{ id }, sp] = await Promise.all([params, searchParams]);
   if (!sp.left || !sp.right) notFound();
 
   const diff = await getRevisionDiff(sp.left, sp.right);
 
   return (
     <div>
+      <BackLink href={`/projects/${id}/history`} label="History" />
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <h1 className="text-[20px] font-semibold tracking-tight">Comparing</h1>
         <Badge tone="gray">Rev {diff.left.letter}</Badge>

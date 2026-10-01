@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LogoMark } from "@/components/brand/logo-mark";
 import { Icon } from "@/components/icons";
+import { BRAND_COMPANY, BRAND_NAME } from "@/lib/brand";
 import { NAV } from "./nav-config";
 import { UserMenu } from "./user-menu";
 import type { UserRole } from "@/lib/roles";
@@ -23,10 +25,10 @@ export function Sidebar({
     <aside className="sidebar">
       {/* Brand */}
       <div className="sb-brand">
-        <div className="sb-logo">B</div>
+        <LogoMark size={30} />
         <div>
-          <div className="sb-name">BOM Studio</div>
-          <div className="sb-name-sub">Insta</div>
+          <div className="sb-name">{BRAND_NAME}</div>
+          <div className="sb-name-sub">{BRAND_COMPANY}</div>
         </div>
       </div>
 

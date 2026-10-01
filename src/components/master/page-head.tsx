@@ -1,19 +1,27 @@
+import { BackLink, type BackTarget } from "./back-link";
+
 export function PageHead({
   title,
   subtitle,
   actions,
+  back,
 }: {
-  title: string;
-  subtitle: string;
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
   actions?: React.ReactNode;
+  /** Detail pages: the list or parent page they belong to ("← Drawings"). */
+  back?: BackTarget;
 }) {
   return (
-    <div className="page-head">
-      <div>
-        <h1 className="page-title">{title}</h1>
-        <p className="page-sub">{subtitle}</p>
+    <>
+      {back && <BackLink {...back} />}
+      <div className="page-head">
+        <div className="min-w-0">
+          <h1 className="page-title">{title}</h1>
+          {subtitle && <p className="page-sub">{subtitle}</p>}
+        </div>
+        {actions && <div className="page-actions">{actions}</div>}
       </div>
-      {actions && <div className="page-actions">{actions}</div>}
-    </div>
+    </>
   );
 }

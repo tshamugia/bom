@@ -289,7 +289,7 @@ function UncategorizedHeader({
           <span className="text-[13px] font-semibold tracking-tight text-[var(--color-text-2)] italic">
             Uncategorized
           </span>
-          <span className="rounded-full bg-[var(--color-surface-3)] px-2 py-px font-mono text-[11px] text-[var(--color-text-3)]">
+          <span className="rounded-[var(--r-1)] bg-[var(--color-surface-3)] px-1.5 py-px font-mono text-[11px] text-[var(--color-text-3)]">
             {count}
           </span>
         </div>

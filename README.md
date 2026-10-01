@@ -1,4 +1,4 @@
-# BOM Studio
+# Revline
 
 Bill of Materials management for hardware teams.
 

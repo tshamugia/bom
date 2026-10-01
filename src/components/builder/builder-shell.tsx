@@ -15,6 +15,7 @@ import { DuplicateDialog } from "./duplicate-dialog";
 import { RevisionHeader } from "@/components/revisions/revision-header";
 import type { SwitcherBom } from "./bom-switcher";
 import { Icon } from "@/components/icons";
+import { BackLink } from "@/components/master/back-link";
 import { BlockedNote } from "@/components/help/blocked-note";
 import type { SectionInfo } from "./section-row";
 
@@ -96,6 +97,7 @@ export function BuilderShell(p: Props) {
 
   return (
     <>
+      <BackLink href="/builder" label="BOM Builder" />
       <RevisionHeader
         projectId={p.projectId}
         projectCode={p.projectCode}

@@ -50,7 +50,7 @@ export default async function VendorsPage() {
                 <tr key={v.id}>
                   <td className="td-main">
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <div className="avatar" style={{ width: 28, height: 28, fontSize: 11, background: "linear-gradient(135deg, #6b7180, #4b5160)" }}>{v.code}</div>
+                      <div className="avatar" style={{ width: 28, height: 28, fontSize: 11, background: "#4f5867" }}>{v.code}</div>
                       <div className="min-w-0" style={{ fontWeight: 500 }}>{v.name}</div>
                     </div>
                   </td>

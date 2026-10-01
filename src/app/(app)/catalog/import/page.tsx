@@ -1,6 +1,4 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { PageHead } from "@/components/master/page-head";
 import { UploadZone } from "@/components/import/upload-zone";
 import { PreviewLoader } from "./preview-loader";
@@ -13,9 +11,9 @@ export default async function ImportPage({ searchParams }: { searchParams: Promi
   if (!canEdit((await requireSession()).user)) redirect("/catalog");
   const head = (
     <PageHead
+      back={{ href: "/catalog", label: "Item Catalog" }}
       title="Import catalog"
       subtitle="Upload an XLSX following the template. Review the dry-run before committing."
-      actions={<Link href="/catalog"><Button variant="outline" className="w-full">Back to catalog</Button></Link>}
     />
   );
 
