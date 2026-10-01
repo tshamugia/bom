@@ -5,6 +5,7 @@ import {
   type TransitionKind,
 } from "@/lib/drawing-status";
 import { TRANSMITTAL_PURPOSE_LABEL, type TransmittalPurpose } from "@/lib/drawing-meta";
+import { drawingFileHref } from "@/lib/drawing-files";
 
 /**
  * Owner and reviewer always hear about their drawing; the global and
@@ -105,12 +106,15 @@ export type TransmittalEmailInput = {
   senderName: string;
   recipientName: string;
   note: string | null;
+  /** The revision's PDF, when it has one people may open. */
+  pdfFileId?: string | null;
 };
 
 export function buildTransmittalEmail(i: TransmittalEmailInput): { subject: string; text: string } {
   const rev = formatDrawingRevision(i.revisionNumber);
   const purpose = TRANSMITTAL_PURPOSE_LABEL[i.purpose];
-  const url = `${i.appUrl.replace(/\/$/, "")}/drawings/${i.drawingId}`;
+  const base = i.appUrl.replace(/\/$/, "");
+  const url = `${base}/drawings/${i.drawingId}`;
 
   const lines = [
     `Hi ${i.recipientName},`,
@@ -123,6 +127,7 @@ export function buildTransmittalEmail(i: TransmittalEmailInput): { subject: stri
     `Purpose:  ${purpose}`,
   ];
   if (i.note?.trim()) lines.push("", "Note:", i.note.trim());
+  if (i.pdfFileId) lines.push("", `Open the PDF: ${base}${drawingFileHref(i.pdfFileId)}`);
   lines.push(
     "",
     `Open the drawing and acknowledge receipt: ${url}`,

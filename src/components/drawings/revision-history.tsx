@@ -1,5 +1,8 @@
+import { Icon } from "@/components/icons";
 import { formatDateTime } from "@/lib/format";
 import { formatDrawingRevision, type DrawingStatus } from "@/lib/drawing-status";
+import { drawingFileHref, drawingFileName, formatFileSize } from "@/lib/drawing-files";
+import type { DrawingFileRow } from "@/server/queries/drawing-files";
 import type { DrawingEventRow, DrawingRevisionRow } from "@/server/queries/drawings";
 import { DrawingStatusBadge } from "./drawing-status-badge";
 import { CommentForm } from "./comment-form";
@@ -50,6 +53,15 @@ function EventItem({ e, revisionLabel }: { e: DrawingEventRow; revisionLabel: st
           )}
         </div>
       );
+    case "file":
+      return (
+        <div className="tl-item">
+          <div className="tl-dot" />
+          <div className="tl-title">Drawing PDF</div>
+          {meta}
+          <div className="mt-1 text-[12.5px] text-[var(--color-text-2)] [overflow-wrap:anywhere]">{e.body}</div>
+        </div>
+      );
     case "comment":
       return (
         <div className="tl-item">
@@ -65,11 +77,15 @@ function EventItem({ e, revisionLabel }: { e: DrawingEventRow; revisionLabel: st
 function RevisionCard({
   rev,
   events,
+  file,
+  drawingCode,
   isLatest,
   readOnly,
 }: {
   rev: DrawingRevisionRow;
   events: DrawingEventRow[];
+  file: DrawingFileRow | undefined;
+  drawingCode: string;
   isLatest: boolean;
   readOnly: boolean;
 }) {
@@ -83,6 +99,16 @@ function RevisionCard({
           {rev.reviewedAt && <> · Approved internally by {rev.reviewedByName ?? "—"} · {formatDateTime(rev.reviewedAt)}</>}
           {!isLatest && rev.lockedAt && <> · Locked {formatDateTime(rev.lockedAt)}</>}
         </div>
+        {/* Viewers get the PDF they may use from the Drawing PDF card, not older ones. */}
+        {file && !readOnly && (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <Icon.Doc className="ico shrink-0 text-[var(--color-text-3)]" aria-hidden />
+            <span className="mono">{drawingFileName(drawingCode, rev.number)}</span>
+            <span className="muted">{formatFileSize(file.sizeBytes)}</span>
+            <a href={drawingFileHref(file.id)} target="_blank" rel="noopener" className="hover:underline">Open</a>
+            <a href={drawingFileHref(file.id, true)} className="hover:underline">Download</a>
+          </div>
+        )}
         {/* Rev 1 has nothing before it to outdate; viewers don't see BOM links. */}
         {isLatest && !readOnly && rev.number > 1 && (
           <div className="flex flex-wrap items-center gap-2">
@@ -112,10 +138,15 @@ function RevisionCard({
 export function RevisionHistory({
   revisions,
   events,
+  files,
+  drawingCode,
   readOnly = false,
 }: {
   revisions: DrawingRevisionRow[];
   events: DrawingEventRow[];
+  /** The current PDF of each revision. */
+  files: DrawingFileRow[];
+  drawingCode: string;
   readOnly?: boolean;
 }) {
   const byRevision = new Map<string, DrawingEventRow[]>();
@@ -139,7 +170,16 @@ export function RevisionHistory({
             <span className="muted text-[12px]">{(byRevision.get(rev.id) ?? []).filter(e => e.kind === "comment").length} comments</span>
           </div>
         );
-        const body = <RevisionCard rev={rev} events={byRevision.get(rev.id) ?? []} isLatest={isLatest} readOnly={readOnly} />;
+        const body = (
+          <RevisionCard
+            rev={rev}
+            events={byRevision.get(rev.id) ?? []}
+            file={files.find(f => f.revisionId === rev.id)}
+            drawingCode={drawingCode}
+            isLatest={isLatest}
+            readOnly={readOnly}
+          />
+        );
         return isLatest ? (
           <div key={rev.id} className="card">
             <div className="card-head">{head}</div>

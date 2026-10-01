@@ -15,6 +15,7 @@ export const HELP_TOPIC_IDS = [
   "drawing-revisions",
   "drawing-statuses",
   "drawing-approval",
+  "drawing-pdf",
   "transmittals",
   "procurement",
   "exports",
@@ -71,6 +72,11 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
     title: "Internal check by a second engineer",
     summary:
       "Set Need to be approved and pick the approving engineer — not the owner and not yourself. Only that engineer can approve it, or send it back to In Progress with a comment.",
+  },
+  "drawing-pdf": {
+    title: "Drawing PDF",
+    summary:
+      "The drawing owner or an admin uploads the PDF of the latest revision once the client approved it (Approved A, Approved B or As Built — an admin can allow it from Need to be approved). Viewers see that PDF only. A new upload replaces the old one, which stays in the archive.",
   },
   "transmittals": {
     title: "Transmittals",

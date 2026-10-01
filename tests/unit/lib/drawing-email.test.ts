@@ -113,4 +113,9 @@ describe("buildTransmittalEmail", () => {
   test("includes the note when given", () => {
     expect(buildTransmittalEmail({ ...base, note: "  Printed copy on site  " }).text).toContain("Note:\nPrinted copy on site");
   });
+
+  test("links the PDF when the revision has one to send", () => {
+    expect(buildTransmittalEmail(base).text).not.toContain("PDF");
+    expect(buildTransmittalEmail({ ...base, pdfFileId: "f1" }).text).toContain("Open the PDF: https://bom.example/api/drawings/files/f1");
+  });
 });

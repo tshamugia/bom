@@ -4,7 +4,8 @@ import { z } from "zod";
 import { and, eq, inArray, isNull, max, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
-import { drawingDisciplines, drawingNotifyRecipients, projects, user } from "@/db/schema";
+import { drawingDisciplines, drawingNotifyRecipients, projects, systemSettings, SYSTEM_SETTINGS_ID, user } from "@/db/schema";
+import { DRAWING_FILE_GATES, DRAWING_FILE_GATE_LABEL } from "@/lib/drawing-files";
 import { ADMIN_ONLY_ERROR, isAdmin } from "@/lib/roles";
 import { requireSession } from "../auth-context";
 import { audit } from "../audit";
@@ -60,6 +61,32 @@ export async function setDrawingRecipients(input: z.infer<typeof RecipientsInput
       ? `Drawing notifications for ${projectCode}: ${unique.length} recipient${unique.length === 1 ? "" : "s"}`
       : `Drawing notifications for all projects: ${unique.length} recipient${unique.length === 1 ? "" : "s"}`,
     payload: { projectId, userIds: unique },
+  });
+  return { ok: true };
+}
+
+const FileGateInput = z.object({ gate: z.enum(DRAWING_FILE_GATES) });
+
+/** From which status drawing PDFs can be uploaded, sent and seen by viewers. */
+export async function setDrawingFileGate(input: z.infer<typeof FileGateInput>): Promise<DrawingActionResult> {
+  const { gate } = FileGateInput.parse(input);
+  const session = await requireSession();
+  if (!isAdmin(session.user)) return fail(ADMIN_ONLY_ERROR);
+
+  const now = new Date();
+  await db
+    .insert(systemSettings)
+    .values({ id: SYSTEM_SETTINGS_ID, drawingFileGate: gate, updatedById: session.user.id, updatedAt: now })
+    .onConflictDoUpdate({
+      target: systemSettings.id,
+      set: { drawingFileGate: gate, updatedById: session.user.id, updatedAt: now },
+    });
+
+  revalidatePath("/settings/drawings");
+  await audit({
+    kind: "drawing.settings.updated",
+    summary: `Drawing PDFs open from: ${DRAWING_FILE_GATE_LABEL[gate].title}`,
+    payload: { drawingFileGate: gate },
   });
   return { ok: true };
 }

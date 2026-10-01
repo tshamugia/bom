@@ -14,6 +14,8 @@ export const ADMIN_ONLY_KINDS = [
   "user.password.reset",
   "user.password.reset.requested",
   "settings.procurement.updated",
+  // Every time someone opens a drawing PDF — kept for document control, too noisy for Activity.
+  "drawing.file.downloaded",
 ] as const satisfies readonly AuditKind[];
 
 const ADMIN_ONLY = new Set<string>(ADMIN_ONLY_KINDS);
@@ -34,6 +36,7 @@ export const DELETION_KINDS = [
   "bom.revision.discarded",
   "bom.drawing.unlinked",
   "drawing.time.deleted",
+  "drawing.file.removed",
   "approval.cancelled",
 ] as const satisfies readonly AuditKind[];
 

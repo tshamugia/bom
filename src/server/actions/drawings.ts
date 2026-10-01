@@ -19,6 +19,7 @@ import { MAX_ESTIMATE_HOURS, formatHours } from "@/lib/drawing-meta";
 import { ADMIN_ONLY_ERROR, READ_ONLY_ERROR, canEdit, isAdmin } from "@/lib/roles";
 import { requireSession } from "../auth-context";
 import { audit } from "../audit";
+import { isUniqueViolation } from "../lib/db-errors";
 import { notifyDrawingStatusChange } from "../lib/drawing-notify";
 
 // Expected failures are returned, not thrown: Next.js hides thrown messages
@@ -40,11 +41,6 @@ const DrawingFields = z.object({
   /** Path on the company file server, e.g. `2026/BMW/CCTV`; blank clears it. */
   fileLocation: z.string().trim().max(500).nullish().transform(v => v || null),
 });
-
-function isUniqueViolation(e: unknown): boolean {
-  const code = (x: unknown) => (typeof x === "object" && x && "code" in x ? (x as { code: unknown }).code : null);
-  return code(e) === "23505" || code((e as { cause?: unknown } | null)?.cause) === "23505";
-}
 
 async function findProject(id: string) {
   const [p] = await db

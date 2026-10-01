@@ -4,6 +4,7 @@ import { Icon } from "@/components/icons";
 import { formatDateTime, formatRelative } from "@/lib/format";
 import { formatDrawingRevision } from "@/lib/drawing-status";
 import { TRANSMITTAL_PURPOSE_LABEL } from "@/lib/drawing-meta";
+import { drawingFileHref } from "@/lib/drawing-files";
 import type { listBomSends, listIssuedTransmittals } from "@/server/queries/status-overview";
 
 type BomSend = Awaited<ReturnType<typeof listBomSends>>[number];
@@ -129,7 +130,21 @@ export function IssuedDrawingsTable({ rows, userId }: { rows: Issued[]; userId: 
                     {r.sentByName && <div className="max-[701px]:hidden" style={{ fontSize: 11 }}>by {r.sentByName}</div>}
                   </td>
                   <td className="l-aside" style={{ whiteSpace: "nowrap" }}>
-                    <ReceiptBadge r={r} />
+                    <span className="inline-flex items-center gap-1.5">
+                      <ReceiptBadge r={r} />
+                      {r.pdfFileId && (
+                        <a
+                          href={drawingFileHref(r.pdfFileId)}
+                          target="_blank"
+                          rel="noopener"
+                          className="btn btn-icon btn-ghost"
+                          aria-label={`Open the PDF of ${r.code} ${formatDrawingRevision(r.revisionNumber)}`}
+                          title="Open PDF"
+                        >
+                          <Icon.Doc className="ico" />
+                        </a>
+                      )}
+                    </span>
                   </td>
                 </tr>
               ))
