@@ -127,6 +127,7 @@ export async function getDrawing(id: string) {
       name: drawings.name,
       dueDate: drawings.dueDate,
       estimatedHours: drawings.estimatedHours,
+      fileLocation: drawings.fileLocation,
       createdAt: drawings.createdAt,
       updatedAt: drawings.updatedAt,
       projectId: projects.id,

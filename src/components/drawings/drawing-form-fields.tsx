@@ -16,6 +16,8 @@ export type DrawingFormValue = {
   dueDate: string;
   /** Planned hours as typed; empty means no estimate. */
   estimatedHours: string;
+  /** Folder on the company file server; empty means not set. */
+  fileLocation: string;
 };
 
 export const SELECT_CLASS =
@@ -109,6 +111,20 @@ export function DrawingFormFields({
             onChange={e => set("estimatedHours", e.target.value)}
           />
         </div>
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor={id("location")}>
+          File location <span className="text-[var(--color-text-3)]">(optional)</span>
+        </Label>
+        <Input
+          id={id("location")}
+          className="font-mono"
+          value={value.fileLocation}
+          maxLength={500}
+          placeholder="e.g. 2026/BMW/CCTV"
+          onChange={e => set("fileLocation", e.target.value)}
+        />
+        <p className="text-[12px] text-[var(--color-text-3)]">The folder on the file server where the drawing files are kept.</p>
       </div>
     </div>
   );

@@ -44,6 +44,7 @@ export function EditDrawingDialog({
         ownerId: value.ownerId,
         dueDate: value.dueDate || null,
         estimatedHours: parseHours(value.estimatedHours) ?? null,
+        fileLocation: value.fileLocation.trim() || null,
       });
       if (!res.ok) {
         toast.error(res.error);

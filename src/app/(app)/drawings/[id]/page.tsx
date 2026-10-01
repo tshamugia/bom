@@ -22,6 +22,7 @@ import { RemarksCard } from "@/components/drawings/remarks-card";
 import { TransmittalsCard } from "@/components/drawings/transmittals-card";
 import { BomUsageCard } from "@/components/drawings/bom-usage-card";
 import { DrawingPipeline } from "@/components/drawings/drawing-pipeline";
+import { FileLocation } from "@/components/drawings/file-location";
 import { HelpTip } from "@/components/help/help-tip";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { formatDrawingRevision, isDrawingOverdue } from "@/lib/drawing-status";
@@ -84,6 +85,7 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
                     ownerId: drawing.ownerId ?? "",
                     dueDate: drawing.dueDate ?? "",
                     estimatedHours: drawing.estimatedHours?.toString() ?? "",
+                    fileLocation: drawing.fileLocation ?? "",
                   }}
                   projects={projects}
                   disciplines={disciplines}
@@ -134,6 +136,12 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
           <dt>Due date</dt>
           <dd style={overdue ? { color: "var(--red)", fontWeight: 600 } : undefined}>
             {drawing.dueDate ? formatDate(drawing.dueDate) : "—"}{overdue && " · overdue"}
+          </dd>
+          <dt>File location</dt>
+          <dd>
+            {drawing.fileLocation
+              ? <FileLocation path={drawing.fileLocation} />
+              : <span className="muted">{readOnly ? "—" : "Not set — add it with Edit"}</span>}
           </dd>
           {current.reviewerName && (current.status === "need-approval" || current.reviewedAt) && (
             <>

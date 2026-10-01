@@ -37,6 +37,8 @@ const DrawingFields = z.object({
   ownerId: Id,
   dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
   estimatedHours: z.number().positive().max(MAX_ESTIMATE_HOURS).nullable(),
+  /** Path on the company file server, e.g. `2026/BMW/CCTV`; blank clears it. */
+  fileLocation: z.string().trim().max(500).nullish().transform(v => v || null),
 });
 
 function isUniqueViolation(e: unknown): boolean {
@@ -112,7 +114,7 @@ const CreateInput = DrawingFields.extend({
   commitMessage: z.string().trim().max(2000).optional(),
 });
 
-export async function createDrawing(input: z.infer<typeof CreateInput>): Promise<DrawingActionResult<{ id: string }>> {
+export async function createDrawing(input: z.input<typeof CreateInput>): Promise<DrawingActionResult<{ id: string }>> {
   const data = CreateInput.parse(input);
   const session = await requireSession();
   if (!canEdit(session.user)) return fail(READ_ONLY_ERROR);
@@ -134,6 +136,7 @@ export async function createDrawing(input: z.infer<typeof CreateInput>): Promise
         ownerId: data.ownerId,
         dueDate: data.dueDate,
         estimatedHours: data.estimatedHours,
+        fileLocation: data.fileLocation,
         createdById: session.user.id,
         lastModifiedById: session.user.id,
       }).returning({ id: drawings.id });
@@ -170,7 +173,7 @@ export async function createDrawing(input: z.infer<typeof CreateInput>): Promise
 
 const UpdateInput = DrawingFields.extend({ id: Id });
 
-export async function updateDrawing(input: z.infer<typeof UpdateInput>): Promise<DrawingActionResult> {
+export async function updateDrawing(input: z.input<typeof UpdateInput>): Promise<DrawingActionResult> {
   const { id, ...data } = UpdateInput.parse(input);
   const session = await requireSession();
   if (!canEdit(session.user)) return fail(READ_ONLY_ERROR);
@@ -184,6 +187,7 @@ export async function updateDrawing(input: z.infer<typeof UpdateInput>): Promise
       ownerId: drawings.ownerId,
       dueDate: drawings.dueDate,
       estimatedHours: drawings.estimatedHours,
+      fileLocation: drawings.fileLocation,
     })
     .from(drawings)
     .where(and(eq(drawings.id, id), isNull(drawings.deletedAt)))
@@ -218,6 +222,9 @@ export async function updateDrawing(input: z.infer<typeof UpdateInput>): Promise
   if (current.dueDate !== data.dueDate) changes.push(`Due date: ${current.dueDate ?? "—"} → ${data.dueDate ?? "—"}`);
   if (current.estimatedHours !== data.estimatedHours) {
     changes.push(`Estimate: ${formatHours(current.estimatedHours)} → ${formatHours(data.estimatedHours)}`);
+  }
+  if (current.fileLocation !== data.fileLocation) {
+    changes.push(`File location: ${current.fileLocation ?? "—"} → ${data.fileLocation ?? "—"}`);
   }
   if (changes.length === 0) return { ok: true };
 
