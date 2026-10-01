@@ -343,7 +343,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     roles: EDITORS,
     body: () => (
       <ol className="help-steps">
-        <li>On <Link href="/drawings">Drawings</Link>, click <Ui>New drawing</Ui>: project, code, name, owner and due date. It starts at rev1, In Progress.</li>
+        <li>On <Link href="/drawings">Drawings</Link>, click <Ui>New drawing</Ui>: project, code, name, owner and due date. Add the <Ui>File location</Ui> — the folder on the file server, e.g. <span className="mono">2026/BMW/CCTV</span> — so others can find the files. It starts at rev1, In Progress.</li>
         <li>Work on it. Log hours in <Ui>Time</Ui> and track client or site comments in <Ui>Remarks</Ui>.</li>
         <li>When it is ready, <Ui>Change status</Ui> → <Ui>Need to be approved</Ui> and pick the approving engineer.</li>
         <li>That engineer approves it (→ Awaiting approval) or sends it back with a comment (→ In Progress).</li>

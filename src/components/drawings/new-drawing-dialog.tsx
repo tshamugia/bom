@@ -37,6 +37,7 @@ export function NewDrawingDialog({
     ownerId: users.some(u => u.id === currentUserId) ? currentUserId : "",
     dueDate: "",
     estimatedHours: "",
+    fileLocation: "",
   });
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState<DrawingFormValue>(blank);
@@ -54,6 +55,7 @@ export function NewDrawingDialog({
         ownerId: value.ownerId,
         dueDate: value.dueDate || null,
         estimatedHours: parseHours(value.estimatedHours) ?? null,
+        fileLocation: value.fileLocation.trim() || null,
         commitMessage: note.trim() || undefined,
       });
       if (!res.ok) {

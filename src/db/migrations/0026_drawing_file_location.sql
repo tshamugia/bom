@@ -1,0 +1,1 @@
+ALTER TABLE "drawing" ADD COLUMN "file_location" text;

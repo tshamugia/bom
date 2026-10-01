@@ -42,6 +42,8 @@ export const drawings = pgTable(
     dueDate: date("due_date"),
     /** Planned effort; engineers log the actual hours in `drawing_time_entry`. */
     estimatedHours: numeric("estimated_hours", { precision: 8, scale: 2, mode: "number" }),
+    /** Where the drawing files sit on the company file server, e.g. `2026/BMW/CCTV` — the app stores no files. */
+    fileLocation: text("file_location"),
     createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
     lastModifiedById: text("last_modified_by_id").references(() => user.id, { onDelete: "set null" }),
     deletedAt: timestamp("deleted_at"),

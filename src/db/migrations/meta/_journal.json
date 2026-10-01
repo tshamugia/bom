@@ -183,6 +183,13 @@
       "when": 1790802106738,
       "tag": "0025_drawing_bom_impact",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1790843296842,
+      "tag": "0026_drawing_file_location",
+      "breakpoints": true
     }
   ]
 }
