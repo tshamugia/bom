@@ -53,6 +53,7 @@ export default async function PreviewPage({ params }: { params: Promise<{ projec
       procurementRevision={procurementRev && procurementRev.status === "committed"
         ? { id: procurementRev.id, letter: procurementRev.letter }
         : null}
+      lastSentLetter={procurementRev && procurementRev.status !== "committed" ? procurementRev.letter : null}
       lines={lines as never}
       sections={sections}
       steps={workflow ? workflow.steps.map(s => ({ position: s.position, role: s.role, status: s.status, assigneeName: s.assigneeName })) : null}

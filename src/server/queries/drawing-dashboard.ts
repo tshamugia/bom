@@ -1,5 +1,6 @@
 import "server-only";
-import { aliasedTable, and, count, desc, eq, inArray, isNotNull, isNull, lt, max } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNotNull, isNull, max } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db/client";
 import {
   bomRevisionDrawings,
@@ -14,6 +15,7 @@ import {
 import { todayIso } from "@/lib/drawing-status";
 import type { DashboardDrawing } from "@/lib/drawing-dashboard";
 import { requireSession } from "../auth-context";
+import { bomImpactRevisions, isOutdatedSql } from "../lib/bom-drawing-outdated";
 import { listDrawings } from "./drawings";
 
 function latestDrawingRevisions() {
@@ -28,7 +30,7 @@ function latestDrawingRevisions() {
     .as("latest");
 }
 
-/** BOMs whose current revision references an older revision of a drawing. */
+/** BOMs whose current revision is built from a drawing that has since changed the BOM. */
 async function listOutdatedBomReferences(projectId?: string) {
   const current = db
     .selectDistinctOn([bomRevisions.bomId], {
@@ -41,7 +43,9 @@ async function listOutdatedBomReferences(projectId?: string) {
     .orderBy(bomRevisions.bomId, desc(bomRevisions.createdAt))
     .as("current_rev");
   const latest = latestDrawingRevisions();
-  const linked = aliasedTable(drawingRevisions, "linked");
+  const linked = alias(drawingRevisions, "linked");
+  const checked = alias(drawingRevisions, "checked");
+  const impact = bomImpactRevisions();
 
   return db
     .select({
@@ -63,8 +67,10 @@ async function listOutdatedBomReferences(projectId?: string) {
     .innerJoin(drawings, eq(drawings.id, bomRevisionDrawings.drawingId))
     .innerJoin(linked, eq(linked.id, bomRevisionDrawings.drawingRevisionId))
     .innerJoin(latest, eq(latest.drawingId, drawings.id))
+    .leftJoin(checked, eq(checked.id, bomRevisionDrawings.checkedRevisionId))
+    .leftJoin(impact, eq(impact.drawingId, drawings.id))
     .where(and(
-      lt(linked.number, latest.number),
+      isOutdatedSql(impact.number, linked.number, checked.number),
       isNull(boms.deletedAt),
       isNull(projects.deletedAt),
       isNull(drawings.deletedAt),

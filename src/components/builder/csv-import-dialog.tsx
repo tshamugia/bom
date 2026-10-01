@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
 import { importCsv } from "@/server/actions/bom-lines";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 export function CsvImportDialog({ revisionId }: { revisionId: string }) {
   const [open, setOpen] = useState(false);

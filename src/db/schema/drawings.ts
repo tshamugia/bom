@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, text, integer, numeric, timestamp, date, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, pgEnum, text, integer, numeric, boolean, timestamp, date, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { projects } from "./projects";
@@ -66,6 +66,8 @@ export const drawingRevisions = pgTable(
     number: integer("number").notNull(),
     status: drawingStatusEnum("status").notNull().default("in-progress"),
     commitMessage: text("commit_message").notNull(),
+    /** False when the revision doesn't touch the BOM (layout, annotations…) — BOMs built from earlier revisions stay current. */
+    bomImpact: boolean("bom_impact").notNull().default(true),
     reviewerId: text("reviewer_id").references(() => user.id, { onDelete: "set null" }),
     reviewedById: text("reviewed_by_id").references(() => user.id, { onDelete: "set null" }),
     reviewedAt: timestamp("reviewed_at"),

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle, DialogTrigger,
@@ -40,7 +40,6 @@ export function ResetPasswordDialog({ userId, name, email }: { userId: string; n
         } else {
           toast.warning(
             `Password reset, but the email ${r.emailStatus === "skipped" ? "is not configured" : "failed"} — give ${name} the new password yourself.`,
-            { duration: 10_000 },
           );
         }
       } catch (err) {

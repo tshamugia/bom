@@ -6,8 +6,8 @@ import { bomLines, bomRevisionDrawings, bomSections, items, vendors } from "@/db
 type Tx = Parameters<Parameters<typeof Db.transaction>[0]>[0];
 
 /**
- * Carries drawing references over unchanged — the new revision then shows
- * any drawing that moved on since as outdated.
+ * Carries drawing references (and "no BOM change" checks) over unchanged —
+ * the new revision then shows any drawing that changed the BOM since as outdated.
  */
 export async function copyDrawingLinks(
   tx: Tx,
@@ -16,7 +16,13 @@ export async function copyDrawingLinks(
   createdById: string,
 ): Promise<void> {
   const links = await tx
-    .select({ drawingId: bomRevisionDrawings.drawingId, drawingRevisionId: bomRevisionDrawings.drawingRevisionId })
+    .select({
+      drawingId: bomRevisionDrawings.drawingId,
+      drawingRevisionId: bomRevisionDrawings.drawingRevisionId,
+      checkedRevisionId: bomRevisionDrawings.checkedRevisionId,
+      checkedById: bomRevisionDrawings.checkedById,
+      checkedAt: bomRevisionDrawings.checkedAt,
+    })
     .from(bomRevisionDrawings)
     .where(eq(bomRevisionDrawings.bomRevisionId, sourceRevisionId));
   if (links.length === 0) return;

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -46,7 +46,7 @@ export function UsersClient({ callerId, users }: { callerId: string; users: User
       try {
         const r = await createUser(form);
         if (r.emailStatus === "sent") toast.success(`${form.email} was created and emailed their password.`);
-        else toast.warning(`${form.email} was created, but the welcome email wasn't sent — share the password yourself.`, { duration: 10_000 });
+        else toast.warning(`${form.email} was created, but the welcome email wasn't sent — share the password yourself.`);
         setForm({ name: "", email: "", password: "", role: "member" });
         router.refresh();
       } catch (err) {

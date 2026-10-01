@@ -11,8 +11,9 @@ import { GenerateDialog } from "./generate-dialog";
 import type { Line } from "@/components/builder/sectioned-line-table";
 import type { SectionInfo } from "@/components/builder/section-row";
 import { sendBomToProcurement } from "@/server/actions/procurement";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { formatDate } from "@/lib/format";
+import { BlockedNote } from "@/components/help/blocked-note";
 
 type Props = {
   projectId: string;
@@ -25,6 +26,8 @@ type Props = {
   revisionId: string;
   revisionLetter: string;
   procurementRevision: { id: string; letter: string } | null;
+  /** The newest non-draft revision when it was already sent (so nothing is left to send). */
+  lastSentLetter?: string | null;
   lines: Line[];
   sections: SectionInfo[];
   steps: Array<{ position: number; role: string; status: "pending" | "active" | "approved" | "rejected" | "skipped"; assigneeName: string | null }> | null;
@@ -76,6 +79,17 @@ export function PreviewShell(p: Props) {
     });
   }
 
+  // Said out loud next to the button — a disabled button's tooltip never shows on a phone.
+  const procurementNote = p.procurementRevision
+    ? p.procurementRevision.letter !== p.revisionLetter
+      ? `Send to procurement sends Rev ${p.procurementRevision.letter}, the latest committed revision. Rev ${p.revisionLetter} is still a draft.`
+      : null
+    : !p.lastSentLetter
+      ? "Nothing to send yet — commit this revision in the builder first."
+      : p.lastSentLetter === p.revisionLetter
+        ? `Rev ${p.lastSentLetter} was already sent to procurement. To send changes, create a new revision in the builder, commit it and send that.`
+        : `Rev ${p.lastSentLetter} was already sent to procurement. Commit Rev ${p.revisionLetter} in the builder to send the changes.`;
+
   const totalUnits = p.lines.reduce((s, l) => s + l.qty, 0);
   const vendorCount = new Set(p.lines.map(l => l.vendorName).filter(Boolean)).size;
 
@@ -113,7 +127,6 @@ export function PreviewShell(p: Props) {
               <button
                 className="btn"
                 disabled={pending || !p.procurementRevision}
-                title={!p.procurementRevision ? "Commit a revision before sending to procurement." : undefined}
                 onClick={sendForReview}
               >
                 <Icon.Send className="ico" /> Send to procurement
@@ -133,6 +146,10 @@ export function PreviewShell(p: Props) {
           )}
         </div>
       </div>
+
+      {!p.readOnly && procurementNote && (
+        <BlockedNote topic="procurement" className="mb-4">{procurementNote}</BlockedNote>
+      )}
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
         <DocumentPreview

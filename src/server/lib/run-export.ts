@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { asc, eq, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import {
@@ -105,11 +106,13 @@ async function buildRevisionWorkbook(
     sectionPosition: l.sectionPosition,
   }));
 
+  const checked = alias(drawingRevisions, "checked_rev");
   const drawingRefs = await db
-    .select({ code: drawings.code, number: drawingRevisions.number })
+    .select({ code: drawings.code, number: drawingRevisions.number, checkedNumber: checked.number })
     .from(bomRevisionDrawings)
     .innerJoin(drawings, eq(drawings.id, bomRevisionDrawings.drawingId))
     .innerJoin(drawingRevisions, eq(drawingRevisions.id, bomRevisionDrawings.drawingRevisionId))
+    .leftJoin(checked, eq(checked.id, bomRevisionDrawings.checkedRevisionId))
     .where(eq(bomRevisionDrawings.bomRevisionId, rev.id))
     .orderBy(asc(drawings.code));
 
@@ -124,7 +127,9 @@ async function buildRevisionWorkbook(
     rows,
     options,
     isDraft,
-    referenceDrawings: drawingRefs.map(d => `${d.code} ${formatDrawingRevision(d.number)}`),
+    referenceDrawings: drawingRefs.map(d =>
+      `${d.code} ${formatDrawingRevision(d.number)}${d.checkedNumber ? ` (checked ${formatDrawingRevision(d.checkedNumber)})` : ""}`,
+    ),
   });
 }
 

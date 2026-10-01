@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { authClient } from "@/lib/auth-client";
 import { PASSWORD_MIN_LENGTH as MIN_LENGTH } from "@/lib/password-policy";
 import { Button } from "@/components/ui/button";

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle, DialogTrigger,
@@ -10,12 +10,24 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Icon } from "@/components/icons";
+import { BlockedNote } from "@/components/help/blocked-note";
+import { HelpTip } from "@/components/help/help-tip";
 import {
   DRAWING_STATUSES, DRAWING_STATUS_LABEL, TRANSITION_ERROR_MESSAGE,
-  checkDrawingTransition, formatDrawingRevision, type DrawingStatus,
+  checkDrawingTransition, formatDrawingRevision, type DrawingStatus, type TransitionError,
 } from "@/lib/drawing-status";
 import { changeDrawingStatus } from "@/server/actions/drawings";
 import { SELECT_CLASS, TEXTAREA_CLASS, type UserOption } from "./drawing-form-fields";
+
+/** Shown next to a status that can't be picked right now. */
+const OPTION_BLOCK: Partial<Record<TransitionError, string>> = {
+  REVIEW_REQUIRED: "after the internal check",
+  ONLY_REVIEWER_CAN_APPROVE: "only the approving engineer",
+  REVIEWER_IS_OWNER: "not by the owner",
+};
+
+/** Fills in what the dialog asks for later, so only the hard rules block an option. */
+const STAND_IN_REVIEWER = "(stand-in reviewer)";
 
 export function ChangeStatusDialog({
   revisionId,
@@ -59,6 +71,23 @@ export function ChangeStatusDialog({
     : null;
   // A missing reviewer is filled in below, so it is not worth an error line.
   const blockingError = check && !check.ok && check.error !== "REVIEWER_REQUIRED" ? check.error : null;
+
+  const blockedBy = (next: DrawingStatus): TransitionError | null => {
+    const r = checkDrawingTransition({
+      from: status,
+      to: next,
+      actorId: currentUserId,
+      ownerId,
+      reviewerId,
+      nextReviewerId: STAND_IN_REVIEWER,
+      reviewed,
+      isLatest: true,
+      comment: "-",
+    });
+    return r.ok || !OPTION_BLOCK[r.error] ? null : r.error;
+  };
+  const options = DRAWING_STATUSES.filter(s => s !== status).map(s => ({ status: s, block: blockedBy(s) }));
+  const blocks = new Set(options.map(o => o.block).filter(Boolean));
 
   function reset() {
     setTo("");
@@ -105,7 +134,8 @@ export function ChangeStatusDialog({
         <DialogHeader>
           <DialogTitle>Change status of {formatDrawingRevision(revisionNumber)}</DialogTitle>
           <DialogDescription>
-            Currently <strong>{DRAWING_STATUS_LABEL[status]}</strong>. Everyone following the drawing gets an email with the revision note and your comment.
+            Currently <strong>{DRAWING_STATUS_LABEL[status]}</strong>. Everyone following the drawing gets an email with the revision note and your comment.{" "}
+            <HelpTip topic="drawing-statuses" />
           </DialogDescription>
         </DialogHeader>
 
@@ -119,10 +149,22 @@ export function ChangeStatusDialog({
               onChange={e => setTo(e.target.value as DrawingStatus)}
             >
               <option value="">— Select status —</option>
-              {DRAWING_STATUSES.filter(s => s !== status).map(s => (
-                <option key={s} value={s}>{DRAWING_STATUS_LABEL[s]}</option>
+              {options.map(o => (
+                <option key={o.status} value={o.status} disabled={!!o.block}>
+                  {DRAWING_STATUS_LABEL[o.status]}{o.block ? ` — ${OPTION_BLOCK[o.block]}` : ""}
+                </option>
               ))}
             </select>
+            {!to && blocks.has("REVIEW_REQUIRED") && (
+              <BlockedNote topic="drawing-approval">
+                Awaiting approval and later open up once a second engineer approves the revision. Pick Need to be approved first.
+              </BlockedNote>
+            )}
+            {!to && blocks.has("ONLY_REVIEWER_CAN_APPROVE") && (
+              <BlockedNote topic="drawing-approval">
+                This revision waits for the approving engineer — only they can move it to Awaiting approval.
+              </BlockedNote>
+            )}
             {blockingError && (
               <p className="text-[12px] text-[var(--color-danger)]">{TRANSITION_ERROR_MESSAGE[blockingError]}</p>
             )}

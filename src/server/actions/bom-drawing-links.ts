@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { bomRevisionDrawings, bomRevisions, boms, drawingRevisions, drawings } from "@/db/schema";
@@ -170,9 +171,10 @@ export async function updateBomDrawingLinks(input: z.infer<typeof UpdateInput>):
 
   await db.transaction(async tx => {
     for (const l of stale) {
+      // Built from the latest revision now, so an earlier "no BOM change" check no longer adds anything.
       await tx
         .update(bomRevisionDrawings)
-        .set({ drawingRevisionId: latest.get(l.drawingId)!.id })
+        .set({ drawingRevisionId: latest.get(l.drawingId)!.id, checkedRevisionId: null, checkedById: null, checkedAt: null })
         .where(eq(bomRevisionDrawings.id, l.id));
     }
   });
@@ -188,4 +190,98 @@ export async function updateBomDrawingLinks(input: z.infer<typeof UpdateInput>):
     payload: { projectId: rev.projectId, bomRevisionId: rev.id, linkIds: stale.map(l => l.id) },
   });
   return { ok: true, updated: stale.length };
+}
+
+const ConfirmInput = z.object({
+  bomRevisionId: z.string().min(1),
+  /**
+   * The drawing revision the user looked at for each reference. A revision
+   * made after that isn't covered, so the reference turns outdated again.
+   */
+  checks: z
+    .array(z.object({ linkId: z.string().min(1), drawingRevisionId: z.string().min(1) }))
+    .min(1)
+    .max(200),
+});
+
+/**
+ * Records that newer drawing revisions don't change this BOM revision. Works on
+ * committed revisions too — the lines and the built-from revision stay as they
+ * are, only the check is stored — so no empty BOM revision has to be branched.
+ */
+export async function confirmNoBomChange(
+  input: z.infer<typeof ConfirmInput>,
+): Promise<DrawingActionResult<{ confirmed: number }>> {
+  const data = ConfirmInput.parse(input);
+  const session = await requireSession();
+  if (!canEdit(session.user)) return fail(READ_ONLY_ERROR);
+  const rev = await loadBomRevision(data.bomRevisionId);
+  if (!rev) return fail("BOM revision not found.");
+  const [current] = await db
+    .select({ id: bomRevisions.id })
+    .from(bomRevisions)
+    .where(eq(bomRevisions.bomId, rev.bomId))
+    .orderBy(desc(bomRevisions.createdAt))
+    .limit(1);
+  if (current?.id !== rev.id) return fail("Only the BOM's current revision can be checked against newer drawings.");
+
+  const linkIds = [...new Set(data.checks.map(c => c.linkId))];
+  const linked = alias(drawingRevisions, "linked");
+  const checked = alias(drawingRevisions, "checked_rev");
+  const links = await db
+    .select({
+      id: bomRevisionDrawings.id,
+      drawingId: bomRevisionDrawings.drawingId,
+      code: drawings.code,
+      linkedNumber: linked.number,
+      checkedNumber: checked.number,
+    })
+    .from(bomRevisionDrawings)
+    .innerJoin(drawings, eq(drawings.id, bomRevisionDrawings.drawingId))
+    .innerJoin(linked, eq(linked.id, bomRevisionDrawings.drawingRevisionId))
+    .leftJoin(checked, eq(checked.id, bomRevisionDrawings.checkedRevisionId))
+    .where(and(eq(bomRevisionDrawings.bomRevisionId, rev.id), inArray(bomRevisionDrawings.id, linkIds)));
+  const targets = await db
+    .select({ id: drawingRevisions.id, drawingId: drawingRevisions.drawingId, number: drawingRevisions.number })
+    .from(drawingRevisions)
+    .where(inArray(drawingRevisions.id, data.checks.map(c => c.drawingRevisionId)));
+
+  const linkById = new Map(links.map(l => [l.id, l]));
+  const targetById = new Map(targets.map(t => [t.id, t]));
+  const updates: { link: (typeof links)[number]; target: (typeof targets)[number] }[] = [];
+  for (const c of data.checks) {
+    const link = linkById.get(c.linkId);
+    const target = targetById.get(c.drawingRevisionId);
+    if (!link || !target || target.drawingId !== link.drawingId) return fail("Drawing reference not found — refresh the page.");
+    // Someone already checked this far (or further) — nothing to add.
+    if (target.number <= Math.max(link.linkedNumber, link.checkedNumber ?? 0)) continue;
+    if (!updates.some(u => u.link.id === link.id)) updates.push({ link, target });
+  }
+  if (updates.length === 0) return { ok: true, confirmed: 0 };
+
+  const now = new Date();
+  await db.transaction(async tx => {
+    for (const { link, target } of updates) {
+      await tx
+        .update(bomRevisionDrawings)
+        .set({ checkedRevisionId: target.id, checkedById: session.user.id, checkedAt: now })
+        .where(eq(bomRevisionDrawings.id, link.id));
+    }
+  });
+
+  revalidateLinks(rev, updates.map(u => u.link.drawingId));
+  await audit({
+    kind: "bom.drawing.checked",
+    refType: "bom",
+    refId: rev.bomId,
+    summary: `Rev ${rev.letter} of "${rev.bomName}" checked against ${updates
+      .map(u => `${u.link.code} ${formatDrawingRevision(u.target.number)}`)
+      .join(", ")} — no BOM change`,
+    payload: {
+      projectId: rev.projectId,
+      bomRevisionId: rev.id,
+      checks: updates.map(u => ({ linkId: u.link.id, drawingRevisionId: u.target.id })),
+    },
+  });
+  return { ok: true, confirmed: updates.length };
 }

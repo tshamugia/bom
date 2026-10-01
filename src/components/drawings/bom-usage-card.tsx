@@ -1,9 +1,13 @@
 import Link from "next/link";
 import { Badge, RevisionStatusBadge } from "@/components/ui/badge";
 import { formatDrawingRevision } from "@/lib/drawing-status";
+import { HelpTip } from "@/components/help/help-tip";
 import type { BomLinkForDrawingRow } from "@/server/queries/drawing-control";
 
-/** BOM revisions built from this drawing; only a BOM's current revision can be outdated. */
+/**
+ * BOM revisions built from this drawing. Only a BOM's current revision can be
+ * outdated, and only by a later revision that changes the BOM.
+ */
 export function BomUsageCard({
   links,
   latestRevisionNumber,
@@ -14,13 +18,13 @@ export function BomUsageCard({
   /** Viewers can't open the builder, so BOMs link to the read-only preview instead. */
   readOnly?: boolean;
 }) {
-  const outdated = links.filter(l => l.isCurrentBomRevision && l.drawingRevisionNumber < latestRevisionNumber).length;
+  const outdated = links.filter(l => l.isCurrentBomRevision && l.outdated).length;
 
   return (
     <div className="card">
       <div className="card-head max-[701px]:flex-wrap">
         <div className="min-w-0">
-          <h3 className="card-title">Used in BOMs</h3>
+          <h3 className="card-title flex items-center gap-1.5">Used in BOMs <HelpTip topic="bom-drawings" /></h3>
           <p className="card-sub">BOM revisions that were built from this drawing.</p>
         </div>
         <span className="spacer" />
@@ -42,7 +46,7 @@ export function BomUsageCard({
             </thead>
             <tbody>
               {links.map(l => {
-                const stale = l.isCurrentBomRevision && l.drawingRevisionNumber < latestRevisionNumber;
+                const stale = l.isCurrentBomRevision && l.outdated;
                 return (
                   <tr key={l.linkId} style={l.isCurrentBomRevision ? undefined : { opacity: 0.6 }}>
                     <td className="l-title">
@@ -61,6 +65,11 @@ export function BomUsageCard({
                     <td className="l-aside" style={{ whiteSpace: "nowrap" }}>
                       <span className="min-[701px]:hidden">Built from </span>
                       <span className="mono">{formatDrawingRevision(l.drawingRevisionNumber)}</span>
+                      {l.checkedRevisionNumber && (
+                        <div className="muted" style={{ fontSize: 11 }}>
+                          checked {formatDrawingRevision(l.checkedRevisionNumber)} — no BOM change
+                        </div>
+                      )}
                       {stale && (
                         <div style={{ marginTop: 2 }}>
                           <Badge tone="danger">{formatDrawingRevision(latestRevisionNumber)} is newer</Badge>

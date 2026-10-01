@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/icons";
+import { HelpTip } from "@/components/help/help-tip";
 import { CommandPalette } from "./command-palette";
 
 const CRUMBS: Record<string, [string, string]> = {
@@ -17,6 +19,7 @@ const CRUMBS: Record<string, [string, string]> = {
   "/users": ["Admin", "Users"],
   "/audit": ["Admin", "Audit log"],
   "/settings": ["Account", "Settings"],
+  "/help": ["Account", "Help"],
 };
 
 export function Topbar({
@@ -52,6 +55,21 @@ export function Topbar({
       </nav>
 
       <div className="tb-actions">
+        {readOnly && (
+          <span className="pill tb-role max-[700.98px]:hidden">
+            <Icon.Eye className="ico" aria-hidden /> View only
+            <HelpTip topic="roles" />
+          </span>
+        )}
+        <Link
+          href="/help"
+          className="btn btn-icon btn-ghost"
+          aria-label="Help"
+          title="Help"
+          aria-current={key === "/help" ? "page" : undefined}
+        >
+          <Icon.Help className="ico" />
+        </Link>
         <CommandPalette viewer={readOnly} />
       </div>
     </header>

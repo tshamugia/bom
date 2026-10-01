@@ -6,6 +6,7 @@ import { BranchRevisionButton } from "@/components/builder/branch-revision-butto
 import { InlineProjectName } from "@/components/builder/inline-project-name";
 import { BomSwitcher, type SwitcherBom } from "@/components/builder/bom-switcher";
 import { formatDateTime } from "@/lib/format";
+import { HelpTip } from "@/components/help/help-tip";
 
 export type RevisionHeaderProps = {
   projectId: string;
@@ -57,6 +58,7 @@ export function RevisionHeader(p: RevisionHeaderProps) {
           )}
           <RevisionStatusBadge status={r.status} />
           <Badge tone="gray">Rev {r.letter}</Badge>
+          <HelpTip topic="bom-revisions" />
         </div>
         <div className="mt-1 text-[12px] text-[var(--color-text-3)] [overflow-wrap:anywhere]">
           {isDraft ? (
