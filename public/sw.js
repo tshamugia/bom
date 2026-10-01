@@ -1,5 +1,5 @@
 /*
- * BOM Studio service worker.
+ * Revline service worker.
  *
  * Strategy (privacy-conscious for an authenticated app):
  *  - Navigations: network-first, falling back to a generic offline page.
@@ -8,7 +8,7 @@
  *    (stale-while-revalidate) since they are immutable and public.
  *  - API / auth requests: always go to the network, never cached.
  */
-const VERSION = "bom-studio-v1";
+const VERSION = "revline-v1";
 const STATIC_CACHE = `${VERSION}-static`;
 const OFFLINE_URL = "/offline.html";
 
@@ -38,7 +38,7 @@ function isStaticAsset(url) {
   return (
     url.pathname.startsWith("/_next/static/") ||
     url.pathname.startsWith("/pwa-icon") ||
-    url.pathname === "/icon" ||
+    url.pathname === "/icon.svg" ||
     url.pathname === "/apple-icon" ||
     /\.(?:css|js|woff2?|ttf|otf|png|jpg|jpeg|svg|gif|webp|ico)$/.test(url.pathname)
   );

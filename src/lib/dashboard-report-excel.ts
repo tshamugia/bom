@@ -102,7 +102,7 @@ export async function buildDashboardWorkbook(input: {
 }): Promise<Buffer> {
   const { summary: s, today } = input;
   const wb = new ExcelJS.Workbook();
-  wb.creator = "BOM Studio";
+  wb.creator = "Revline";
   wb.created = new Date();
 
   // ── Summary ────────────────────────────────

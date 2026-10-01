@@ -90,11 +90,11 @@ export async function sendWelcomeEmail(args: {
   role: UserRole;
 }): Promise<SendMailResult> {
   const signInUrl = `${env.NEXT_PUBLIC_BETTER_AUTH_URL}/sign-in`;
-  const subject = "Your BOM Studio account";
+  const subject = "Your Revline account";
   const text = [
     `Hi ${args.name},`,
     ``,
-    `An account has been created for you on BOM Studio.`,
+    `An account has been created for you on Revline.`,
     ``,
     `Email: ${args.to}`,
     `Temporary password: ${args.password}`,
@@ -104,7 +104,7 @@ export async function sendWelcomeEmail(args: {
     ``,
     `This password is temporary — you'll be asked to choose your own when you first sign in.`,
     ``,
-    `On your phone, open the sign-in link and choose "Add to Home Screen" to install BOM Studio as an app.`,
+    `On your phone, open the sign-in link and choose "Add to Home Screen" to install Revline as an app.`,
   ].join("\n");
   return sendMail({ to: args.to, subject, text });
 }
@@ -119,7 +119,7 @@ export async function sendPasswordResetByAdminEmail(args: {
   const text = [
     `Hi ${args.name},`,
     ``,
-    `An administrator has reset your BOM Studio password. You have been signed out everywhere.`,
+    `An administrator has reset your Revline password. You have been signed out everywhere.`,
     ``,
     `Email: ${args.to}`,
     `Temporary password: ${args.password}`,
@@ -128,7 +128,7 @@ export async function sendPasswordResetByAdminEmail(args: {
     ``,
     `This password is temporary — you'll be asked to choose your own when you sign in.`,
   ].join("\n");
-  return sendMail({ to: args.to, subject: "Your BOM Studio password was reset", text });
+  return sendMail({ to: args.to, subject: "Your Revline password was reset", text });
 }
 
 /** Self-service reset link — only sent to admins (members are reset by an admin). */
@@ -141,14 +141,14 @@ export async function sendPasswordResetLinkEmail(args: {
   const text = [
     `Hi ${args.name},`,
     ``,
-    `Someone asked to reset the password for your BOM Studio account.`,
+    `Someone asked to reset the password for your Revline account.`,
     `Open this link to choose a new one (valid for ${args.expiresInMinutes} minutes):`,
     ``,
     args.url,
     ``,
     `If you didn't ask for this, ignore this email — your password stays the same.`,
   ].join("\n");
-  return sendMail({ to: args.to, subject: "Reset your BOM Studio password", text });
+  return sendMail({ to: args.to, subject: "Reset your Revline password", text });
 }
 
 export async function sendProcurementBomEmail(args: {

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Noto_Sans_Georgian } from "next/font/google";
 import Script from "next/script";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
+import { BRAND_DESCRIPTION, BRAND_NAME } from "@/lib/brand";
 import { THEME_META_COLOR, THEME_STORAGE_KEY } from "@/lib/theme";
 import "./globals.css";
 
@@ -12,13 +13,13 @@ const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono"
 const notoGeorgian = Noto_Sans_Georgian({ subsets: ["georgian"], variable: "--font-georgian", preload: false });
 
 export const metadata: Metadata = {
-  title: "BOM Studio",
-  description: "Bill of Materials management for hardware teams.",
-  applicationName: "BOM Studio",
+  title: BRAND_NAME,
+  description: BRAND_DESCRIPTION,
+  applicationName: BRAND_NAME,
   // <link rel="manifest"> is injected automatically from app/manifest.ts.
   appleWebApp: {
     capable: true,
-    title: "BOM Studio",
+    title: BRAND_NAME,
     statusBarStyle: "black-translucent",
   },
 };

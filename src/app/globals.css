@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ────────────────────────────────────────────
-   BOM Studio — design tokens
+   Revline — design tokens
    The palette is defined twice: light on :root, dark on :root.dark (the class
    the theme toggle and the init script in app/layout.tsx put on <html>).
    Everything else — the --color-* names the components use, the shadcn
@@ -312,14 +312,6 @@ html, body {
     align-items: center;
     gap: 10px;
     border-bottom: 1px solid var(--sb-line);
-  }
-  .sb-logo {
-    width: 30px; height: 30px;
-    border-radius: var(--r-2);
-    background: var(--accent);
-    display: grid; place-items: center;
-    color: var(--on-accent); font-weight: 700; font-size: 13px;
-    letter-spacing: -0.02em;
   }
   .sb-name { font-weight: 600; font-size: 13.5px; letter-spacing: -0.01em; color: var(--sb-text); }
   .sb-name-sub { font-size: 11px; color: var(--sb-text-3); }

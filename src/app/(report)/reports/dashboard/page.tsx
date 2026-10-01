@@ -7,7 +7,7 @@ import { DRAWING_STATUSES, DRAWING_STATUS_LABEL, formatDrawingRevision } from "@
 import { formatDate, formatDateTime } from "@/lib/format";
 import { roundHours } from "@/lib/drawing-meta";
 
-export const metadata: Metadata = { title: "Dashboard report — BOM Studio" };
+export const metadata: Metadata = { title: "Dashboard report — Revline" };
 
 // Fixed light palette: this page is for paper/PDF, whatever theme the app is in.
 const CSS = `
