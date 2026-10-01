@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle, DialogTrigger,
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Icon } from "@/components/icons";
+import { HelpTip } from "@/components/help/help-tip";
 import { formatDateTime } from "@/lib/format";
 import { TRANSMITTAL_PURPOSES, TRANSMITTAL_PURPOSE_LABEL, type TransmittalPurpose } from "@/lib/drawing-meta";
 import { formatDrawingRevision } from "@/lib/drawing-status";
@@ -190,7 +191,7 @@ export function TransmittalsCard({
     <div className="card">
       <div className="card-head max-[701px]:flex-wrap">
         <div className="min-w-0">
-          <h3 className="card-title">Transmittals</h3>
+          <h3 className="card-title flex items-center gap-1.5">Transmittals <HelpTip topic="transmittals" /></h3>
           <p className="card-sub">Who received which revision, and whether it is still current.</p>
         </div>
         <span className="spacer" />

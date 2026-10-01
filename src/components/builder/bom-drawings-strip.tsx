@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle, DialogTrigger,
@@ -11,13 +11,147 @@ import {
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
 import { DrawingStatusBadge } from "@/components/drawings/drawing-status-badge";
+import { HelpTip } from "@/components/help/help-tip";
 import { formatDrawingRevision } from "@/lib/drawing-status";
 import {
-  linkDrawingsToBom, unlinkDrawingFromBom, updateBomDrawingLinks,
+  confirmNoBomChange, linkDrawingsToBom, unlinkDrawingFromBom, updateBomDrawingLinks,
 } from "@/server/actions/bom-drawing-links";
 import type { DrawingLinkRow, LinkableDrawing } from "@/server/queries/drawing-control";
 
-const isOutdated = (l: DrawingLinkRow) => l.linkedRevisionNumber < l.latestRevisionNumber;
+type ActionResult = { ok: boolean; error?: string };
+
+/** Runs an action, toasts the outcome and refreshes the page on success. */
+function useRunAction() {
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  const run = (fn: () => Promise<ActionResult>, done?: string, onDone?: () => void) =>
+    start(async () => {
+      const res = await fn();
+      if (!res.ok) {
+        toast.error(res.error ?? "Something went wrong");
+        return;
+      }
+      if (done) toast.success(done);
+      onDone?.();
+      router.refresh();
+    });
+  return { pending, run };
+}
+
+/** A newer drawing revision exists but none of them changes the BOM, or someone checked them. */
+const isBehindButCurrent = (l: DrawingLinkRow) => !l.outdated && l.latestRevisionNumber > l.linkedRevisionNumber;
+
+function pillTitle(l: DrawingLinkRow): string {
+  const latest = formatDrawingRevision(l.latestRevisionNumber);
+  if (l.outdated) return `${l.name} — ${latest} changes the BOM`;
+  if (isBehindButCurrent(l)) {
+    const checked = l.checkedRevisionNumber
+      ? ` Checked against ${formatDrawingRevision(l.checkedRevisionNumber)}${l.checkedByName ? ` by ${l.checkedByName}` : ""}.`
+      : "";
+    return `${l.name} — no BOM change through ${latest}.${checked}`;
+  }
+  return l.name;
+}
+
+function ReviewDialog({
+  bomRevisionId,
+  isDraft,
+  outdated,
+}: {
+  bomRevisionId: string;
+  isDraft: boolean;
+  outdated: DrawingLinkRow[];
+}) {
+  const [open, setOpen] = useState(false);
+  const { pending, run } = useRunAction();
+
+  // Close first when nothing will be left, since the trigger unmounts once the list is empty.
+  const closeIfLast = (count: number) => () => { if (count >= outdated.length) setOpen(false); };
+
+  const confirm = (rows: DrawingLinkRow[]) =>
+    run(
+      () => confirmNoBomChange({
+        bomRevisionId,
+        checks: rows.map(l => ({ linkId: l.linkId, drawingRevisionId: l.latestRevisionId })),
+      }),
+      `${rows.length === 1 ? rows[0].code : `${rows.length} drawings`} checked — no BOM change`,
+      closeIfLast(rows.length),
+    );
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger render={<button type="button" className="btn btn-sm">Review</button>} />
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Outdated drawings</DialogTitle>
+          <DialogDescription>
+            These drawings have a newer revision that changes the BOM. If this BOM doesn&apos;t need to change,
+            mark it — the BOM keeps its revision and stops showing as outdated.
+            {!isDraft && " To change the BOM itself, create a new revision."}{" "}
+            <HelpTip topic="no-bom-change" />
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-2">
+          {outdated.map(l => (
+            <div key={l.linkId} className="grid gap-1.5 rounded-md border border-[var(--color-line)] px-2.5 py-2 text-[12.5px]">
+              <div className="flex flex-wrap items-center gap-2">
+                <Link href={`/drawings/${l.drawingId}`} className="mono font-semibold" style={{ color: "inherit" }}>
+                  {l.code}
+                </Link>
+                <span className="min-w-0 flex-1 truncate">{l.name}</span>
+                <span className="mono" style={{ color: "var(--red)" }}>
+                  {formatDrawingRevision(l.linkedRevisionNumber)} → {formatDrawingRevision(l.latestRevisionNumber)}
+                </span>
+              </div>
+              {l.newerRevisions.length > 0 && (
+                <ul className="grid gap-0.5">
+                  {l.newerRevisions.map(r => (
+                    <li key={r.number} className="flex gap-2">
+                      <span className="mono shrink-0">{formatDrawingRevision(r.number)}</span>
+                      <span className="min-w-0 flex-1 italic text-[var(--color-text-2)] [overflow-wrap:anywhere]">
+                        {r.commitMessage}
+                      </span>
+                      {!r.bomImpact && <span className="muted shrink-0">no BOM change</span>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="flex flex-wrap justify-end gap-2">
+                {isDraft && (
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    disabled={pending}
+                    onClick={() =>
+                      run(
+                        () => updateBomDrawingLinks({ bomRevisionId, linkIds: [l.linkId] }),
+                        `${l.code} updated`,
+                        closeIfLast(1),
+                      )
+                    }
+                  >
+                    Update to {formatDrawingRevision(l.latestRevisionNumber)}
+                  </button>
+                )}
+                <button type="button" className="btn btn-sm" disabled={pending} onClick={() => confirm([l])}>
+                  <Icon.Check className="ico" /> No BOM change
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Close</Button>
+          {outdated.length > 1 && (
+            <Button onClick={() => confirm(outdated)} disabled={pending}>No BOM change for all</Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function ManageDialog({
   bomRevisionId,
@@ -30,22 +164,10 @@ function ManageDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
-  const [pending, start] = useTransition();
-  const router = useRouter();
+  const { pending, run } = useRunAction();
 
   const linkedIds = new Set(links.map(l => l.drawingId));
   const candidates = linkable.filter(d => !linkedIds.has(d.id));
-
-  const run = (fn: () => Promise<{ ok: boolean; error?: string }>, done?: string) =>
-    start(async () => {
-      const res = await fn();
-      if (!res.ok) {
-        toast.error(res.error ?? "Something went wrong");
-        return;
-      }
-      if (done) toast.success(done);
-      router.refresh();
-    });
 
   const addPicked = () =>
     run(async () => {
@@ -67,7 +189,8 @@ function ManageDialog({
         <DialogHeader>
           <DialogTitle>Drawings for this revision</DialogTitle>
           <DialogDescription>
-            A drawing is linked at its current revision. When the drawing gets a newer revision, this BOM shows it as outdated.
+            A drawing is linked at its current revision. When the drawing gets a newer revision that changes the BOM,
+            this BOM shows it as outdated.
           </DialogDescription>
         </DialogHeader>
 
@@ -80,7 +203,7 @@ function ManageDialog({
                 <span className="mono font-semibold">{l.code}</span>
                 <span className="min-w-0 flex-1 truncate max-[480px]:order-last max-[480px]:basis-full">{l.name}</span>
                 <span className="mono max-[480px]:ml-auto">{formatDrawingRevision(l.linkedRevisionNumber)}</span>
-                {isOutdated(l) && (
+                {l.latestRevisionNumber > l.linkedRevisionNumber && (
                   <button
                     type="button"
                     className="btn btn-sm"
@@ -144,7 +267,11 @@ function ManageDialog({
   );
 }
 
-/** The drawing revisions this BOM revision is built from, with outdated ones flagged. */
+/**
+ * The drawing revisions this BOM revision is built from. Outdated ones (a newer
+ * revision changes the BOM) are flagged and can be reviewed — even on a
+ * committed revision, a "no BOM change" check clears them without branching.
+ */
 export function BomDrawingsStrip({
   bomRevisionId,
   isDraft,
@@ -156,19 +283,14 @@ export function BomDrawingsStrip({
   links: DrawingLinkRow[];
   linkable: LinkableDrawing[];
 }) {
-  const [pending, start] = useTransition();
-  const router = useRouter();
-  const outdated = links.filter(isOutdated);
+  const { pending, run } = useRunAction();
+  const outdated = links.filter(l => l.outdated);
 
   const updateAll = () =>
-    start(async () => {
+    run(async () => {
       const res = await updateBomDrawingLinks({ bomRevisionId });
-      if (!res.ok) {
-        toast.error(res.error);
-        return;
-      }
-      toast.success(`${res.updated} drawing reference${res.updated === 1 ? "" : "s"} updated`);
-      router.refresh();
+      if (res.ok) toast.success(`${res.updated} drawing reference${res.updated === 1 ? "" : "s"} updated`);
+      return res;
     });
 
   return (
@@ -178,9 +300,12 @@ export function BomDrawingsStrip({
     >
       <Icon.Drawing className="ico" style={{ color: "var(--text-3)", width: 15, height: 15 }} />
       <span className="text-[12.5px] font-semibold">Drawings</span>
+      <HelpTip topic="bom-drawings" />
       {links.length === 0 && (
         <span className="muted text-[12.5px]">
-          {isDraft ? "None linked — link the drawings this BOM is built from." : "None linked."}
+          {isDraft
+            ? "None linked — link the drawings this BOM is built from."
+            : "None linked. Drawings are linked on a draft revision."}
         </span>
       )}
       {links.map(l => (
@@ -188,20 +313,24 @@ export function BomDrawingsStrip({
           key={l.linkId}
           href={`/drawings/${l.drawingId}`}
           className="pill"
-          style={isOutdated(l) ? { borderColor: "var(--red)", color: "var(--red)" } : { color: "inherit" }}
-          title={`${l.name}${isOutdated(l) ? ` — ${formatDrawingRevision(l.latestRevisionNumber)} is available` : ""}`}
+          style={l.outdated ? { borderColor: "var(--red)", color: "var(--red)" } : { color: "inherit" }}
+          title={pillTitle(l)}
         >
           <span className="mono">{l.code}</span> {formatDrawingRevision(l.linkedRevisionNumber)}
-          {isOutdated(l) && <> → {formatDrawingRevision(l.latestRevisionNumber)}</>}
+          {l.outdated && <> → {formatDrawingRevision(l.latestRevisionNumber)}</>}
+          {isBehindButCurrent(l) && (
+            <span className="muted"> ✓ {formatDrawingRevision(l.latestRevisionNumber)}</span>
+          )}
           {l.deleted && <span className="muted"> (archived)</span>}
         </Link>
       ))}
       <span className="spacer" />
       {outdated.length > 0 && (
         <span className="text-[12px]" style={{ color: "var(--red)", fontWeight: 600 }}>
-          {outdated.length} outdated{!isDraft && " — branch a new revision to update"}
+          {outdated.length} outdated
         </span>
       )}
+      {outdated.length > 0 && <ReviewDialog bomRevisionId={bomRevisionId} isDraft={isDraft} outdated={outdated} />}
       {isDraft && outdated.length > 0 && (
         <button type="button" className="btn btn-sm" disabled={pending} onClick={updateAll}>
           Update all

@@ -161,6 +161,7 @@ export async function listDrawingRevisions(drawingId: string) {
       number: drawingRevisions.number,
       status: drawingRevisions.status,
       commitMessage: drawingRevisions.commitMessage,
+      bomImpact: drawingRevisions.bomImpact,
       reviewerId: drawingRevisions.reviewerId,
       reviewerName: reviewer.name,
       reviewedByName: reviewedBy.name,

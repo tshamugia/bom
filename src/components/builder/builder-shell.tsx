@@ -15,9 +15,20 @@ import { DuplicateDialog } from "./duplicate-dialog";
 import { RevisionHeader } from "@/components/revisions/revision-header";
 import type { SwitcherBom } from "./bom-switcher";
 import { Icon } from "@/components/icons";
+import { BlockedNote } from "@/components/help/blocked-note";
 import type { SectionInfo } from "./section-row";
 
 type RevisionStatus = "draft" | "committed" | "in-progress" | "review" | "approved" | "locked";
+
+/** Why the lines of a non-draft revision can't be edited, and what to do instead. */
+function lockedReason(letter: string, status: RevisionStatus): string {
+  const why = status === "committed"
+    ? `Rev ${letter} is committed`
+    : status === "approved" || status === "locked"
+      ? `Rev ${letter} is released`
+      : `Rev ${letter} was sent to procurement`;
+  return `${why}, so its lines are read-only. To change them, click New revision above — it starts a draft copy.`;
+}
 
 type Props = {
   projectId: string;
@@ -140,6 +151,11 @@ export function BuilderShell(p: Props) {
         )}
 
         <div className="card" style={{ overflow: "hidden" }}>
+          {!isDraft && (
+            <div className="add-strip">
+              <BlockedNote icon="lock" topic="bom-revisions">{lockedReason(p.revision.letter, p.revision.status)}</BlockedNote>
+            </div>
+          )}
           {isDraft && (
             <div className="add-strip">
               <SearchAddCombo

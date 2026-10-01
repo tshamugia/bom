@@ -2,9 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
+import { HelpTip } from "@/components/help/help-tip";
 import { changeDrawingStatus } from "@/server/actions/drawings";
 import { TEXTAREA_CLASS } from "./drawing-form-fields";
 
@@ -43,7 +44,8 @@ export function ReviewPanel({
         <Icon.AlertTriangle className="ico" style={{ color: "var(--amber)", width: 16, height: 16 }} />
         <div className="min-w-0">
           <h3 className="card-title">
-            {canReview ? `Your approval is requested for ${revisionLabel}` : `${revisionLabel} is waiting for approval`}
+            {canReview ? `Your approval is requested for ${revisionLabel}` : `${revisionLabel} is waiting for approval`}{" "}
+            <HelpTip topic="drawing-approval" />
           </h3>
           <p className="card-sub">
             {canReview
@@ -61,6 +63,9 @@ export function ReviewPanel({
             placeholder="Comment — required when sending back"
           />
           <div className="flex flex-wrap justify-end gap-2">
+            {!comment.trim() && (
+              <span className="muted mr-auto self-center text-[12px]">Sending back needs a comment.</span>
+            )}
             <Button variant="outline" disabled={pending || !comment.trim()} onClick={() => decide("in-progress")}>
               Send back
             </Button>

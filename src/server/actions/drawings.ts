@@ -285,12 +285,14 @@ export async function deleteDrawing(input: z.infer<typeof IdInput>): Promise<Dra
 const NewRevisionInput = z.object({
   drawingId: Id,
   commitMessage: z.string().trim().min(1).max(2000),
+  /** False for a revision that doesn't touch the BOM — BOMs built from earlier revisions stay current. */
+  bomImpact: z.boolean().default(true),
 });
 
 export async function createDrawingRevision(
-  input: z.infer<typeof NewRevisionInput>,
+  input: z.input<typeof NewRevisionInput>,
 ): Promise<DrawingActionResult<{ number: number }>> {
-  const { drawingId, commitMessage } = NewRevisionInput.parse(input);
+  const { drawingId, commitMessage, bomImpact } = NewRevisionInput.parse(input);
   const session = await requireSession();
   if (!canEdit(session.user)) return fail(READ_ONLY_ERROR);
 
@@ -314,6 +316,7 @@ export async function createDrawingRevision(
         drawingId,
         number,
         commitMessage,
+        bomImpact,
         createdById: session.user.id,
       }).returning({ id: drawingRevisions.id });
       await tx.insert(drawingEvents).values({
@@ -337,10 +340,64 @@ export async function createDrawingRevision(
     kind: "drawing.revision.created",
     refType: "drawing",
     refId: drawingId,
-    summary: `${d.code} ${formatDrawingRevision(number)} created`,
-    payload: { projectId: d.projectId, number, commitMessage },
+    summary: `${d.code} ${formatDrawingRevision(number)} created${bomImpact ? "" : " — no BOM change"}`,
+    payload: { projectId: d.projectId, number, commitMessage, bomImpact },
   });
   return { ok: true, number };
+}
+
+const BomImpactInput = z.object({ revisionId: Id, bomImpact: z.boolean() });
+
+/** Corrects whether the current revision changes the BOM; older revisions are locked. */
+export async function setDrawingRevisionBomImpact(input: z.infer<typeof BomImpactInput>): Promise<DrawingActionResult> {
+  const { revisionId, bomImpact } = BomImpactInput.parse(input);
+  const session = await requireSession();
+  if (!canEdit(session.user)) return fail(READ_ONLY_ERROR);
+
+  const [rev] = await db
+    .select({
+      drawingId: drawingRevisions.drawingId,
+      number: drawingRevisions.number,
+      bomImpact: drawingRevisions.bomImpact,
+      code: drawings.code,
+      projectId: drawings.projectId,
+    })
+    .from(drawingRevisions)
+    .innerJoin(drawings, eq(drawings.id, drawingRevisions.drawingId))
+    .where(and(eq(drawingRevisions.id, revisionId), isNull(drawings.deletedAt)))
+    .limit(1);
+  if (!rev) return fail("Revision not found.");
+  const latest = await latestRevision(rev.drawingId);
+  if (latest?.id !== revisionId) return fail("Only the current revision can change — older revisions are locked.");
+  if (rev.bomImpact === bomImpact) return { ok: true };
+
+  const label = (v: boolean) => (v ? "changes the BOM" : "no BOM change");
+  await db.transaction(async tx => {
+    await tx.update(drawingRevisions)
+      .set({ bomImpact, updatedAt: new Date() })
+      .where(eq(drawingRevisions.id, revisionId));
+    await tx.insert(drawingEvents).values({
+      drawingId: rev.drawingId,
+      revisionId,
+      kind: "updated",
+      body: `BOM impact: ${label(rev.bomImpact)} → ${label(bomImpact)}`,
+      actorId: session.user.id,
+    });
+    await tx.update(drawings)
+      .set({ lastModifiedById: session.user.id, updatedAt: new Date() })
+      .where(eq(drawings.id, rev.drawingId));
+  });
+
+  revalidateDrawing(rev.drawingId, rev.projectId);
+  revalidatePath("/dashboard");
+  await audit({
+    kind: "drawing.revision.bom_impact",
+    refType: "drawing",
+    refId: rev.drawingId,
+    summary: `${rev.code} ${formatDrawingRevision(rev.number)} marked as ${bomImpact ? "changing the BOM" : "no BOM change"}`,
+    payload: { projectId: rev.projectId, revisionId, bomImpact },
+  });
+  return { ok: true };
 }
 
 const StatusInput = z.object({

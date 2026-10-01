@@ -3,6 +3,7 @@ import { formatDrawingRevision, type DrawingStatus } from "@/lib/drawing-status"
 import type { DrawingEventRow, DrawingRevisionRow } from "@/server/queries/drawings";
 import { DrawingStatusBadge } from "./drawing-status-badge";
 import { CommentForm } from "./comment-form";
+import { BomImpactToggle } from "./bom-impact-toggle";
 
 function statusTitle(from: DrawingStatus | null, to: DrawingStatus | null): string {
   if (to === "need-approval") return "Approval requested";
@@ -82,6 +83,17 @@ function RevisionCard({
           {rev.reviewedAt && <> · Approved internally by {rev.reviewedByName ?? "—"} · {formatDateTime(rev.reviewedAt)}</>}
           {!isLatest && rev.lockedAt && <> · Locked {formatDateTime(rev.lockedAt)}</>}
         </div>
+        {/* Rev 1 has nothing before it to outdate; viewers don't see BOM links. */}
+        {isLatest && !readOnly && rev.number > 1 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="muted">
+              {rev.bomImpact
+                ? "Changes the BOM — BOMs built from earlier revisions show as outdated."
+                : "No BOM change — BOMs built from earlier revisions stay current."}
+            </span>
+            <BomImpactToggle revisionId={rev.id} bomImpact={rev.bomImpact} />
+          </div>
+        )}
       </div>
       <div className="p-4">
         <div className="timeline">
@@ -122,6 +134,7 @@ export function RevisionHistory({
             <span className="mono text-[13px] font-semibold">{formatDrawingRevision(rev.number)}</span>
             <DrawingStatusBadge status={rev.status} />
             <span className="pill">{isLatest ? "Current" : "Locked"}</span>
+            {!readOnly && !rev.bomImpact && rev.number > 1 && <span className="pill">No BOM change</span>}
             <span className="spacer" />
             <span className="muted text-[12px]">{(byRevision.get(rev.id) ?? []).filter(e => e.kind === "comment").length} comments</span>
           </div>

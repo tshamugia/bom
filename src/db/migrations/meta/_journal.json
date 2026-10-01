@@ -176,6 +176,13 @@
       "when": 1790795223859,
       "tag": "0024_user_must_change_password",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1790802106738,
+      "tag": "0025_drawing_bom_impact",
+      "breakpoints": true
     }
   ]
 }

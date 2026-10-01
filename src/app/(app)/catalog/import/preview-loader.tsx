@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { DryRunCounts } from "@/components/import/dry-run-counts";
 import { AutoCreatePanel } from "@/components/import/auto-create-panel";
 import { ErrorTable } from "@/components/import/error-table";

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle, DialogTrigger,
@@ -58,6 +58,9 @@ export function CommitDialog({ revisionId, letter, lineCount, vendorCount, hasZe
             {hasZeroQty ? "✗ Some lines have zero quantity" : "✓ No empty quantities"}
           </div>
         </div>
+        {blocked && (
+          <p className="mt-2 text-[12px] text-[var(--color-danger)]">Fix the items marked ✗ in the builder before committing.</p>
+        )}
 
         <div className="mt-3 grid gap-1.5">
           <Label htmlFor="commit-message">Commit message <span className="text-[var(--color-text-3)]">(optional)</span></Label>

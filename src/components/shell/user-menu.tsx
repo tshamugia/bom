@@ -86,6 +86,10 @@ export function UserMenu({ user }: { user: User | null }) {
           <Icon.Settings size={14} />
           Settings
         </DropdownMenuItem>
+        <DropdownMenuItem render={<Link href="/help" />}>
+          <Icon.Help size={14} />
+          Help
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <ThemeToggle />
         <DropdownMenuSeparator />
