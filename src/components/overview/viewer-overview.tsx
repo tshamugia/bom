@@ -3,6 +3,7 @@ import { Icon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { DrawingStatusBadge } from "@/components/drawings/drawing-status-badge";
 import { AcknowledgeButton } from "@/components/drawings/acknowledge-button";
+import { drawingFileHref } from "@/lib/drawing-files";
 import { DashboardProjectFilter, type ProjectFilterOption } from "@/components/dashboard/project-filter";
 import { formatDate, formatRelative } from "@/lib/format";
 import { formatDrawingRevision } from "@/lib/drawing-status";
@@ -79,7 +80,14 @@ function PendingReceipts({ rows }: { rows: StatusFeed["mine"] }) {
             </div>
             {t.note && <div className="irow-meta" style={{ whiteSpace: "pre-line" }}>“{t.note}”</div>}
           </Link>
-          <AcknowledgeButton id={t.id} label="Confirm receipt" className="btn btn-primary" />
+          <div className="flex flex-wrap gap-2">
+            {t.pdfFileId && (
+              <a href={drawingFileHref(t.pdfFileId)} target="_blank" rel="noopener" className="btn">
+                <Icon.Doc className="ico" /> Open PDF
+              </a>
+            )}
+            <AcknowledgeButton id={t.id} label="Confirm receipt" className="btn btn-primary" />
+          </div>
         </div>
       ))}
     </section>
@@ -171,9 +179,9 @@ type Sent =
 function TransmittalRow({ t, userId }: { t: FeedTransmittal; userId: string }) {
   const to = t.recipientUserId === userId ? "you" : t.recipientName ?? t.externalName ?? "—";
   return (
-    <Link href={`/drawings/${t.drawingId}`} className="irow">
+    <div className="irow">
       <span className="irow-ico tone-accent"><Icon.Send className="ico" /></span>
-      <div className="irow-body">
+      <Link href={`/drawings/${t.drawingId}`} className="irow-body" style={{ color: "inherit" }}>
         <div className="irow-title">
           <span className="mono">{t.code}</span> <span className="mono muted">{formatDrawingRevision(t.revisionNumber)}</span>
         </div>
@@ -181,7 +189,7 @@ function TransmittalRow({ t, userId }: { t: FeedTransmittal; userId: string }) {
         <div className="irow-meta">
           {[`To ${to}`, TRANSMITTAL_PURPOSE_LABEL[t.purpose], t.projectCode, formatRelative(t.createdAt)].join(" · ")}
         </div>
-      </div>
+      </Link>
       <div className="irow-side">
         {t.superseded ? (
           <Badge tone="gray">Superseded</Badge>
@@ -192,8 +200,19 @@ function TransmittalRow({ t, userId }: { t: FeedTransmittal; userId: string }) {
         ) : (
           <Badge tone="gray">Recorded</Badge>
         )}
+        {t.pdfFileId && (
+          <a
+            href={drawingFileHref(t.pdfFileId)}
+            target="_blank"
+            rel="noopener"
+            className="btn btn-sm"
+            aria-label={`Open the PDF of ${t.code} ${formatDrawingRevision(t.revisionNumber)}`}
+          >
+            <Icon.Doc className="ico" /> PDF
+          </a>
+        )}
       </div>
-    </Link>
+    </div>
   );
 }
 

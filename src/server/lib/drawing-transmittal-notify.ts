@@ -1,11 +1,13 @@
 import "server-only";
-import { aliasedTable, and, eq, inArray } from "drizzle-orm";
+import { aliasedTable, and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
-import { drawingRevisions, drawingTransmittals, drawings, projects, user } from "@/db/schema";
+import { drawingFiles, drawingRevisions, drawingTransmittals, drawings, projects, user } from "@/db/schema";
+import { isFileStatus } from "@/lib/drawing-files";
 import { env } from "@/lib/env";
 import { sendMail } from "@/lib/mailer";
 import { audit } from "../audit";
 import { buildTransmittalEmail } from "./drawing-email";
+import { loadDrawingFileGate } from "./drawing-file-gate";
 
 /**
  * Emails each app-user recipient of the given transmittals. Runs after the
@@ -29,13 +31,20 @@ export async function notifyTransmittals(ids: string[], senderName: string): Pro
         note: drawingTransmittals.note,
         recipientName: recipient.name,
         recipientEmail: recipient.email,
+        fileId: drawingFiles.id,
       })
       .from(drawingTransmittals)
       .innerJoin(drawings, eq(drawings.id, drawingTransmittals.drawingId))
       .innerJoin(projects, eq(projects.id, drawings.projectId))
       .innerJoin(drawingRevisions, eq(drawingRevisions.id, drawingTransmittals.revisionId))
       .innerJoin(recipient, eq(recipient.id, drawingTransmittals.recipientUserId))
+      .leftJoin(drawingFiles, and(
+        eq(drawingFiles.revisionId, drawingTransmittals.revisionId),
+        eq(drawingFiles.status, "ready"),
+        isNull(drawingFiles.archivedAt),
+      ))
       .where(and(inArray(drawingTransmittals.id, ids), eq(recipient.disabled, false)));
+    const gate = rows.some(r => r.fileId) ? await loadDrawingFileGate() : null;
 
     for (const r of rows) {
       const { subject, text } = buildTransmittalEmail({
@@ -51,6 +60,8 @@ export async function notifyTransmittals(ids: string[], senderName: string): Pro
         senderName,
         recipientName: r.recipientName,
         note: r.note,
+        // The PDF goes out only from the status the upload rule allows.
+        pdfFileId: r.fileId && gate && isFileStatus(r.status, gate) ? r.fileId : null,
       });
       const result = await sendMail({ to: r.recipientEmail, subject, text });
       const payload = { projectId: r.projectId, to: [r.recipientEmail] };

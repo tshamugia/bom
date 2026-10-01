@@ -8,6 +8,7 @@ import {
 import {
   listBomLinksForDrawing, listRemarks, listTimeEntries, listTransmittals,
 } from "@/server/queries/drawing-control";
+import { getDrawingFileGate, listDrawingFiles } from "@/server/queries/drawing-files";
 import { listOwnerCandidates } from "@/server/queries/projects";
 import { PageHead } from "@/components/master/page-head";
 import { DrawingStatusBadge } from "@/components/drawings/drawing-status-badge";
@@ -23,14 +24,16 @@ import { TransmittalsCard } from "@/components/drawings/transmittals-card";
 import { BomUsageCard } from "@/components/drawings/bom-usage-card";
 import { DrawingPipeline } from "@/components/drawings/drawing-pipeline";
 import { FileLocation } from "@/components/drawings/file-location";
+import { DrawingPdfCard, type PdfRevision } from "@/components/drawings/drawing-pdf-card";
 import { HelpTip } from "@/components/help/help-tip";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { formatDrawingRevision, isDrawingOverdue } from "@/lib/drawing-status";
+import { checkFileUpload, fileUploadErrorMessage, isFileStatus } from "@/lib/drawing-files";
 
 export default async function DrawingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await requireSession();
-  const [drawing, revisions, events, projects, disciplines, users, timeEntries, remarks, transmittals, bomLinks] =
+  const [drawing, revisions, events, projects, disciplines, users, timeEntries, remarks, transmittals, bomLinks, files, fileGate] =
     await Promise.all([
       getDrawing(id),
       listDrawingRevisions(id),
@@ -42,6 +45,8 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
       listRemarks(id),
       listTransmittals(id),
       listBomLinksForDrawing(id),
+      listDrawingFiles(id),
+      getDrawingFileGate(),
     ]);
   if (!drawing || revisions.length === 0) notFound();
   const admin = isAdmin(session.user);
@@ -54,6 +59,49 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
   const revLabel = formatDrawingRevision(current.number);
   const overdue = isDrawingOverdue(drawing.dueDate, current.status);
   const canReview = !readOnly && current.reviewerId === session.user.id && drawing.ownerId !== session.user.id;
+
+  const fileOf = new Map(files.map(f => [f.revisionId, f]));
+  const asPdf = (r: (typeof revisions)[number]): PdfRevision => ({
+    id: r.id, number: r.number, status: r.status, file: fileOf.get(r.id) ?? null,
+  });
+  // Viewers only see a revision that passed the upload rule — by default, approved by the client.
+  const issued = revisions.find(r => isFileStatus(r.status, fileGate));
+  const issuedWord = fileGate === "approved" ? "approved" : "finished";
+  const upload = checkFileUpload({
+    status: current.status,
+    gate: fileGate,
+    isLatest: true,
+    actorId: session.user.id,
+    actorIsAdmin: admin,
+    ownerId: drawing.ownerId,
+  });
+  const pdfCard = readOnly ? (
+    <DrawingPdfCard
+      code={drawing.code}
+      main={issued ? asPdf(issued) : null}
+      earlier={null}
+      note={issued && issued.id !== current.id
+        ? `${revLabel} is still being worked on — this is the latest ${issuedWord} revision.`
+        : null}
+      emptyText={issued
+        ? `The PDF of ${formatDrawingRevision(issued.number)} hasn't been uploaded yet.`
+        : `No revision is ${issuedWord} yet — the PDF shows up here once one is.`}
+      canUpload={false}
+      blockedReason={null}
+      canRemove={false}
+    />
+  ) : (
+    <DrawingPdfCard
+      code={drawing.code}
+      main={asPdf(current)}
+      earlier={fileOf.has(current.id) ? null : revisions.slice(1).map(asPdf).find(r => r.file) ?? null}
+      note={null}
+      emptyText={`No PDF for ${revLabel} yet.`}
+      canUpload={upload.ok}
+      blockedReason={upload.ok ? null : fileUploadErrorMessage(upload.error, fileGate)}
+      canRemove={admin}
+    />
+  );
   const transmittalsCard = (
     <TransmittalsCard
       transmittals={transmittals}
@@ -117,6 +165,9 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
         />
       )}
 
+      {/* Viewers come for the PDF, so it leads for them. */}
+      {readOnly && pdfCard}
+
       <div className="card mb-5">
         <div className="card-head">
           <h3 className="card-title">Details</h3>
@@ -159,6 +210,8 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
         </dl>
       </div>
 
+      {!readOnly && pdfCard}
+
       <div className="grid-2 mb-5" style={{ alignItems: "start" }}>
         {/* Viewers confirm receipt in Transmittals, so it comes first for them. */}
         {readOnly && transmittalsCard}
@@ -184,7 +237,7 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
         <h2 className="text-[15px] font-semibold tracking-tight">Revisions</h2>
         <span className="text-[12px] text-[var(--color-text-3)]">{revisions.length} total</span>
       </div>
-      <RevisionHistory revisions={revisions} events={events} readOnly={readOnly} />
+      <RevisionHistory revisions={revisions} events={events} files={files} drawingCode={drawing.code} readOnly={readOnly} />
     </>
   );
 }

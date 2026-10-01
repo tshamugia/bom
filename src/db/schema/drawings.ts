@@ -15,6 +15,7 @@ export const drawingEventKindEnum = pgEnum("drawing_event_kind", [
   "updated",
   "status",
   "comment",
+  "file",
 ]);
 
 export const drawingDisciplines = pgTable(
@@ -99,6 +100,43 @@ export const drawingEvents = pgTable(
   },
   t => ({
     drawingCreatedIdx: index("drawing_event_drawing_created_idx").on(t.drawingId, t.createdAt),
+  }),
+);
+
+export const drawingFileStatusEnum = pgEnum("drawing_file_status", ["pending", "ready"]);
+
+/**
+ * The PDF of a drawing revision, stored in the S3 bucket under `objectKey`.
+ * A row starts `pending` when the upload URL is handed out and turns `ready`
+ * once the server has checked the stored bytes. Replacing or removing a PDF
+ * archives the row; the object stays in the bucket.
+ */
+export const drawingFiles = pgTable(
+  "drawing_file",
+  {
+    id: text("id").primaryKey().$defaultFn(() => createId()),
+    drawingId: text("drawing_id").notNull().references(() => drawings.id, { onDelete: "cascade" }),
+    revisionId: text("revision_id").notNull().references(() => drawingRevisions.id, { onDelete: "cascade" }),
+    objectKey: text("object_key").notNull(),
+    /** What the engineer called the file; downloads are named `<code>_rev<n>.pdf`. */
+    originalName: text("original_name").notNull(),
+    contentType: text("content_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    status: drawingFileStatusEnum("status").notNull().default("pending"),
+    uploadedById: text("uploaded_by_id").references(() => user.id, { onDelete: "set null" }),
+    uploadedAt: timestamp("uploaded_at"),
+    archivedAt: timestamp("archived_at"),
+    archivedById: text("archived_by_id").references(() => user.id, { onDelete: "set null" }),
+    archiveReason: text("archive_reason"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  t => ({
+    objectKeyUq: uniqueIndex("drawing_file_object_key_uq").on(t.objectKey),
+    drawingIdx: index("drawing_file_drawing_idx").on(t.drawingId),
+    // One current PDF per revision; replacing it archives the old row first.
+    revisionCurrentUq: uniqueIndex("drawing_file_revision_current_uq")
+      .on(t.revisionId)
+      .where(sql`"status" = 'ready' AND "archived_at" IS NULL`),
   }),
 );
 

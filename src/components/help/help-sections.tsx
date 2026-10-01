@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { EDITOR_ROLES, type UserRole } from "@/lib/roles";
 import { DRAWING_STATUSES, DRAWING_STATUS_LABEL, type DrawingStatus } from "@/lib/drawing-status";
+import { MAX_DRAWING_FILE_MB } from "@/lib/drawing-files";
 import { HELP_TOPICS, type HelpTopicId } from "@/lib/help-topics";
 import { DrawingStatusBadge } from "@/components/drawings/drawing-status-badge";
 import { HelpDiagram } from "./help-diagram";
@@ -43,12 +44,14 @@ const ROLE_COLUMNS = ["admin", "member", "viewer"] as const satisfies readonly U
 
 const PERMISSIONS: Can[] = [
   ["See projects, drawings, statuses and what was sent", true, true, true],
+  ["Open and download the PDF of approved drawings", true, true, true],
   ["Download BOM Excel files that were sent", true, true, true],
   ["Confirm receipt of a drawing revision issued to you", true, true, true],
   ["Create and edit projects, BOMs and drawings", true, true, false],
   ["Commit BOM revisions, export, send to procurement", true, true, false],
   ["Change drawing status, issue transmittals, log hours", true, true, false],
   ["Own a drawing or approve it as the second engineer", true, true, false],
+  ["Upload a drawing's PDF (as its owner)", true, true, false],
   ["Edit the item catalog and vendors", true, true, false],
   ["Delete or archive projects, BOMs, vendors, drawings", true, false, false],
   ["Create users, change roles, reset passwords", true, false, false],
@@ -114,6 +117,11 @@ const FAQ: FaqEntry[] = [
     a: <p>The engineer who approves the latest revision can&apos;t also own the drawing — owner and approver stay two different people. Create a new revision first. Viewers can&apos;t own drawings.</p>,
   },
   {
+    q: "I can't upload the drawing PDF.",
+    roles: EDITORS,
+    a: <p>Only the drawing owner or an admin uploads it, only to the latest revision, and only once the revision has the status the upload rule asks for — by default Approved A, Approved B or As Built. The reason is written on the <Ui>Drawing PDF</Ui> card. See <a href="#drawing-pdf">Drawing PDF</a>.</p>,
+  },
+  {
     q: "A BOM shows a drawing in red, or “outdated”.",
     roles: EDITORS,
     a: <p>That drawing has a newer revision that changes the BOM. Open <Ui>Review</Ui> on the BOM&apos;s drawings strip and decide: <Ui>No BOM change</Ui>, or update the BOM. See <a href="#no-bom-change">Outdated drawings</a>.</p>,
@@ -132,6 +140,11 @@ const FAQ: FaqEntry[] = [
     q: "Where do I confirm I received a drawing?",
     roles: ["viewer"],
     a: <p>On <Link href="/dashboard">Overview</Link> under <Ui>Issued to you</Ui> — click <Ui>Confirm receipt</Ui>. The drawing&apos;s <Ui>Transmittals</Ui> card has the same button.</p>,
+  },
+  {
+    q: "Where is the drawing PDF?",
+    roles: ["viewer"],
+    a: <p>Open the drawing — the <Ui>Drawing PDF</Ui> card at the top has <Ui>Open</Ui> and <Ui>Download</Ui>. It shows up once the revision is approved and its owner uploaded the file. See <a href="#drawing-pdf">Drawing PDF</a>.</p>,
   },
   {
     q: "Where are the BOM Excel files?",
@@ -188,7 +201,7 @@ export const HELP_SECTIONS: HelpSection[] = [
       <ol className="help-steps">
         <li><strong>Overview</strong> shows what was issued to you, drawing progress, what waits for approval, what was sent and what is coming up. Filter it by project at the top.</li>
         <li>When a drawing revision is issued to you, confirm it under <Ui>Issued to you</Ui> — the sender sees that you received it.</li>
-        <li><strong>Drawings</strong> lists every drawing with its latest revision and status; open one to see its history, remarks and transmittals.</li>
+        <li><strong>Drawings</strong> lists every drawing with its latest revision and status; open one to see its PDF, history, remarks and transmittals.</li>
         <li><strong>Sent</strong> lists BOMs sent to procurement (with the Excel file) and drawing revisions issued to people.</li>
       </ol>
     ),
@@ -348,6 +361,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         <li>When it is ready, <Ui>Change status</Ui> → <Ui>Need to be approved</Ui> and pick the approving engineer.</li>
         <li>That engineer approves it (→ Awaiting approval) or sends it back with a comment (→ In Progress).</li>
         <li>Set the approval result: Approved A, Approved B (with comments) or later As Built.</li>
+        <li>The owner uploads the approved PDF on the <Ui>Drawing PDF</Ui> card — viewers can open it from then on.</li>
         <li>Issue it to the people who need it with <Ui>Issue</Ui> on the Transmittals card.</li>
         <li>Drawing changed? Click <Ui>New revision</Ui> and say whether it changes the BOM.</li>
       </ol>
@@ -405,6 +419,26 @@ export const HELP_SECTIONS: HelpSection[] = [
         </ol>
         <p>Only the assigned engineer can approve. The engineer approving the latest revision can&apos;t become the drawing&apos;s owner either — so nobody can check their own work.</p>
         {role === "viewer" && <p className="muted">Viewers can&apos;t own or approve drawings.</p>}
+      </>
+    ),
+  },
+  {
+    ...topic("drawing-pdf"),
+    group: "Drawings",
+    body: role => (
+      <>
+        {role === "viewer" ? (
+          <p>Open a drawing and use <Ui>Open</Ui> or <Ui>Download</Ui> on the <Ui>Drawing PDF</Ui> card. You see the PDF of the latest approved revision — while a newer revision is still being worked on, you keep seeing the approved one.</p>
+        ) : (
+          <p>Each drawing revision can carry one PDF — the copy that goes to site and to the client. The working files stay on the file server under <Ui>File location</Ui>.</p>
+        )}
+        <ul>
+          <li>The <strong>drawing owner</strong> or an <strong>admin</strong> uploads it, on the <Ui>Drawing PDF</Ui> card, to the latest revision only.</li>
+          <li>Uploads open once the client approved the revision: <strong>Approved A, Approved B or As Built</strong>. An admin can open them earlier, from <strong>Need to be approved</strong>, in Settings → Drawings. Viewers see the PDF from the same point.</li>
+          <li>PDF only, up to {MAX_DRAWING_FILE_MB} MB. Whatever the file was called, it is saved and downloaded as <span className="mono">CODE_rev3.pdf</span>; the original name is shown next to it.</li>
+          <li>A new upload replaces the current PDF. The old one is kept in the archive and the revision history says who replaced it. An admin can remove a wrong PDF, with a reason.</li>
+          {role !== "viewer" && <li>Earlier revisions keep their PDFs — open them under <Ui>Revisions</Ui>.</li>}
+        </ul>
       </>
     ),
   },
@@ -478,7 +512,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     body: () => (
       <ul>
         <li><Link href="/settings/procurement">Procurement email</Link> — who receives BOMs sent to procurement, and the email text.</li>
-        <li><Link href="/settings/drawings">Drawings</Link> — who gets status emails for every drawing, the daily reminders and the list of disciplines.</li>
+        <li><Link href="/settings/drawings">Drawings</Link> — who gets status emails for every drawing, the daily reminders, the list of disciplines and from which status drawing PDFs can be uploaded.</li>
         <li>Each project page can add more recipients for that project only.</li>
         <li><Link href="/audit">Audit log</Link> — sign-ins, password resets, role changes, settings and deletions. Everyone else sees ordinary activity in History → Activity.</li>
       </ul>

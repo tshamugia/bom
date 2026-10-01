@@ -8,14 +8,17 @@ import {
   bomRevisions,
   boms,
   drawingEvents,
+  drawingFiles,
   drawingRevisions,
   drawingTransmittals,
   drawings,
   projects,
   user,
 } from "@/db/schema";
-import { todayIso } from "@/lib/drawing-status";
+import { todayIso, type DrawingStatus } from "@/lib/drawing-status";
+import { isFileStatus, type DrawingFileGate } from "@/lib/drawing-files";
 import { requireSession } from "../auth-context";
+import { loadDrawingFileGate } from "../lib/drawing-file-gate";
 
 /** Latest revision per drawing — only it can still be acknowledged or move. */
 function latestRevisions() {
@@ -62,6 +65,12 @@ function transmittalColumns() {
       name: drawings.name,
       projectCode: projects.code,
       revisionNumber: drawingRevisions.number,
+      revisionStatus: drawingRevisions.status,
+      fileId: sql<string | null>`(
+        select ${drawingFiles.id} from ${drawingFiles}
+        where ${drawingFiles.revisionId} = ${drawingTransmittals.revisionId}
+          and ${drawingFiles.status} = 'ready' and ${drawingFiles.archivedAt} is null
+      )`,
       purpose: drawingTransmittals.purpose,
       recipientUserId: drawingTransmittals.recipientUserId,
       recipientName: recipient.name,
@@ -74,6 +83,20 @@ function transmittalColumns() {
   };
 }
 
+/**
+ * Swaps the raw file id for `pdfFileId`: set only when the revision passed the
+ * upload rule and is still current, so nobody is pointed at an outdated drawing.
+ */
+function withPdf<T extends { fileId: string | null; revisionStatus: DrawingStatus; superseded?: boolean }>(
+  rows: T[],
+  gate: DrawingFileGate,
+) {
+  return rows.map(({ fileId, ...r }) => ({
+    ...r,
+    pdfFileId: fileId && !r.superseded && isFileStatus(r.revisionStatus, gate) ? fileId : null,
+  }));
+}
+
 const liveDrawing = (projectId?: string) =>
   and(isNull(drawings.deletedAt), isNull(projects.deletedAt), projectId ? eq(drawings.projectId, projectId) : undefined);
 
@@ -82,7 +105,7 @@ export async function listIssuedTransmittals(opts: { projectId?: string; limit?:
   await requireSession();
   const { recipient, sender, columns } = transmittalColumns();
   const latest = latestRevisions();
-  return db
+  const rows = await db
     .select({ ...columns, superseded: sql<boolean>`${drawingRevisions.number} < ${latest.number}` })
     .from(drawingTransmittals)
     .innerJoin(drawingRevisions, eq(drawingRevisions.id, drawingTransmittals.revisionId))
@@ -94,6 +117,7 @@ export async function listIssuedTransmittals(opts: { projectId?: string; limit?:
     .where(liveDrawing(opts.projectId))
     .orderBy(desc(drawingTransmittals.createdAt))
     .limit(opts.limit ?? 200);
+  return withPdf(rows, await loadDrawingFileGate());
 }
 
 /** BOM revisions sent to procurement, newest first, with the latest export to download. */
@@ -147,7 +171,7 @@ export async function getStatusFeed(opts: { projectId?: string; limit?: number }
   const limit = opts.limit ?? 12;
   const { recipient, sender, columns } = transmittalColumns();
   const latest = latestRevisions();
-  const [mine, issued, bomSends] = await Promise.all([
+  const [mine, issued, bomSends, gate] = await Promise.all([
     db
       .select(columns)
       .from(drawingTransmittals)
@@ -165,8 +189,9 @@ export async function getStatusFeed(opts: { projectId?: string; limit?: number }
       .orderBy(desc(drawingTransmittals.createdAt)),
     listIssuedTransmittals({ projectId: opts.projectId, limit }),
     listBomSends({ projectId: opts.projectId, limit }),
+    loadDrawingFileGate(),
   ]);
-  return { mine, issued, bomSends };
+  return { mine: withPdf(mine, gate), issued, bomSends };
 }
 
 export type StatusFeed = Awaited<ReturnType<typeof getStatusFeed>>;
