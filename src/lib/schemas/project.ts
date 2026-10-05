@@ -2,9 +2,10 @@ import { z } from "zod";
 
 const IsoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
+// No `code` anywhere: it is generated from the name when the project is created
+// and never changes (`src/lib/codes.ts`).
 export const ProjectInput = z.object({
-  code: z.string().min(1).max(32),
-  name: z.string().min(1),
+  name: z.string().trim().min(1).max(200),
   clientName: z.string().trim().max(200).optional(),
   targetDate: z.string().optional(), // YYYY-MM-DD
   ownerId: z.string().min(1).optional(),
@@ -14,7 +15,6 @@ export type ProjectInput = z.infer<typeof ProjectInput>;
 
 export const ProjectPatch = z.object({
   id: z.string().min(1),
-  code: z.string().min(1).max(32).optional(),
   name: z.string().min(1).optional(),
   targetDate: z.string().nullable().optional(),
   ownerId: z.string().min(1).nullable().optional(),
@@ -27,7 +27,6 @@ const Optional = (max: number) => z.string().trim().max(max).nullable();
 /** Everything the passport dialog edits; empty text is stored as null. */
 export const ProjectPassportInput = z.object({
   id: z.string().min(1),
-  code: z.string().trim().min(1).max(32),
   name: z.string().trim().min(1).max(200),
   ownerId: z.string().min(1).nullable(),
   clientName: Optional(200),

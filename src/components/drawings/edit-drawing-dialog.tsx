@@ -9,7 +9,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
-import { updateDrawing } from "@/server/actions/drawings";
+import { suggestDrawingCode, updateDrawing } from "@/server/actions/drawings";
+import { useSuggestedCode } from "@/components/master/code-field";
 import {
   DrawingFormFields, isDrawingFormComplete, parseHours,
   type DisciplineOption, type DrawingFormValue, type ProjectOption, type UserOption,
@@ -17,12 +18,14 @@ import {
 
 export function EditDrawingDialog({
   drawingId,
+  code,
   initial,
   projects,
   disciplines,
   users,
 }: {
   drawingId: string;
+  code: string;
   initial: DrawingFormValue;
   projects: ProjectOption[];
   disciplines: DisciplineOption[];
@@ -32,13 +35,18 @@ export function EditDrawingDialog({
   const [value, setValue] = useState<DrawingFormValue>(initial);
   const [pending, start] = useTransition();
   const router = useRouter();
+  // The code only changes when the drawing moves to a project that already uses it.
+  const moved = value.projectId !== initial.projectId;
+  const suggested = useSuggestedCode(
+    suggestDrawingCode,
+    open && moved && value.name.trim() ? { projectId: value.projectId, name: value.name.trim(), drawingId } : null,
+  );
 
   const submit = () => {
     start(async () => {
       const res = await updateDrawing({
         id: drawingId,
         projectId: value.projectId,
-        code: value.code.trim(),
         name: value.name.trim(),
         disciplineId: value.disciplineId,
         ownerId: value.ownerId,
@@ -80,6 +88,13 @@ export function EditDrawingDialog({
         <DrawingFormFields
           idPrefix="edit-drawing"
           value={value}
+          code={{
+            value: moved ? suggested.code : code,
+            loading: moved && suggested.loading,
+            note: moved
+              ? "Moving keeps the code unless the new project already uses it — then it gets the next free one."
+              : "The code is fixed — renaming the drawing keeps it.",
+          }}
           onChange={setValue}
           projects={projects}
           disciplines={disciplines}

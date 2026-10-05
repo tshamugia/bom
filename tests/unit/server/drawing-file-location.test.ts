@@ -18,7 +18,7 @@ async function setup() {
   const [p] = await db.insert(projects).values({ code: "P-1", name: "BMW showroom" }).returning();
   const [d] = await db.insert(drawingDisciplines).values({ name: `CCTV ${Date.now()}` }).returning();
   const fields = {
-    projectId: p.id, code: "CCTV-01", name: "Ground floor cameras", disciplineId: d.id,
+    projectId: p.id, name: "Ground floor cameras", disciplineId: d.id,
     ownerId: user.id, dueDate: null, estimatedHours: null,
   };
   return { fields };

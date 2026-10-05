@@ -10,7 +10,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Icon } from "@/components/icons";
-import { createDrawing } from "@/server/actions/drawings";
+import { createDrawing, suggestDrawingCode } from "@/server/actions/drawings";
+import { useSuggestedCode } from "@/components/master/code-field";
 import {
   DrawingFormFields, isDrawingFormComplete, parseHours, TEXTAREA_CLASS,
   type DisciplineOption, type DrawingFormValue, type ProjectOption, type UserOption,
@@ -31,7 +32,6 @@ export function NewDrawingDialog({
 }) {
   const blank = (): DrawingFormValue => ({
     projectId: defaultProjectId ?? "",
-    code: "",
     name: "",
     disciplineId: "",
     ownerId: users.some(u => u.id === currentUserId) ? currentUserId : "",
@@ -44,12 +44,15 @@ export function NewDrawingDialog({
   const [note, setNote] = useState("");
   const [pending, start] = useTransition();
   const router = useRouter();
+  const suggested = useSuggestedCode(
+    suggestDrawingCode,
+    open && value.projectId && value.name.trim() ? { projectId: value.projectId, name: value.name.trim() } : null,
+  );
 
   const submit = () => {
     start(async () => {
       const res = await createDrawing({
         projectId: value.projectId,
-        code: value.code.trim(),
         name: value.name.trim(),
         disciplineId: value.disciplineId,
         ownerId: value.ownerId,
@@ -62,7 +65,7 @@ export function NewDrawingDialog({
         toast.error(res.error);
         return;
       }
-      toast.success(`${value.code.trim()} created`);
+      toast.success(`${res.code} created`);
       setOpen(false);
       router.push(`/drawings/${res.id}`);
     });
@@ -95,6 +98,13 @@ export function NewDrawingDialog({
         <DrawingFormFields
           idPrefix="new-drawing"
           value={value}
+          code={{
+            value: suggested.code,
+            loading: suggested.loading,
+            note: value.projectId
+              ? "The code is made from the name — its initials and the next free number in the project."
+              : "Pick the project first — the code is made from the name and numbered within the project.",
+          }}
           onChange={setValue}
           projects={projects}
           disciplines={disciplines}

@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { and, desc, eq, isNull, ne, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { db } from "@/db/client";
@@ -20,6 +20,7 @@ import { ADMIN_ONLY_ERROR, READ_ONLY_ERROR, canEdit, isAdmin } from "@/lib/roles
 import { requireSession } from "../auth-context";
 import { audit } from "../audit";
 import { isUniqueViolation } from "../lib/db-errors";
+import { drawingCodeInProject, lockDrawingCodes, nextDrawingCode } from "../lib/codes";
 import { notifyDrawingStatusChange } from "../lib/drawing-notify";
 
 // Expected failures are returned, not thrown: Next.js hides thrown messages
@@ -30,9 +31,10 @@ const fail = (error: string) => ({ ok: false as const, error });
 
 const Id = z.string().min(1);
 
+// No `code`: it is generated from the name on create (`src/lib/codes.ts`) and
+// only changes when the drawing moves to a project that already uses it.
 const DrawingFields = z.object({
   projectId: Id,
-  code: z.string().trim().min(1).max(64),
   name: z.string().trim().min(1).max(200),
   disciplineId: Id,
   ownerId: Id,
@@ -70,20 +72,6 @@ async function findActiveEngineer(id: string) {
   return u ?? null;
 }
 
-async function isCodeTaken(projectId: string, code: string, exceptId?: string) {
-  const [hit] = await db
-    .select({ id: drawings.id })
-    .from(drawings)
-    .where(and(
-      eq(drawings.projectId, projectId),
-      sql`lower(${drawings.code}) = lower(${code})`,
-      isNull(drawings.deletedAt),
-      exceptId ? ne(drawings.id, exceptId) : undefined,
-    ))
-    .limit(1);
-  return !!hit;
-}
-
 async function latestRevision(drawingId: string) {
   const [rev] = await db
     .select({
@@ -110,7 +98,34 @@ const CreateInput = DrawingFields.extend({
   commitMessage: z.string().trim().max(2000).optional(),
 });
 
-export async function createDrawing(input: z.input<typeof CreateInput>): Promise<DrawingActionResult<{ id: string }>> {
+const CODE_RACE_ERROR = "Someone just took that code — try again.";
+
+const SuggestCodeInput = z.object({
+  projectId: z.string(),
+  name: z.string().trim().max(200),
+  /** Editing: keep this drawing's own code when it is free in `projectId`. */
+  drawingId: z.string().optional(),
+});
+
+/** The code the drawing dialogs show before saving; the server assigns the real one. */
+export async function suggestDrawingCode(input: z.input<typeof SuggestCodeInput>): Promise<string> {
+  const { projectId, name, drawingId } = SuggestCodeInput.parse(input);
+  const session = await requireSession();
+  if (!canEdit(session.user) || !projectId || !name) return "";
+  if (drawingId) {
+    const [d] = await db
+      .select({ id: drawings.id, code: drawings.code })
+      .from(drawings)
+      .where(and(eq(drawings.id, drawingId), isNull(drawings.deletedAt)))
+      .limit(1);
+    if (d) return drawingCodeInProject(db, { ...d, name }, projectId);
+  }
+  return nextDrawingCode(db, projectId, name);
+}
+
+export async function createDrawing(
+  input: z.input<typeof CreateInput>,
+): Promise<DrawingActionResult<{ id: string; code: string }>> {
   const data = CreateInput.parse(input);
   const session = await requireSession();
   if (!canEdit(session.user)) return fail(READ_ONLY_ERROR);
@@ -119,14 +134,14 @@ export async function createDrawing(input: z.input<typeof CreateInput>): Promise
   if (!project) return fail("Project not found.");
   if (!(await findDiscipline(data.disciplineId))) return fail("Discipline not found.");
   if (!(await findActiveEngineer(data.ownerId))) return fail("The owner must be an active user who isn't a viewer.");
-  if (await isCodeTaken(data.projectId, data.code)) return fail(`Code ${data.code} is already used in ${project.code}.`);
 
-  let id: string;
+  let created: { id: string; code: string };
   try {
-    id = await db.transaction(async tx => {
+    created = await db.transaction(async tx => {
+      await lockDrawingCodes(tx, data.projectId);
       const [d] = await tx.insert(drawings).values({
         projectId: data.projectId,
-        code: data.code,
+        code: await nextDrawingCode(tx, data.projectId, data.name),
         name: data.name,
         disciplineId: data.disciplineId,
         ownerId: data.ownerId,
@@ -135,7 +150,7 @@ export async function createDrawing(input: z.input<typeof CreateInput>): Promise
         fileLocation: data.fileLocation,
         createdById: session.user.id,
         lastModifiedById: session.user.id,
-      }).returning({ id: drawings.id });
+      }).returning({ id: drawings.id, code: drawings.code });
       const [rev] = await tx.insert(drawingRevisions).values({
         drawingId: d.id,
         number: 1,
@@ -149,22 +164,23 @@ export async function createDrawing(input: z.input<typeof CreateInput>): Promise
         toStatus: "in-progress",
         actorId: session.user.id,
       });
-      return d.id;
+      return d;
     });
   } catch (e) {
-    if (isUniqueViolation(e)) return fail(`Code ${data.code} is already used in ${project.code}.`);
+    if (isUniqueViolation(e)) return fail(CODE_RACE_ERROR);
     throw e;
   }
 
+  const { id, code } = created;
   revalidateDrawing(id, data.projectId);
   await audit({
     kind: "drawing.created",
     refType: "drawing",
     refId: id,
-    summary: `${project.code} · ${data.code} — ${data.name} created`,
-    payload: { projectId: data.projectId, code: data.code },
+    summary: `${project.code} · ${code} — ${data.name} created`,
+    payload: { projectId: data.projectId, code },
   });
-  return { ok: true, id };
+  return { ok: true, id, code };
 }
 
 const UpdateInput = DrawingFields.extend({ id: Id });
@@ -196,10 +212,8 @@ export async function updateDrawing(input: z.input<typeof UpdateInput>): Promise
   if (!discipline) return fail("Discipline not found.");
   const owner = await findActiveEngineer(data.ownerId);
   if (!owner) return fail("The owner must be an active user who isn't a viewer.");
-  if (await isCodeTaken(data.projectId, data.code, id)) return fail(`Code ${data.code} is already used in ${project.code}.`);
 
   const changes: string[] = [];
-  if (current.code !== data.code) changes.push(`Code: ${current.code} → ${data.code}`);
   if (current.name !== data.name) changes.push(`Name: ${current.name} → ${data.name}`);
   if (current.projectId !== data.projectId) {
     const before = await findProject(current.projectId);
@@ -230,10 +244,17 @@ export async function updateDrawing(input: z.input<typeof UpdateInput>): Promise
     return fail(OWNER_IS_REVIEWER_MESSAGE);
   }
 
+  let code = current.code;
   try {
     await db.transaction(async tx => {
+      if (current.projectId !== data.projectId) {
+        await lockDrawingCodes(tx, data.projectId);
+        code = await drawingCodeInProject(tx, { id, code: current.code, name: data.name }, data.projectId);
+        if (code !== current.code) changes.unshift(`Code: ${current.code} → ${code}`);
+      }
       await tx.update(drawings).set({
         ...data,
+        code,
         lastModifiedById: session.user.id,
         updatedAt: new Date(),
       }).where(eq(drawings.id, id));
@@ -246,7 +267,7 @@ export async function updateDrawing(input: z.input<typeof UpdateInput>): Promise
       });
     });
   } catch (e) {
-    if (isUniqueViolation(e)) return fail(`Code ${data.code} is already used in ${project.code}.`);
+    if (isUniqueViolation(e)) return fail(CODE_RACE_ERROR);
     throw e;
   }
 
@@ -255,7 +276,7 @@ export async function updateDrawing(input: z.input<typeof UpdateInput>): Promise
     kind: "drawing.updated",
     refType: "drawing",
     refId: id,
-    summary: `${data.code} updated — ${changes.map(c => c.split(":")[0]).join(", ").toLowerCase()}`,
+    summary: `${code} updated — ${changes.map(c => c.split(":")[0]).join(", ").toLowerCase()}`,
     payload: { projectId: data.projectId, changes },
   });
   return { ok: true };

@@ -126,9 +126,9 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
               <>
                 <EditDrawingDialog
                   drawingId={drawing.id}
+                  code={drawing.code}
                   initial={{
                     projectId: drawing.projectId,
-                    code: drawing.code,
                     name: drawing.name,
                     disciplineId: drawing.disciplineId ?? "",
                     ownerId: drawing.ownerId ?? "",
