@@ -3,6 +3,7 @@ import { aliasedTable, and, asc, count, desc, eq, isNull, sql } from "drizzle-or
 import { db } from "@/db/client";
 import { boms, projects, user } from "@/db/schema";
 import { requireSession } from "../auth-context";
+import { isOutdatedSql } from "../lib/bom-drawing-outdated";
 
 export type BomListRow = {
   id: string;
@@ -24,10 +25,24 @@ export type BomListAllRow = BomListRow & {
   projectId: string;
   projectCode: string;
   projectName: string;
+  /** Drawings the current revision was built from that have since changed the BOM. */
+  outdatedDrawings: number;
 };
 
-export async function listAllBoms(): Promise<BomListAllRow[]> {
+export type BomListFilters = {
+  projectId?: string;
+  ownerId?: string;
+  /** BOM name, project code or project name. */
+  search?: string;
+};
+
+export async function listAllBoms(filters: BomListFilters = {}): Promise<BomListAllRow[]> {
   await requireSession();
+  const search = filters.search?.trim();
+  const like = search ? `%${search.replace(/[\\%_]/g, c => `\\${c}`)}%` : null;
+  const linked = sql`linked.number`;
+  const checked = sql`checked.number`;
+  const impact = sql`(SELECT MAX(dr.number) FROM "drawing_revision" dr WHERE dr.drawing_id = d.id AND dr.bom_impact)`;
   const rows = await db.execute(sql/* sql */`
     SELECT
       b.id,
@@ -44,7 +59,8 @@ export async function listAllBoms(): Promise<BomListAllRow[]> {
       latest.id     AS "activeRevisionId",
       latest.letter AS "activeRevisionLetter",
       latest.status AS "activeRevisionStatus",
-      COALESCE(lc.line_count, 0)::int AS "lineCount"
+      COALESCE(lc.line_count, 0)::int AS "lineCount",
+      COALESCE(od.outdated, 0)::int AS "outdatedDrawings"
     FROM "bom" b
     INNER JOIN "project" p ON p.id = b.project_id
     LEFT JOIN "user" u ON u.id = b.owner_id
@@ -60,7 +76,18 @@ export async function listAllBoms(): Promise<BomListAllRow[]> {
       FROM "bom_line" l
       WHERE l.revision_id = latest.id
     ) lc ON TRUE
+    LEFT JOIN LATERAL (
+      SELECT COUNT(*) AS outdated
+      FROM "bom_revision_drawing" brd
+      INNER JOIN "drawing" d ON d.id = brd.drawing_id AND d.deleted_at IS NULL
+      INNER JOIN "drawing_revision" linked ON linked.id = brd.drawing_revision_id
+      LEFT JOIN "drawing_revision" checked ON checked.id = brd.checked_revision_id
+      WHERE brd.bom_revision_id = latest.id AND ${isOutdatedSql(impact, linked, checked)}
+    ) od ON TRUE
     WHERE b.deleted_at IS NULL AND p.deleted_at IS NULL
+      ${filters.projectId ? sql`AND b.project_id = ${filters.projectId}` : sql``}
+      ${filters.ownerId ? sql`AND b.owner_id = ${filters.ownerId}` : sql``}
+      ${like ? sql`AND (b.name ILIKE ${like} OR p.code ILIKE ${like} OR p.name ILIKE ${like})` : sql``}
     ORDER BY b.updated_at DESC
   `);
   return rows as unknown as BomListAllRow[];

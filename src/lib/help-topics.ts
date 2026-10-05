@@ -9,6 +9,7 @@ export const HELP_TOPIC_IDS = [
   "overview",
   "roles",
   "bom-revisions",
+  "bom-statuses",
   "bom-drawings",
   "bom-impact",
   "no-bom-change",
@@ -42,6 +43,11 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
     title: "BOM revisions",
     summary:
       "A BOM is built in revisions — Rev A, Rev B… Only a Draft can be edited. Committing locks its lines. To change them later, create a new revision: it starts as a copy of the last one. The BOM's owner changes only with a new revision — pick them in the New revision dialog.",
+  },
+  "bom-statuses": {
+    title: "BOM statuses",
+    summary:
+      "Draft and Committed follow the Commit button, Sent to procurement the procurement email. When the client confirms a BOM, set Approved with Change status and say who confirmed it — your name, the time and the comment are recorded. Taking the approval back needs a comment too.",
   },
   "bom-drawings": {
     title: "Drawings linked to a BOM",
@@ -86,7 +92,7 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
   "procurement": {
     title: "Send to procurement",
     summary:
-      "Emails the latest committed revision as an Excel file to the procurement list in Settings and marks it In review. A revision is sent once — to send changes, create a new revision, commit it and send that.",
+      "Emails the latest committed revision as an Excel file to the procurement list in Settings. A committed revision becomes Sent to procurement; an approved one stays Approved. A revision is sent once — to send changes, create a new revision, commit it and send that.",
   },
   "exports": {
     title: "Excel exports",

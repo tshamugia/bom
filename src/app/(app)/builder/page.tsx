@@ -1,14 +1,52 @@
 import Link from "next/link";
 import { listAllBoms, listProjectsForPicker } from "@/server/queries/boms";
+import { listOwnerCandidates } from "@/server/queries/projects";
+import { requireSession } from "@/server/auth-context";
+import { isAdmin } from "@/lib/roles";
+import { BOM_STATUSES, type BomStatus, type RevisionStatus } from "@/lib/bom-status";
 import { PageHead } from "@/components/master/page-head";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
 import { Badge, RevisionStatusBadge } from "@/components/ui/badge";
 import { NewBomDialog } from "@/components/boms/new-bom-dialog";
+import { BomFilterBar, BomStatusTabs } from "@/components/boms/bom-filters";
+import { DeleteBomDialog } from "@/components/boms/delete-bom-dialog";
 import { formatDateTime } from "@/lib/format";
 
-export default async function BuilderIndex() {
-  const [boms, projects] = await Promise.all([listAllBoms(), listProjectsForPicker()]);
+type SP = {
+  q?: string;
+  project?: string;
+  owner?: string;
+  status?: string;
+  mine?: string;
+  outdated?: string;
+};
+
+export default async function BuilderIndex({ searchParams }: { searchParams: Promise<SP> }) {
+  const sp = await searchParams;
+  const session = await requireSession();
+  const admin = isAdmin(session.user);
+  const [rows, projects, users] = await Promise.all([
+    listAllBoms({ projectId: sp.project, ownerId: sp.owner, search: sp.q }),
+    listProjectsForPicker(),
+    listOwnerCandidates(),
+  ]);
+  // Viewers can't own a BOM, so they aren't offered as owners.
+  const owners = users.filter(u => u.role !== "viewer").map(u => ({ id: u.id, name: u.name }));
+
+  let base = rows;
+  if (sp.mine === "1") base = base.filter(b => b.ownerId === session.user.id);
+  if (sp.outdated === "1") base = base.filter(b => b.outdatedDrawings > 0);
+
+  const counts = Object.fromEntries(BOM_STATUSES.map(s => [s, 0])) as Record<BomStatus, number>;
+  for (const b of base) {
+    const s = BOM_STATUSES.find(x => x === b.activeRevisionStatus);
+    if (s) counts[s]++;
+  }
+  const status = BOM_STATUSES.find(s => s === sp.status);
+  const visible = status ? base.filter(b => b.activeRevisionStatus === status) : base;
+  const filtered = !!(sp.q || sp.project || sp.owner || sp.mine || sp.outdated);
+
   return (
     <>
       <PageHead
@@ -16,75 +54,85 @@ export default async function BuilderIndex() {
         subtitle="All BOMs across projects. Pick one to edit, or start a new one."
         actions={<NewBomDialog projects={projects} />}
       />
-      <div className="overflow-x-auto rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
-        <table className="tbl-list w-full text-[12.5px]">
-          <thead>
-            <tr className="bg-[var(--color-surface-2)] text-[11px] uppercase tracking-wider text-[var(--color-text-3)]">
-              <th className="px-4 py-2.5 text-left font-medium">BOM</th>
-              <th className="px-4 py-2.5 text-left font-medium">Project</th>
-              <th className="px-4 py-2.5 text-left font-medium">Owner</th>
-              <th className="px-4 py-2.5 text-left font-medium">Modified by</th>
-              <th className="px-4 py-2.5 text-left font-medium">Status</th>
-              <th className="px-4 py-2.5 text-left font-medium">Active Rev</th>
-              <th className="px-4 py-2.5 text-right font-medium">Lines</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {boms.length === 0 ? (
+
+      <BomStatusTabs counts={counts} total={base.length} />
+
+      <div className="card">
+        <div className="card-head" style={{ flexWrap: "wrap" }}>
+          <BomFilterBar projects={projects} users={owners} />
+          <div className="spacer" />
+          <span className="muted" style={{ fontSize: 12 }}>{visible.length} BOM{visible.length === 1 ? "" : "s"}</span>
+        </div>
+        <div className="table-wrap">
+          <table className="tbl tbl-list">
+            <thead>
               <tr>
-                <td colSpan={8} className="px-4 py-12 text-center text-[12.5px] text-[var(--color-text-3)]">
-                  <div className="text-[13.5px]">No BOMs yet</div>
-                  <div className="mt-1">Click &quot;New BOM&quot; to create your first BOM.</div>
-                </td>
+                <th>BOM</th>
+                <th>Project</th>
+                <th>Owner</th>
+                <th>Status</th>
+                <th>Rev</th>
+                <th className="num">Lines</th>
+                <th>Modified by</th>
+                <th />
               </tr>
-            ) : (
-              boms.map(b => (
-                <tr key={b.id} className="border-b border-[var(--color-line-soft)] last:border-0 hover:bg-[var(--color-surface-2)]">
-                  <td className="l-title px-4 py-2.5">
-                    <Link href={`/builder/${b.projectId}/${b.id}`} className="block font-medium">
+            </thead>
+            <tbody>
+              {visible.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="muted" style={{ textAlign: "center", padding: "28px 14px" }}>
+                    {rows.length === 0 && !filtered
+                      ? "No BOMs yet — click “New BOM” to create the first one."
+                      : "No BOMs match these filters."}
+                  </td>
+                </tr>
+              )}
+              {visible.map(b => (
+                <tr key={b.id}>
+                  <td className="l-title">
+                    <Link href={`/builder/${b.projectId}/${b.id}`} style={{ color: "inherit", fontWeight: 600 }}>
                       {b.name}
                     </Link>
+                    {b.outdatedDrawings > 0 && (
+                      <div style={{ fontSize: 11, color: "var(--red)", fontWeight: 600 }}>
+                        {b.outdatedDrawings} outdated drawing{b.outdatedDrawings === 1 ? "" : "s"}
+                      </div>
+                    )}
                   </td>
-                  <td className="l-meta px-4 py-2.5">
-                    <Link href={`/projects/${b.projectId}`} className="block max-[701px]:inline" title={b.projectName}>
-                      <div className="font-medium max-[701px]:hidden">{b.projectName}</div>
-                      <div className="font-mono text-[11px] text-[var(--color-text-3)] max-[701px]:inline max-[701px]:text-[12px]">{b.projectCode}</div>
+                  <td className="l-meta">
+                    <Link href={`/projects/${b.projectId}`} title={b.projectName} className="block max-[701px]:inline" style={{ color: "inherit" }}>
+                      <div className="max-[701px]:hidden" style={{ fontWeight: 500 }}>{b.projectName}</div>
+                      <div className="mono max-[701px]:inline" style={{ fontSize: 11.5, color: "var(--text-3)" }}>{b.projectCode}</div>
                     </Link>
                   </td>
-                  <td className="l-hide px-4 py-2.5">{b.ownerName ?? "—"}</td>
-                  <td className={`${b.lastModifiedByName ? "l-meta" : "l-hide"} px-4 py-2.5`}>
-                    {b.lastModifiedByName ? (
-                      <div className="flex flex-col max-[701px]:inline-flex max-[701px]:flex-row max-[701px]:flex-wrap max-[701px]:gap-x-1">
-                        <span>{b.lastModifiedByName}</span>
-                        <span className="text-[11px] text-[var(--color-text-3)] max-[701px]:text-[12px]">
-                          {formatDateTime(b.updatedAt)}
-                        </span>
-                      </div>
-                    ) : "—"}
-                  </td>
-                  <td className="l-aside px-4 py-2.5">
+                  <td className="l-meta">{b.ownerName ?? "—"}</td>
+                  <td className="l-aside">
                     {b.activeRevisionStatus
-                      ? <RevisionStatusBadge status={b.activeRevisionStatus as "draft" | "committed" | "in-progress" | "review" | "approved" | "locked"} />
+                      ? <RevisionStatusBadge status={b.activeRevisionStatus as RevisionStatus} />
                       : <Badge tone="gray">—</Badge>}
                   </td>
-                  <td className="l-meta px-4 py-2.5 font-mono text-[11px] text-[var(--color-text-3)]">
-                    {b.activeRevisionLetter ? `Rev ${b.activeRevisionLetter}` : "—"}
-                  </td>
-                  <td className="l-meta px-4 py-2.5 text-right tabular-nums">
+                  <td className="mono muted l-meta">{b.activeRevisionLetter ? `Rev ${b.activeRevisionLetter}` : "—"}</td>
+                  <td className="num l-meta" style={{ fontVariantNumeric: "tabular-nums" }}>
                     {b.lineCount}
                     <span className="min-[701px]:hidden"> line{b.lineCount === 1 ? "" : "s"}</span>
                   </td>
-                  <td className="l-end px-4 py-2.5 text-right">
-                    <Link href={`/builder/${b.projectId}/${b.id}`}>
-                      <Button variant="ghost" size="sm"><Icon.Box size={14} className="mr-1" /> Open</Button>
-                    </Link>
+                  <td className="muted l-hide" style={{ whiteSpace: "nowrap" }}>
+                    <div>{formatDateTime(b.updatedAt)}</div>
+                    {b.lastModifiedByName && <div style={{ fontSize: 11 }}>{b.lastModifiedByName}</div>}
+                  </td>
+                  <td className="l-end" style={{ textAlign: "right" }}>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <Link href={`/builder/${b.projectId}/${b.id}`}>
+                        <Button variant="ghost" size="sm"><Icon.Box size={14} className="mr-1" /> Open</Button>
+                      </Link>
+                      {admin && <DeleteBomDialog bomId={b.id} bomName={b.name} iconOnly />}
+                    </div>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </>
   );

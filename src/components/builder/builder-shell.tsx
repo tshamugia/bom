@@ -19,16 +19,17 @@ import { Icon } from "@/components/icons";
 import { BackLink } from "@/components/master/back-link";
 import { BlockedNote } from "@/components/help/blocked-note";
 import type { SectionInfo } from "./section-row";
-
-type RevisionStatus = "draft" | "committed" | "in-progress" | "review" | "approved" | "locked";
+import type { RevisionStatus } from "@/lib/bom-status";
 
 /** Why the lines of a non-draft revision can't be edited, and what to do instead. */
 function lockedReason(letter: string, status: RevisionStatus): string {
   const why = status === "committed"
     ? `Rev ${letter} is committed`
-    : status === "approved" || status === "locked"
-      ? `Rev ${letter} is released`
-      : `Rev ${letter} was sent to procurement`;
+    : status === "approved"
+      ? `Rev ${letter} is approved`
+      : status === "locked"
+        ? `Rev ${letter} is released`
+        : `Rev ${letter} was sent to procurement`;
   return `${why}, so its lines are read-only. To change them, click New revision above — it starts a draft copy.`;
 }
 
@@ -48,7 +49,13 @@ type Props = {
     committedAt: Date | null;
     commitMessage: string | null;
     parentLetter: string | null;
+    statusChangedByName: string | null;
+    statusChangedAt: Date | null;
+    statusComment: string | null;
+    sent: boolean;
   };
+  /** Deleting a BOM is admin-only. */
+  canDelete: boolean;
   hasOpenDraft: boolean;
   bomOwner: { id: string | null; name: string | null };
   owners: BomOwnerOption[];
@@ -117,6 +124,7 @@ export function BuilderShell(p: Props) {
         bomsInProject={p.bomsInProject}
         bomOwner={p.bomOwner}
         owners={p.owners}
+        canDelete={p.canDelete}
       />
       {p.drawings}
       <div className="mb-5 flex flex-wrap items-center justify-end gap-2">

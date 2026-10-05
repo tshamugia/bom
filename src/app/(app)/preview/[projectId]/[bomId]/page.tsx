@@ -7,6 +7,7 @@ import { getBom } from "@/server/queries/boms";
 import { getForProject } from "@/server/queries/approvals";
 import { listDrawingLinksForBomRevision } from "@/server/queries/drawing-control";
 import { formatDrawingRevision } from "@/lib/drawing-status";
+import { canSendToProcurement } from "@/lib/bom-status";
 import { canEdit } from "@/lib/roles";
 import { requireSession } from "@/server/auth-context";
 import { PreviewShell } from "@/components/preview/preview-shell";
@@ -50,10 +51,10 @@ export default async function PreviewPage({ params }: { params: Promise<{ projec
       bomName={bom.name}
       revisionId={rev.id}
       revisionLetter={rev.letter}
-      procurementRevision={procurementRev && procurementRev.status === "committed"
+      procurementRevision={procurementRev && canSendToProcurement(procurementRev)
         ? { id: procurementRev.id, letter: procurementRev.letter }
         : null}
-      lastSentLetter={procurementRev && procurementRev.status !== "committed" ? procurementRev.letter : null}
+      lastSentLetter={procurementRev?.sent ? procurementRev.letter : null}
       lines={lines as never}
       sections={sections}
       steps={workflow ? workflow.steps.map(s => ({ position: s.position, role: s.role, status: s.status, assigneeName: s.assigneeName })) : null}

@@ -1,3 +1,5 @@
+import { BOM_STATUS_LABEL, type RevisionStatus } from "@/lib/bom-status";
+
 type Tone = "success" | "info" | "warning" | "danger" | "accent" | "gray" | "teal" | "pink";
 
 const TONE_CLASS: Record<Tone, string> = {
@@ -26,20 +28,17 @@ export function VendorStatusBadge({ status }: { status: "preferred" | "approved"
   return <Badge tone={tone as Tone}>{label}</Badge>;
 }
 
-type RevisionStatus = "draft" | "committed" | "in-progress" | "review" | "approved" | "locked";
-
-const REVISION_STATUS_MAP: Record<RevisionStatus, { tone: Tone; label: string }> = {
-  "draft":       { tone: "warning", label: "Draft" },
-  "committed":   { tone: "info",    label: "Committed" },
-  "in-progress": { tone: "info",    label: "In review" },
-  "review":      { tone: "info",    label: "In review" },
-  "approved":    { tone: "success", label: "Approved" },
-  "locked":      { tone: "success", label: "Released" },
+const REVISION_STATUS_TONE: Record<RevisionStatus, Tone> = {
+  "draft":       "warning",
+  "committed":   "info",
+  "in-progress": "gray",
+  "review":      "accent",
+  "approved":    "success",
+  "locked":      "teal",
 };
 
 export function RevisionStatusBadge({ status }: { status: RevisionStatus }) {
-  const { tone, label } = REVISION_STATUS_MAP[status];
-  return <Badge tone={tone}>{label}</Badge>;
+  return <Badge tone={REVISION_STATUS_TONE[status]}>{BOM_STATUS_LABEL[status]}</Badge>;
 }
 
 export type { Tone };

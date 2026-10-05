@@ -99,20 +99,31 @@ const stillAt = (w: Workflow) =>
     eq(approvalWorkflows.currentStepIndex, w.currentStepIndex),
   );
 
+/** Committed or client-approved and not sent yet; an approved revision keeps its status when it goes out. */
 export async function requestApproval(input: { revisionId: string }) {
   const { revisionId } = RevisionInput.parse(input);
   const rev = await loadRevision(revisionId);
-  if (rev.status !== "committed") throw new Error("REVISION_NOT_COMMITTED");
+  if (rev.status !== "committed" && rev.status !== "approved") throw new Error("REVISION_NOT_COMMITTED");
   const session = await requireRole(...EDITOR_ROLES);
 
   const workflow = await db.transaction(async tx => {
-    // Claim the revision first so two requests can't both open a workflow.
-    const [claimed] = await tx
+    // Lock the revision first so two requests can't both open a workflow.
+    const [locked] = await tx
+      .select({ status: bomRevisions.status })
+      .from(bomRevisions)
+      .where(eq(bomRevisions.id, rev.id))
+      .for("update");
+    if (locked?.status !== "committed" && locked?.status !== "approved") throw new Error("REVISION_NOT_COMMITTED");
+    const [already] = await tx
+      .select({ id: approvalWorkflows.id })
+      .from(approvalWorkflows)
+      .where(eq(approvalWorkflows.revisionId, rev.id))
+      .limit(1);
+    if (already) throw new Error("REVISION_ALREADY_SENT");
+    await tx
       .update(bomRevisions)
-      .set({ status: "review", updatedAt: new Date() })
-      .where(and(eq(bomRevisions.id, rev.id), eq(bomRevisions.status, "committed")))
-      .returning({ id: bomRevisions.id });
-    if (!claimed) throw new Error("REVISION_NOT_COMMITTED");
+      .set({ ...(locked.status === "committed" ? { status: "review" as const } : {}), updatedAt: new Date() })
+      .where(eq(bomRevisions.id, rev.id));
 
     const [w] = await tx.insert(approvalWorkflows).values({
       revisionId: rev.id,

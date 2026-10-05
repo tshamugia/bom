@@ -7,6 +7,9 @@ import { InlineProjectName } from "@/components/builder/inline-project-name";
 import { BomSwitcher, type SwitcherBom } from "@/components/builder/bom-switcher";
 import { formatDateTime } from "@/lib/format";
 import { HelpTip } from "@/components/help/help-tip";
+import { ChangeBomStatusDialog } from "@/components/boms/change-bom-status-dialog";
+import { DeleteBomDialog } from "@/components/boms/delete-bom-dialog";
+import type { RevisionStatus } from "@/lib/bom-status";
 
 export type RevisionHeaderProps = {
   projectId: string;
@@ -17,12 +20,18 @@ export type RevisionHeaderProps = {
   revision: {
     id: string;
     letter: string;
-    status: "draft" | "committed" | "in-progress" | "review" | "approved" | "locked";
+    status: RevisionStatus;
     ownerName: string | null;
     committedByName: string | null;
     committedAt: Date | null;
     commitMessage: string | null;
     parentLetter: string | null;
+    /** Who last set the client's approval, or took it back, and why. */
+    statusChangedByName: string | null;
+    statusChangedAt: Date | null;
+    statusComment: string | null;
+    /** Emailed to procurement already. */
+    sent: boolean;
   };
   preflight?: { lineCount: number; vendorCount: number; hasZeroQty: boolean };
   hasOpenDraft: boolean;
@@ -30,6 +39,8 @@ export type RevisionHeaderProps = {
   /** The BOM's current owner — it changes only with a new revision. */
   bomOwner: { id: string | null; name: string | null };
   owners: BomOwnerOption[];
+  /** Deleting a BOM is admin-only. */
+  canDelete?: boolean;
 };
 
 export function RevisionHeader(p: RevisionHeaderProps) {
@@ -77,6 +88,12 @@ export function RevisionHeader(p: RevisionHeaderProps) {
             </>
           )}
         </div>
+        {!isDraft && r.statusChangedAt && (
+          <div className="mt-1 text-[12px] text-[var(--color-text-2)] [overflow-wrap:anywhere]">
+            {r.status === "approved" ? "Approved" : "Approval taken back"} by {r.statusChangedByName ?? "—"} · {formatDateTime(r.statusChangedAt)}
+            {r.statusComment ? <> · <em>&ldquo;{r.statusComment}&rdquo;</em></> : null}
+          </div>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Link href={`/projects/${p.projectId}/history`} className="text-[12px] text-[var(--color-text-2)] hover:underline">History</Link>
@@ -94,17 +111,21 @@ export function RevisionHeader(p: RevisionHeaderProps) {
             )}
           </>
         ) : (
-          <BranchRevisionDialog
-            variant="new"
-            parentRevisionId={r.id}
-            parentLetter={r.letter}
-            projectId={p.projectId}
-            bomId={p.bomId}
-            hasOpenDraft={p.hasOpenDraft}
-            owner={p.bomOwner}
-            owners={p.owners}
-          />
+          <>
+            <BranchRevisionDialog
+              variant="new"
+              parentRevisionId={r.id}
+              parentLetter={r.letter}
+              projectId={p.projectId}
+              bomId={p.bomId}
+              hasOpenDraft={p.hasOpenDraft}
+              owner={p.bomOwner}
+              owners={p.owners}
+            />
+            <ChangeBomStatusDialog revisionId={r.id} letter={r.letter} status={r.status} sent={r.sent} />
+          </>
         )}
+        {p.canDelete && <DeleteBomDialog bomId={p.bomId} bomName={p.bomName} redirectTo="/builder" />}
       </div>
     </div>
   );
