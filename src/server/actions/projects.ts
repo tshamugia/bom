@@ -9,15 +9,21 @@ import { ProjectInput, ProjectPatch, type ProjectInput as ProjectInputType, type
 import { EDITOR_ROLES } from "@/lib/roles";
 import { requireRole } from "../auth-context";
 import { audit } from "../audit";
+import { lockProjectCodes, nextProjectCode } from "../lib/codes";
 
 export async function createProject(input: ProjectInputType) {
   const data = ProjectInput.parse(input);
   const session = await requireRole(...EDITOR_ROLES);
-  const [project] = await db.insert(projects).values({
-    ...data,
-    clientName: data.clientName || null,
-    ownerId: data.ownerId ?? session.user.id,
-  }).returning();
+  const project = await db.transaction(async tx => {
+    await lockProjectCodes(tx);
+    const [row] = await tx.insert(projects).values({
+      ...data,
+      code: await nextProjectCode(tx, data.name),
+      clientName: data.clientName || null,
+      ownerId: data.ownerId ?? session.user.id,
+    }).returning();
+    return row;
+  });
   revalidatePath("/builder");
   revalidatePath("/dashboard");
   revalidatePath("/projects");
@@ -28,6 +34,15 @@ export async function createProject(input: ProjectInputType) {
     summary: `${project.code} — ${project.name} created`,
   });
   return project;
+}
+
+const SuggestInput = z.object({ name: z.string().trim().max(200) });
+
+/** The code a new project with this name would get — the New project dialog shows it before saving. */
+export async function suggestProjectCode(input: z.infer<typeof SuggestInput>) {
+  const { name } = SuggestInput.parse(input);
+  await requireRole(...EDITOR_ROLES);
+  return name ? nextProjectCode(db, name) : "";
 }
 
 export async function updateProject(input: ProjectPatchType) {

@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Icon } from "@/components/icons";
 import { SELECT_CLASS, TEXTAREA_CLASS, type UserOption } from "@/components/drawings/drawing-form-fields";
+import { BlockedNote } from "@/components/help/blocked-note";
+import { CodeField } from "@/components/master/code-field";
 import { saveProjectPassport } from "@/server/actions/project-passport";
 import { softDeleteProject } from "@/server/actions/projects";
 
@@ -47,13 +49,12 @@ export function PassportEditDialog({
 
   const set = <K extends keyof PassportValue>(k: K, value: PassportValue[K]) => setV(prev => ({ ...prev, [k]: value }));
   const datesWrong = !!v.startDate && !!v.targetDate && v.startDate > v.targetDate;
-  const blocked = !v.code.trim() || !v.name.trim() || datesWrong;
+  const blocked = !v.name.trim() || datesWrong;
 
   const save = () =>
     start(async () => {
       const res = await saveProjectPassport({
         id: projectId,
-        code: v.code,
         name: v.name,
         ownerId: v.ownerId || null,
         clientName: v.clientName,
@@ -107,16 +108,14 @@ export function PassportEditDialog({
         </DialogHeader>
 
         <div className="grid max-h-[65vh] gap-3 overflow-y-auto pr-1 max-[701px]:max-h-none max-[701px]:overflow-visible max-[701px]:pr-0">
-          <div className="grid grid-cols-[140px_1fr] gap-3 max-[480px]:grid-cols-1">
-            <div className="grid gap-1.5">
-              <Label htmlFor="pp-code">Code</Label>
-              <Input id="pp-code" value={v.code} maxLength={32} onChange={e => set("code", e.target.value)} />
-            </div>
+          <div className="grid grid-cols-[1fr_140px] gap-3 max-[480px]:grid-cols-1">
             <div className="grid gap-1.5">
               <Label htmlFor="pp-name">Project name</Label>
               <Input id="pp-name" value={v.name} maxLength={200} onChange={e => set("name", e.target.value)} />
             </div>
+            <CodeField id="pp-code" value={v.code} />
           </div>
+          <BlockedNote icon="lock">The code is fixed — renaming the project keeps it.</BlockedNote>
           <div className="grid grid-cols-2 gap-3 max-[480px]:grid-cols-1">
             <div className="grid gap-1.5">
               <Label htmlFor="pp-client">Client</Label>

@@ -60,7 +60,6 @@ export async function saveProjectPassport(input: ProjectPassportInput): Promise<
   }
 
   const next = {
-    code: data.code,
     name: data.name,
     ownerId: data.ownerId,
     clientName: blank(data.clientName),
@@ -71,7 +70,6 @@ export async function saveProjectPassport(input: ProjectPassportInput): Promise<
     targetDate: data.targetDate,
   };
   const labels: Record<keyof typeof next, string> = {
-    code: "code",
     name: "name",
     ownerId: "manager",
     clientName: "client",
@@ -92,7 +90,7 @@ export async function saveProjectPassport(input: ProjectPassportInput): Promise<
     kind: "project.updated",
     refType: "project",
     refId: data.id,
-    summary: `${next.code} passport updated — ${changed.map(k => labels[k]).join(", ")}`,
+    summary: `${current.code} passport updated — ${changed.map(k => labels[k]).join(", ")}`,
     payload: { projectId: data.id, changed },
   });
   return { ok: true };

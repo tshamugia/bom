@@ -2,14 +2,16 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { BlockedNote } from "@/components/help/blocked-note";
+import { CodeField } from "@/components/master/code-field";
 
 export type ProjectOption = { id: string; code: string; name: string };
 export type DisciplineOption = { id: string; name: string };
 export type UserOption = { id: string; name: string; email: string };
 
+/** No code: the server makes it from the name (`src/lib/codes.ts`); the form only shows it. */
 export type DrawingFormValue = {
   projectId: string;
-  code: string;
   name: string;
   disciplineId: string;
   ownerId: string;
@@ -34,13 +36,14 @@ export function parseHours(text: string): number | null | undefined {
 }
 
 export function isDrawingFormComplete(v: DrawingFormValue) {
-  return !!(v.projectId && v.code.trim() && v.name.trim() && v.disciplineId && v.ownerId)
+  return !!(v.projectId && v.name.trim() && v.disciplineId && v.ownerId)
     && parseHours(v.estimatedHours) !== undefined;
 }
 
 export function DrawingFormFields({
   idPrefix,
   value,
+  code,
   onChange,
   projects,
   disciplines,
@@ -48,6 +51,8 @@ export function DrawingFormFields({
 }: {
   idPrefix: string;
   value: DrawingFormValue;
+  /** The code to show and why it can't be typed. */
+  code: { value: string; loading: boolean; note: React.ReactNode };
   onChange: (next: DrawingFormValue) => void;
   projects: ProjectOption[];
   disciplines: DisciplineOption[];
@@ -67,16 +72,14 @@ export function DrawingFormFields({
           ))}
         </select>
       </div>
-      <div className="grid grid-cols-[140px_1fr] gap-3 max-[480px]:grid-cols-1">
-        <div className="grid gap-1.5">
-          <Label htmlFor={id("code")}>Code</Label>
-          <Input id={id("code")} value={value.code} maxLength={64} placeholder="e.g. ELV-101" onChange={e => set("code", e.target.value)} />
-        </div>
+      <div className="grid grid-cols-[1fr_140px] gap-3 max-[480px]:grid-cols-1">
         <div className="grid gap-1.5">
           <Label htmlFor={id("name")}>Name</Label>
           <Input id={id("name")} value={value.name} maxLength={200} placeholder="e.g. Ground floor CCTV layout" onChange={e => set("name", e.target.value)} />
         </div>
+        <CodeField id={id("code")} value={code.value} loading={code.loading} />
       </div>
+      <BlockedNote icon="lock">{code.note}</BlockedNote>
       <div className="grid gap-1.5">
         <Label htmlFor={id("discipline")}>Discipline</Label>
         <select id={id("discipline")} className={SELECT_CLASS} value={value.disciplineId} onChange={e => set("disciplineId", e.target.value)}>

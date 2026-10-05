@@ -186,6 +186,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         <HelpDiagram />
         <ul>
           <li>Everything lives in a <strong>project</strong>: its drawings and its BOMs.</li>
+          <li>Projects and drawings get their <strong>code</strong> from their name when they are created — the initials (Georgian is spelt in Latin letters) and the next free number, e.g. <span className="mono">BS-001</span> for &ldquo;BMW showroom&rdquo;. Nobody types a code, and renaming keeps it, because files and transmittals carry it.</li>
           <li><strong>Drawings</strong> are the engineering drawing register. Each drawing has revisions (rev1, rev2…), a status, an owner and a due date.</li>
           <li><strong>BOMs</strong> (bills of materials) list what to buy. Each BOM has revisions too (Rev A, Rev B…). Lines come from the item catalog, which knows each item&apos;s vendor.</li>
           <li>The two meet where a <strong>BOM revision is built from drawing revisions</strong>. When a drawing gets a revision that changes the BOM, the BOMs built from the older one show it as outdated.</li>
@@ -383,7 +384,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     roles: EDITORS,
     body: () => (
       <ol className="help-steps">
-        <li>On <Link href="/drawings">Drawings</Link>, click <Ui>New drawing</Ui>: project, code, name, owner and due date. Add the <Ui>File location</Ui> — the folder on the file server, e.g. <span className="mono">2026/BMW/CCTV</span> — so others can find the files. It starts at rev1, In Progress.</li>
+        <li>On <Link href="/drawings">Drawings</Link>, click <Ui>New drawing</Ui>: project, name, owner and due date. The code is made from the name — its initials and the next free number in the project, e.g. <span className="mono">GFCL-001</span> for &ldquo;Ground floor CCTV layout&rdquo;. Add the <Ui>File location</Ui> — the folder on the file server, e.g. <span className="mono">2026/BMW/CCTV</span> — so others can find the files. It starts at rev1, In Progress.</li>
         <li>Work on it. Log hours in <Ui>Time</Ui> and track client or site comments in <Ui>Remarks</Ui>.</li>
         <li>When it is ready, <Ui>Change status</Ui> → <Ui>Need to be approved</Ui> and pick the approving engineer.</li>
         <li>That engineer approves it (→ Awaiting approval) or sends it back with a comment (→ In Progress).</li>

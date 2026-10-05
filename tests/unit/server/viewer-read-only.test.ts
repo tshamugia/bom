@@ -22,7 +22,7 @@ test("a viewer can read but throwing actions reject with FORBIDDEN", async () =>
   await mockSession("viewer");
 
   expect(await listProjects()).toHaveLength(1);
-  await expect(createProject({ code: "P-2", name: "Two" })).rejects.toThrow(/FORBIDDEN/);
+  await expect(createProject({ name: "Two" })).rejects.toThrow(/FORBIDDEN/);
   await expect(
     createVendor({ name: "V", code: "V", country: "US", leadTime: "3d", rating: 4, status: "approved" }),
   ).rejects.toThrow(/FORBIDDEN/);
@@ -44,7 +44,7 @@ test("a member can't make a viewer the owner of a drawing", async () => {
   const [d] = await db.insert(drawingDisciplines).values({ name: `Viewer test ${Date.now()}` }).returning();
 
   const r = await createDrawing({
-    projectId: p.id, code: "E-01", name: "Single line", disciplineId: d.id,
+    projectId: p.id, name: "Single line", disciplineId: d.id,
     ownerId: viewer.id, dueDate: null, estimatedHours: null,
   });
   expect(r).toEqual({ ok: false, error: "The owner must be an active user who isn't a viewer." });
