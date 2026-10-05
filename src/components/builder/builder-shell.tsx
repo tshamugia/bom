@@ -10,7 +10,7 @@ import { SectionedLineTable, type Line } from "./sectioned-line-table";
 import { SummaryBar } from "./summary-bar";
 import { ColumnsMenu } from "./columns-menu";
 import { LayoutToggle } from "./layout-toggle";
-import { CsvImportDialog } from "./csv-import-dialog";
+import { BomImportDialog } from "./bom-import-dialog";
 import { DuplicateDialog } from "./duplicate-dialog";
 import { RevisionHeader } from "@/components/revisions/revision-header";
 import type { BomOwnerOption } from "@/components/revisions/branch-revision-dialog";
@@ -171,7 +171,7 @@ export function BuilderShell(p: Props) {
                 lineItemIds={lineCatalogIds}
                 activeSectionId={activeSectionId}
               />
-              <CsvImportDialog revisionId={p.revisionId} />
+              <BomImportDialog revisionId={p.revisionId} />
               <ColumnsMenu />
             </div>
           )}

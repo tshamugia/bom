@@ -254,13 +254,33 @@ export const HELP_SECTIONS: HelpSection[] = [
     roles: EDITORS,
     body: () => (
       <ol className="help-steps">
-        <li>Open the project and click <Ui>New BOM</Ui>. It starts as a Draft Rev A. (Or <Ui>Duplicate</Ui> an existing BOM from the builder.)</li>
-        <li>In the <Link href="/builder">BOM Builder</Link>, add lines by searching the catalog, or import a CSV. Group lines into sections such as “Fire alarm” or “IT network”.</li>
+        <li>Open the project and click <Ui>New BOM</Ui>. It starts as a Draft Rev A. (Or <Ui>Duplicate</Ui> an existing BOM from the builder, or pick <Ui>From file</Ui> to build it from the BOM template — see below.)</li>
+        <li>In the <Link href="/builder">BOM Builder</Link>, add lines by searching the catalog, or with <Ui>Import</Ui> from the BOM template. Group lines into sections such as “Fire alarm” or “IT network”.</li>
         <li>Link the drawings the BOM is built from with <Ui>Manage</Ui> on the drawings strip — they are linked at their current revision.</li>
         <li>Click <Ui>Commit revision</Ui>. The lines lock.</li>
         <li>Click <Ui>Preview</Ui> to check the document, then <Ui>Generate Excel</Ui> to download it, or <Ui>Send to procurement</Ui> to email it.</li>
         <li>Something changed later? Click <Ui>New revision</Ui>: Rev B starts as a draft copy of Rev A.</li>
       </ol>
+    ),
+  },
+  {
+    id: "howto-bom-import",
+    group: "BOMs",
+    title: "Import a BOM from a file",
+    roles: EDITORS,
+    body: () => (
+      <>
+        <p>A BOM can come from a spreadsheet. The same file works in two places: <Ui>New BOM</Ui> → <Ui>From file</Ui> creates a BOM from it, and <Ui>Import</Ui> in the builder adds its lines to the open draft. Both dialogs have <Ui>Download template</Ui>.</p>
+        <dl className="help-defs">
+          <dt>section</dt>
+          <dd>Optional. Rows with the same name form one section; in a draft, an existing section with that name is reused.</dd>
+          <dt>sku, qty</dt>
+          <dd>Required. The quantity is a whole number above 0, and each SKU is listed once.</dd>
+          <dt>description … subcategory</dt>
+          <dd>Only for SKUs the catalog doesn&apos;t have yet: the import adds them to the catalog (with any new vendor, category or subcategory), so a new SKU needs a description and a manufacturer. Items already in the catalog keep their own data.</dd>
+        </dl>
+        <p>After you choose the file you see a preview — lines, sections, new SKUs and any rows with errors. If a row has an error nothing is imported; fix the file and choose it again. A SKU that is already on the draft gets the file&apos;s quantity added to its line.</p>
+      </>
     ),
   },
   {
@@ -350,6 +370,7 @@ export const HELP_SECTIONS: HelpSection[] = [
       <>
         <p>BOM lines come from the <Link href="/catalog">Item catalog</Link>. Each item has a SKU, a category and a vendor from <Link href="/vendors">Vendors</Link>.</p>
         <p>To add many items at once, use <Ui>Import</Ui> on the catalog page with the XLSX template. You first see a dry run — rows to add, rows to update and rows with errors — and nothing is saved until you click <Ui>Import</Ui>.</p>
+        <p>Importing a BOM from a file also adds the SKUs the catalog doesn&apos;t have yet.</p>
       </>
     ),
   },

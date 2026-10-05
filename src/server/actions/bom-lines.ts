@@ -245,23 +245,3 @@ export async function moveLineToSection(input: { lineId: string; sectionId: stri
     });
   }
 }
-
-const CsvRow = z.object({ sku: z.string().min(1), qty: z.coerce.number().int().positive() });
-export async function importCsv(input: { revisionId: string; rows: Array<{ sku: string; qty: number | string }> }) {
-  const rev = await ensureRevisionWritable(input.revisionId);
-  const parsed = input.rows.map(r => CsvRow.parse(r));
-
-  const skuToItem = new Map(
-    (await db.select().from(items)).map(i => [i.sku, i]),
-  );
-
-  let added = 0;
-  const missing: string[] = [];
-  for (const r of parsed) {
-    const it = skuToItem.get(r.sku);
-    if (!it) { missing.push(r.sku); continue; }
-    await addLine({ revisionId: rev.id, itemId: it.id, qty: r.qty });
-    added++;
-  }
-  return { added, missing };
-}

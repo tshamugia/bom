@@ -2,9 +2,9 @@
 
 import ExcelJS from "exceljs";
 import { createId } from "@paralleldrive/cuid2";
-import { eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { items, vendors, categories, subcategories } from "@/db/schema";
+import { items } from "@/db/schema";
 import { audit } from "@/server/audit";
 import {
   putObject,
@@ -19,6 +19,7 @@ import { requireRole } from "@/server/auth-context";
 import { parseImportBuffer } from "@/server/lib/import-parser";
 import { validateRows } from "@/server/lib/import-validator";
 import { loadValidatorContext } from "@/server/lib/import-validator-context";
+import { ensureCatalogRefs } from "@/server/lib/catalog-refs";
 import {
   DuplicatePolicy,
   TEMPLATE_COLUMNS,
@@ -82,52 +83,10 @@ export async function commitImport(input: { importId: string; duplicates: Duplic
 
   try {
     await db.transaction(async (tx) => {
-      const vendorIdByCode = new Map<string, string>();
-      const existingVs = await tx.select({ id: vendors.id, code: vendors.code }).from(vendors);
-      for (const v of existingVs) vendorIdByCode.set(v.code, v.id);
-
-      for (const code of dry.newVendors) {
-        const [row] = await tx.insert(vendors).values({
-          name: code,
-          code,
-          country: "",
-          leadTime: "",
-          rating: 0,
-          status: "approved",
-        }).returning({ id: vendors.id, code: vendors.code });
-        vendorIdByCode.set(row.code, row.id);
-        vendorsCreated += 1;
-      }
-
-      const catIdByName = new Map<string, string>();
-      const existingCs = await tx.select({ id: categories.id, name: categories.name }).from(categories);
-      for (const c of existingCs) catIdByName.set(c.name, c.id);
-
-      for (const name of dry.newCategories) {
-        const [row] = await tx.insert(categories).values({ name }).returning({ id: categories.id, name: categories.name });
-        catIdByName.set(row.name, row.id);
-        categoriesCreated += 1;
-      }
-
-      const subIdByPair = new Map<string, string>();
-      const catIds = [...catIdByName.values()];
-      const existingSubs = catIds.length > 0
-        ? await tx.select({
-            id: subcategories.id,
-            name: subcategories.name,
-            categoryId: subcategories.categoryId,
-          }).from(subcategories).where(inArray(subcategories.categoryId, catIds))
-        : [];
-      const catNameById = new Map<string, string>();
-      for (const [name, id] of catIdByName) catNameById.set(id, name);
-      for (const s of existingSubs) subIdByPair.set(`${catNameById.get(s.categoryId)}::${s.name}`, s.id);
-
-      for (const pair of dry.newSubcategories) {
-        const catId = catIdByName.get(pair.category)!;
-        const [row] = await tx.insert(subcategories).values({ name: pair.subcategory, categoryId: catId }).returning({ id: subcategories.id, name: subcategories.name });
-        subIdByPair.set(`${pair.category}::${row.name}`, row.id);
-        subcategoriesCreated += 1;
-      }
+      const { vendorIdByCode, catIdByName, subIdByPair, created } = await ensureCatalogRefs(tx, dry);
+      vendorsCreated = created.vendors;
+      categoriesCreated = created.categories;
+      subcategoriesCreated = created.subcategories;
 
       const skusInDb = new Set(
         (await tx.select({ sku: items.sku }).from(items)).map(r => r.sku),
