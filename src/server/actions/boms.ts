@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { boms, bomRevisions, projects } from "@/db/schema";
 import { EDITOR_ROLES } from "@/lib/roles";
+import { BOM_DELETE_REASON_MIN } from "@/lib/bom-status";
 import { requireRole } from "../auth-context";
 import { audit } from "../audit";
 import { copyDrawingLinks, copyRevisionContent } from "../lib/copy-revision";
@@ -21,7 +22,11 @@ const BomRenameInput = z.object({
   name: z.string().trim().min(1).max(200),
 });
 
-const BomDeleteInput = z.object({ bomId: z.string().min(1) });
+const BomDeleteInput = z.object({
+  bomId: z.string().min(1),
+  /** Why the BOM goes — required, and kept in the audit log. */
+  reason: z.string().trim().min(BOM_DELETE_REASON_MIN).max(1000),
+});
 
 const BomDuplicateInput = z.object({
   sourceBomId: z.string().min(1),
@@ -112,23 +117,28 @@ export async function renameBom(input: z.infer<typeof BomRenameInput>) {
   });
 }
 
+/** Admin-only soft delete: the BOM leaves every list, its revisions and history stay. */
 export async function deleteBom(input: z.infer<typeof BomDeleteInput>) {
-  const { bomId } = BomDeleteInput.parse(input);
-  await requireRole("admin");
+  const { bomId, reason } = BomDeleteInput.parse(input);
+  const session = await requireRole("admin");
   const bom = await loadBom(bomId);
 
-  await db.update(boms)
-    .set({ deletedAt: new Date(), updatedAt: new Date() })
-    .where(eq(boms.id, bomId));
+  const [deleted] = await db.update(boms)
+    .set({ deletedAt: new Date(), lastModifiedById: session.user.id, updatedAt: new Date() })
+    .where(and(eq(boms.id, bomId), isNull(boms.deletedAt)))
+    .returning({ id: boms.id });
+  if (!deleted) throw new Error("BOM_NOT_FOUND");
 
   revalidatePath("/builder");
+  revalidatePath("/preview");
+  revalidatePath("/dashboard");
   revalidatePath(`/projects/${bom.projectId}`);
   await audit({
     kind: "bom.deleted",
     refType: "bom",
     refId: bomId,
-    summary: `BOM "${bom.name}" archived`,
-    payload: { projectId: bom.projectId },
+    summary: `BOM "${bom.name}" deleted — ${reason}`,
+    payload: { projectId: bom.projectId, name: bom.name, reason },
   });
 }
 

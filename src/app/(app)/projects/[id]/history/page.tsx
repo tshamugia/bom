@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { aliasedTable, desc, eq } from "drizzle-orm";
+import { aliasedTable, and, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import { boms, bomRevisions, projects, user } from "@/db/schema";
 import { requireSession } from "@/server/auth-context";
 import { canEdit } from "@/lib/roles";
+import { revisionSentSql } from "@/server/lib/revision-status";
 import { listOwnerCandidates } from "@/server/queries/projects";
 import { HistoryTable, type HistoryRow } from "@/components/revisions/history-table";
 import { Button } from "@/components/ui/button";
@@ -25,11 +26,13 @@ export default async function HistoryPage({ params }: { params: Promise<{ id: st
 
   const bomOwner = aliasedTable(user, "bom_owner");
   const revOwner = aliasedTable(user, "rev_owner");
+  const statusUser = aliasedTable(user, "status_user");
   const bomRows = await db
     .select({ id: boms.id, name: boms.name, ownerId: boms.ownerId, ownerName: bomOwner.name })
     .from(boms)
     .leftJoin(bomOwner, eq(bomOwner.id, boms.ownerId))
-    .where(eq(boms.projectId, id))
+    // Deleted BOMs can't be opened any more; their trail is in the audit log.
+    .where(and(eq(boms.projectId, id), isNull(boms.deletedAt)))
     .orderBy(desc(boms.updatedAt));
   // Viewers can't change a BOM, so they can't own one either.
   const owners = readOnly
@@ -47,10 +50,13 @@ export default async function HistoryPage({ params }: { params: Promise<{ id: st
       commitMessage: bomRevisions.commitMessage,
       parentRevisionId: bomRevisions.parentRevisionId,
       bomId: bomRevisions.bomId,
+      statusChangedByName: statusUser.name,
+      sent: revisionSentSql(bomRevisions.id),
     })
     .from(bomRevisions)
     .leftJoin(user, eq(user.id, bomRevisions.committedById))
     .leftJoin(revOwner, eq(revOwner.id, bomRevisions.ownerId))
+    .leftJoin(statusUser, eq(statusUser.id, bomRevisions.statusChangedById))
     .innerJoin(boms, eq(boms.id, bomRevisions.bomId))
     .where(eq(boms.projectId, id))
     .orderBy(desc(bomRevisions.createdAt));
@@ -67,6 +73,8 @@ export default async function HistoryPage({ params }: { params: Promise<{ id: st
       committedAt: r.committedAt ?? null,
       commitMessage: r.commitMessage ?? null,
       parentRevisionId: r.parentRevisionId ?? null,
+      statusChangedByName: r.statusChangedByName ?? null,
+      sent: r.sent,
     });
     groupedByBom.set(r.bomId, list);
   }

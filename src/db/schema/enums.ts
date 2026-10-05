@@ -1,4 +1,5 @@
 import { pgEnum } from "drizzle-orm/pg-core";
+import { REVISION_STATUSES } from "../../lib/bom-status";
 
 export const vendorStatusEnum = pgEnum("vendor_status", [
   "preferred",
@@ -6,13 +7,6 @@ export const vendorStatusEnum = pgEnum("vendor_status", [
   "review",
 ]);
 
-export const revisionStatusEnum = pgEnum("revision_status", [
-  "draft",
-  "committed",
-  "in-progress",
-  "review",
-  "approved",
-  "locked",
-]);
+export const revisionStatusEnum = pgEnum("revision_status", REVISION_STATUSES);
 
 export const userRoleEnum = pgEnum("user_role", ["admin", "member", "viewer"]);

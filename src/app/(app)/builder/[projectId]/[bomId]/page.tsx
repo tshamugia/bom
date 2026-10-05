@@ -10,9 +10,12 @@ import { listDrawingLinksForBomRevision, listLinkableDrawings } from "@/server/q
 import { BuilderShell } from "@/components/builder/builder-shell";
 import { BomDrawingsStrip } from "@/components/builder/bom-drawings-strip";
 import type { Line } from "@/components/builder/sectioned-line-table";
+import { requireSession } from "@/server/auth-context";
+import { isAdmin } from "@/lib/roles";
 
 export default async function BuilderPage({ params }: { params: Promise<{ projectId: string; bomId: string }> }) {
   const { projectId, bomId } = await params;
+  const session = await requireSession();
 
   const [bom, vendors, cats, catalog, projectsForDuplicate, bomsInProject, users] = await Promise.all([
     getBom(bomId),
@@ -72,7 +75,12 @@ export default async function BuilderPage({ params }: { params: Promise<{ projec
         committedAt: rev.committedAt ?? null,
         commitMessage: rev.commitMessage ?? null,
         parentLetter: rev.parentLetter ?? null,
+        statusChangedByName: rev.statusChangedByName ?? null,
+        statusChangedAt: rev.statusChangedAt ?? null,
+        statusComment: rev.statusComment ?? null,
+        sent: rev.sent,
       }}
+      canDelete={isAdmin(session.user)}
       hasOpenDraft={hasOpenDraft}
       bomOwner={{ id: bom.ownerId, name: bom.ownerName }}
       owners={owners}

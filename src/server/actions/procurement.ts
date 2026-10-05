@@ -11,6 +11,8 @@ import { runExport, type ExportOptionsT } from "../lib/run-export";
 import { getProcurementSettings } from "../queries/system-settings";
 import { sendProcurementBomEmail } from "@/lib/mailer";
 import { requestApproval } from "./approvals";
+import { revisionSentSql } from "../lib/revision-status";
+import { canSendToProcurement } from "@/lib/bom-status";
 
 const DEFAULT_SUBJECT = "BOM for procurement: {projectCode} ({bomName} Rev {revLetter})";
 const DEFAULT_BODY = [
@@ -41,14 +43,14 @@ export async function sendBomToProcurement(input: {
 }): Promise<SendBomToProcurementResult> {
   const session = await requireRole(...EDITOR_ROLES);
 
-  // Checked before anything is emailed: only a committed revision can start an
-  // approval, and a draft or one already under review must not reach procurement.
+  // Checked before anything is emailed: a draft, or a revision that already
+  // went out, must not reach procurement.
   const [rev] = await db
-    .select({ status: bomRevisions.status })
+    .select({ status: bomRevisions.status, sent: revisionSentSql(bomRevisions.id) })
     .from(bomRevisions)
     .where(eq(bomRevisions.id, input.revisionId))
     .limit(1);
-  if (rev?.status !== "committed") {
+  if (!rev || !canSendToProcurement(rev)) {
     return {
       ok: false,
       code: "REVISION_NOT_COMMITTED",

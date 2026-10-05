@@ -18,6 +18,10 @@ export const bomRevisions = pgTable(
     committedAt: timestamp("committed_at"),
     commitMessage: text("commit_message"),
     lockedAt: timestamp("locked_at"),
+    /** Last status set by hand (the client's approval or taking it back): who, when and the comment they gave. */
+    statusChangedById: text("status_changed_by_id").references(() => user.id, { onDelete: "set null" }),
+    statusChangedAt: timestamp("status_changed_at"),
+    statusComment: text("status_comment"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },

@@ -1,15 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
 import { Badge, RevisionStatusBadge } from "@/components/ui/badge";
 import { RenameBomDialog } from "@/components/boms/rename-bom-dialog";
-import { deleteBom } from "@/server/actions/boms";
+import { DeleteBomDialog } from "@/components/boms/delete-bom-dialog";
 import { formatDateTime } from "@/lib/format";
+import type { RevisionStatus } from "@/lib/bom-status";
 
 export type BomRow = {
   id: string;
@@ -18,7 +16,7 @@ export type BomRow = {
   lastModifiedByName: string | null;
   activeRevisionId: string | null;
   activeRevisionLetter: string | null;
-  activeRevisionStatus: "draft" | "committed" | "in-progress" | "review" | "approved" | "locked" | null;
+  activeRevisionStatus: RevisionStatus | null;
   lineCount: number;
   updatedAt: Date | string;
 };
@@ -31,13 +29,11 @@ export function BomList({
 }: {
   projectId: string;
   rows: BomRow[];
-  /** Archiving a BOM is admin-only. */
+  /** Deleting a BOM is admin-only. */
   canDelete: boolean;
   /** Viewers open the read-only preview instead of the builder. */
   readOnly?: boolean;
 }) {
-  const router = useRouter();
-  const [archiving, startArchive] = useTransition();
   const openHref = (bomId: string) => `/${readOnly ? "preview" : "builder"}/${projectId}/${bomId}`;
 
   if (rows.length === 0) {
@@ -110,28 +106,7 @@ export function BomList({
                       trigger={<Button variant="ghost" size="sm" title="Rename"><Icon.Edit size={14} /></Button>}
                     />
                   )}
-                  {canDelete && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={archiving}
-                      title="Archive"
-                      onClick={() => {
-                        if (!confirm(`Archive BOM "${b.name}"? It will be hidden from this project.`)) return;
-                        startArchive(async () => {
-                          try {
-                            await deleteBom({ bomId: b.id });
-                            toast.success(`${b.name} archived`);
-                            router.refresh();
-                          } catch (e) {
-                            toast.error(e instanceof Error ? e.message : "Archive failed");
-                          }
-                        });
-                      }}
-                    >
-                      <Icon.Trash size={14} />
-                    </Button>
-                  )}
+                  {canDelete && <DeleteBomDialog bomId={b.id} bomName={b.name} iconOnly />}
                 </div>
               </td>
             </tr>

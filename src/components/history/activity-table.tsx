@@ -7,7 +7,7 @@ import { isAdminOnlyKind } from "@/lib/audit-kinds";
 const KIND_META: Record<AuditKind, { label: string; tone: Tone; group: string }> = {
   "bom.created":            { label: "Created",           tone: "info",    group: "Project / BOM" },
   "bom.renamed":            { label: "BOM renamed",       tone: "gray",    group: "Project / BOM" },
-  "bom.deleted":            { label: "BOM archived",      tone: "warning", group: "Project / BOM" },
+  "bom.deleted":            { label: "BOM deleted",       tone: "warning", group: "Project / BOM" },
   "bom.duplicated":         { label: "BOM duplicated",    tone: "info",    group: "Project / BOM" },
   "bom.imported":           { label: "Imported from file", tone: "info",   group: "BOM" },
   "project.deleted":        { label: "Project archived",  tone: "warning", group: "Project / BOM" },
@@ -23,6 +23,7 @@ const KIND_META: Record<AuditKind, { label: string; tone: Tone; group: string }>
   "bom.revision.committed": { label: "Revision committed", tone: "success", group: "Revision" },
   "bom.revision.branched":  { label: "Revision branched", tone: "info",    group: "Revision" },
   "bom.revision.discarded": { label: "Revision discarded", tone: "danger", group: "Revision" },
+  "bom.status.changed":     { label: "BOM status",        tone: "success", group: "Revision" },
   "bom.export.generated":   { label: "BOM exported",      tone: "accent",  group: "Export" },
   "procurement.email.sent": { label: "BOM emailed to procurement", tone: "accent", group: "Export" },
   "catalog.imported":       { label: "Catalog imported",  tone: "info",    group: "Catalog" },

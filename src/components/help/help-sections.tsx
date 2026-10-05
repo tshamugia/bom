@@ -49,11 +49,12 @@ const PERMISSIONS: Can[] = [
   ["Confirm receipt of a drawing revision issued to you", true, true, true],
   ["Create and edit projects, BOMs and drawings", true, true, false],
   ["Commit BOM revisions, export, send to procurement", true, true, false],
+  ["Mark a BOM approved by the client, or take the approval back", true, true, false],
   ["Change drawing status, issue transmittals, log hours", true, true, false],
   ["Own a drawing or approve it as the second engineer", true, true, false],
   ["Upload a drawing's PDF (as its owner)", true, true, false],
   ["Edit the item catalog and vendors", true, true, false],
-  ["Delete or archive projects, BOMs, vendors, drawings", true, false, false],
+  ["Delete or archive projects, BOMs, vendors, drawings (a BOM with a reason)", true, false, false],
   ["Create users, change roles, reset passwords", true, false, false],
   ["Settings: procurement email, drawing emails, reminders, disciplines", true, false, false],
   ["Audit log", true, false, false],
@@ -97,6 +98,11 @@ const FAQ: FaqEntry[] = [
     a: <p>A revision needs at least one line and no line with zero quantity. The commit dialog marks what is missing with ✗.</p>,
   },
   {
+    q: "I can't set a BOM to Approved.",
+    roles: EDITORS,
+    a: <p>Only a committed revision can be approved — commit the draft first. Only the latest committed revision of a BOM changes status; while a newer draft is open, use <Ui>Change status</Ui> on that revision in the project&apos;s <Ui>History</Ui>. The comment is required: say who confirmed it and how. See <a href="#bom-statuses">BOM statuses</a>.</p>,
+  },
+  {
     q: "“Send to procurement” is greyed out.",
     roles: EDITORS,
     a: <p>Either nothing is committed yet, or the latest committed revision was already sent. Commit a new revision and send that one. The reason is written under the page title. See <a href="#procurement">Send to procurement</a>.</p>,
@@ -134,7 +140,7 @@ const FAQ: FaqEntry[] = [
   {
     q: "I can't find the Delete button.",
     roles: ["member"],
-    a: <p>Deleting and archiving projects, BOMs, vendors and drawings is for admins. Ask an admin.</p>,
+    a: <p>Deleting and archiving projects, BOMs, vendors and drawings is for admins. Ask an admin. An admin deleting a BOM gives a reason, which is kept in the audit log.</p>,
   },
   {
     q: "I can't edit anything or open the BOM builder.",
@@ -260,6 +266,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         <li>Link the drawings the BOM is built from with <Ui>Manage</Ui> on the drawings strip — they are linked at their current revision.</li>
         <li>Click <Ui>Commit revision</Ui>. The lines lock.</li>
         <li>Click <Ui>Preview</Ui> to check the document, then <Ui>Generate Excel</Ui> to download it, or <Ui>Send to procurement</Ui> to email it.</li>
+        <li>When the client confirms the BOM, click <Ui>Change status</Ui> → <Ui>Approved</Ui> and say who confirmed it.</li>
         <li>Something changed later? Click <Ui>New revision</Ui>: Rev B starts as a draft copy of Rev A.</li>
       </ol>
     ),
@@ -290,19 +297,38 @@ export const HELP_SECTIONS: HelpSection[] = [
     roles: EDITORS,
     body: () => (
       <>
-        <p>A BOM keeps every version as a revision: Rev A, Rev B, Rev C… Each revision moves through these states:</p>
-        <dl className="help-defs">
-          <dt>Draft</dt>
-          <dd>Editable. A BOM has at most one draft at a time.</dd>
-          <dt>Committed</dt>
-          <dd>Locked. Lines can&apos;t change. Ready to export or send to procurement.</dd>
-          <dt>In review</dt>
-          <dd>Sent to procurement. Still locked.</dd>
-          <dt>Released</dt>
-          <dd>Approved and final.</dd>
-        </dl>
+        <p>A BOM keeps every version as a revision: Rev A, Rev B, Rev C… Only a <strong>Draft</strong> can be edited, and a BOM has at most one draft at a time. Committing locks the lines; after that the revision only changes status — see <a href="#bom-statuses">BOM statuses</a>.</p>
         <p>To change a committed BOM, click <Ui>New revision</Ui> in the builder. The new draft copies the sections, lines and drawing links of the one before. <Ui>Discard draft</Ui> throws a draft away. Compare revisions from the project&apos;s <Ui>History</Ui>.</p>
         <p>A BOM&apos;s owner changes only together with a new revision. Pick the new owner in the <Ui>New revision</Ui> dialog (or <Ui>Clone</Ui> in History): the new draft and the BOM pass to them, earlier revisions keep their owner, and History shows who owned each one. Viewers can&apos;t own a BOM.</p>
+      </>
+    ),
+  },
+  {
+    ...topic("bom-statuses"),
+    group: "BOMs",
+    body: role => (
+      <>
+        <p>The BOM Builder lists every BOM with the status of its latest revision, and its tabs filter by status:</p>
+        <dl className="help-defs">
+          <dt>Draft</dt>
+          <dd>Being built. Editable. <Ui>Commit revision</Ui> moves it on.</dd>
+          <dt>Committed</dt>
+          <dd>Locked. Lines can&apos;t change. Ready to export, send to the client or send to procurement.</dd>
+          <dt>Sent to procurement</dt>
+          <dd>Emailed to procurement with <Ui>Send to procurement</Ui>. Still locked.</dd>
+          <dt>Approved</dt>
+          <dd>The client confirmed this revision. Set by hand, with a comment saying who confirmed it and how.</dd>
+        </dl>
+        {role !== "viewer" && (
+          <>
+            <p>Draft, Committed and Sent to procurement follow the buttons. Only <strong>Approved</strong> is set by hand: click <Ui>Change status</Ui> in the builder header (or on the revision in the project&apos;s <Ui>History</Ui>), pick <Ui>Approved</Ui> and write the comment. Your name, the time and the comment show under the BOM title and in History → Activity.</p>
+            <ul>
+              <li>Taking an approval back also needs a comment. The revision returns to Committed, or to Sent to procurement if it was already emailed.</li>
+              <li>An approved revision can still be sent to procurement — once — and stays Approved.</li>
+              <li>Only the latest committed revision of a BOM changes status; older revisions keep the status they had. A newer draft doesn&apos;t stop you approving the committed revision before it.</li>
+            </ul>
+          </>
+        )}
       </>
     ),
   },
@@ -354,7 +380,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     roles: EDITORS,
     body: () => (
       <>
-        <p><Ui>Send to procurement</Ui> on the Preview page emails the latest <strong>committed</strong> revision as an Excel file to the procurement list and marks the revision <strong>In review</strong>. It shows up under <Link href="/approvals">Sent</Link>.</p>
+        <p><Ui>Send to procurement</Ui> on the Preview page emails the latest <strong>committed</strong> revision as an Excel file to the procurement list. A committed revision becomes <strong>Sent to procurement</strong>; one the client already approved stays <strong>Approved</strong>. It shows up under <Link href="/approvals">Sent</Link>.</p>
         <ul>
           <li>If you are looking at a draft, the button sends the latest committed revision — its letter is shown on the button.</li>
           <li>A revision is sent once. To send changes, create a new revision, commit it and send that.</li>

@@ -4,6 +4,7 @@ import { and, asc, count, desc, eq, isNotNull, ne, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { projects, boms, bomRevisions, bomLines, bomSections, items, vendors, categories, subcategories, user } from "@/db/schema";
 import { requireSession } from "../auth-context";
+import { revisionSentSql, type RevisionStatus } from "../lib/revision-status";
 
 export async function listOwnerCandidates() {
   await requireSession();
@@ -83,7 +84,7 @@ export async function getProject(id: string) {
 export type ActiveRevision = {
   id: string;
   letter: string;
-  status: "draft" | "committed" | "in-progress" | "review" | "approved" | "locked";
+  status: RevisionStatus;
   ownerId: string | null;
   ownerName: string | null;
   committedById: string | null;
@@ -92,6 +93,11 @@ export type ActiveRevision = {
   commitMessage: string | null;
   parentRevisionId: string | null;
   parentLetter: string | null;
+  statusChangedByName: string | null;
+  statusChangedAt: Date | null;
+  statusComment: string | null;
+  /** Emailed to procurement already. */
+  sent: boolean;
 };
 
 export async function getActiveRevision(bomId: string): Promise<ActiveRevision | null> {
@@ -99,6 +105,7 @@ export async function getActiveRevision(bomId: string): Promise<ActiveRevision |
   const ownerUser = aliasedTable(user, "owner_user");
   const committedByUser = aliasedTable(user, "committed_by_user");
   const parent = aliasedTable(bomRevisions, "parent_rev");
+  const statusUser = aliasedTable(user, "status_user");
   const [row] = await db
     .select({
       id: bomRevisions.id,
@@ -112,11 +119,16 @@ export async function getActiveRevision(bomId: string): Promise<ActiveRevision |
       commitMessage: bomRevisions.commitMessage,
       parentRevisionId: bomRevisions.parentRevisionId,
       parentLetter: parent.letter,
+      statusChangedByName: statusUser.name,
+      statusChangedAt: bomRevisions.statusChangedAt,
+      statusComment: bomRevisions.statusComment,
+      sent: revisionSentSql(bomRevisions.id),
     })
     .from(bomRevisions)
     .leftJoin(ownerUser, eq(ownerUser.id, bomRevisions.ownerId))
     .leftJoin(committedByUser, eq(committedByUser.id, bomRevisions.committedById))
     .leftJoin(parent, eq(parent.id, bomRevisions.parentRevisionId))
+    .leftJoin(statusUser, eq(statusUser.id, bomRevisions.statusChangedById))
     .where(and(eq(bomRevisions.bomId, bomId), sql`${bomRevisions.status} <> 'locked'`))
     .orderBy(desc(bomRevisions.createdAt))
     .limit(1);
@@ -130,6 +142,7 @@ export async function getLatestProcurementRevision(bomId: string) {
       id: bomRevisions.id,
       letter: bomRevisions.letter,
       status: bomRevisions.status,
+      sent: revisionSentSql(bomRevisions.id),
     })
     .from(bomRevisions)
     .where(and(
@@ -202,6 +215,7 @@ export async function getActiveRevisionForProject(projectId: string): Promise<Ac
   const ownerUser = aliasedTable(user, "owner_user");
   const committedByUser = aliasedTable(user, "committed_by_user");
   const parent = aliasedTable(bomRevisions, "parent_rev");
+  const statusUser = aliasedTable(user, "status_user");
   const [row] = await db
     .select({
       id: bomRevisions.id,
@@ -215,12 +229,17 @@ export async function getActiveRevisionForProject(projectId: string): Promise<Ac
       commitMessage: bomRevisions.commitMessage,
       parentRevisionId: bomRevisions.parentRevisionId,
       parentLetter: parent.letter,
+      statusChangedByName: statusUser.name,
+      statusChangedAt: bomRevisions.statusChangedAt,
+      statusComment: bomRevisions.statusComment,
+      sent: revisionSentSql(bomRevisions.id),
     })
     .from(bomRevisions)
     .innerJoin(boms, eq(boms.id, bomRevisions.bomId))
     .leftJoin(ownerUser, eq(ownerUser.id, bomRevisions.ownerId))
     .leftJoin(committedByUser, eq(committedByUser.id, bomRevisions.committedById))
     .leftJoin(parent, eq(parent.id, bomRevisions.parentRevisionId))
+    .leftJoin(statusUser, eq(statusUser.id, bomRevisions.statusChangedById))
     .where(and(eq(boms.projectId, projectId), sql`${boms.deletedAt} IS NULL`, sql`${bomRevisions.status} <> 'locked'`))
     .orderBy(desc(bomRevisions.createdAt))
     .limit(1);
