@@ -1,0 +1,1 @@
+ALTER TYPE "public"."audit_kind" ADD VALUE 'bom.imported';

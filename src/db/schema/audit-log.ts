@@ -76,6 +76,7 @@ export const auditKindEnum = pgEnum("audit_kind", [
   "drawing.file.uploaded",
   "drawing.file.removed",
   "drawing.file.downloaded",
+  "bom.imported",
 ]);
 
 export const auditLog = pgTable(

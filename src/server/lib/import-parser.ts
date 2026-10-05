@@ -74,7 +74,7 @@ export async function parseImportBuffer(buf: Buffer): Promise<ParserResult> {
   return { ok: true, rows, rowErrors };
 }
 
-function readCell(v: ExcelJS.CellValue): string {
+export function readCell(v: ExcelJS.CellValue): string {
   if (v == null) return "";
   if (typeof v === "string") return v.trim();
   if (typeof v === "number" || typeof v === "boolean") return String(v);

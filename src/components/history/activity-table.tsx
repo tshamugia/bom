@@ -9,6 +9,7 @@ const KIND_META: Record<AuditKind, { label: string; tone: Tone; group: string }>
   "bom.renamed":            { label: "BOM renamed",       tone: "gray",    group: "Project / BOM" },
   "bom.deleted":            { label: "BOM archived",      tone: "warning", group: "Project / BOM" },
   "bom.duplicated":         { label: "BOM duplicated",    tone: "info",    group: "Project / BOM" },
+  "bom.imported":           { label: "Imported from file", tone: "info",   group: "BOM" },
   "project.deleted":        { label: "Project archived",  tone: "warning", group: "Project / BOM" },
   "project.restored":       { label: "Project restored",  tone: "info",    group: "Project / BOM" },
   "bom.line.added":         { label: "Line added",        tone: "info",    group: "BOM" },

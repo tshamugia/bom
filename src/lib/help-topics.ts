@@ -101,7 +101,7 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
   "catalog": {
     title: "Catalog and vendors",
     summary:
-      "BOM lines are picked from the item catalog; each item has a vendor and a category. Many items can be imported at once from the XLSX template — you see a dry run before anything is saved.",
+      "BOM lines are picked from the item catalog; each item has a vendor and a category. Many items can be imported at once from the XLSX template — you see a dry run before anything is saved. Importing a BOM from a file adds its new SKUs too.",
   },
 };
 
