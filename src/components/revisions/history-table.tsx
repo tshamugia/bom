@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { RevisionStatusBadge } from "@/components/ui/badge";
-import { CloneRevisionButton } from "./clone-revision-button";
+import { BranchRevisionDialog, type BomOwnerOption } from "./branch-revision-dialog";
 import { formatDateTime } from "@/lib/format";
 
 export type HistoryRow = {
   id: string;
   letter: string;
   status: "draft" | "committed" | "in-progress" | "review" | "approved" | "locked";
+  ownerName: string | null;
   committedByName: string | null;
   committedAt: Date | null;
   commitMessage: string | null;
@@ -14,8 +15,16 @@ export type HistoryRow = {
 };
 
 export function HistoryTable({
-  projectId, bomId, rows, readOnly = false,
-}: { projectId: string; bomId: string; rows: HistoryRow[]; readOnly?: boolean }) {
+  projectId, bomId, rows, bomOwner, owners, readOnly = false,
+}: {
+  projectId: string;
+  bomId: string;
+  rows: HistoryRow[];
+  /** The BOM's current owner — Clone can hand it to someone else with the new draft. */
+  bomOwner: { id: string | null; name: string | null };
+  owners: BomOwnerOption[];
+  readOnly?: boolean;
+}) {
   const hasOpenDraft = rows.some(r => r.status === "draft");
   return (
     <div className="overflow-hidden rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)]">
@@ -24,6 +33,7 @@ export function HistoryTable({
           <tr>
             <th className="p-2 text-left">Rev</th>
             <th className="p-2 text-left">Status</th>
+            <th className="p-2 text-left">Owner</th>
             <th className="p-2 text-left">Committed by</th>
             <th className="p-2 text-left">When</th>
             <th className="p-2 text-left">Message</th>
@@ -35,6 +45,7 @@ export function HistoryTable({
             <tr key={r.id} className="border-t border-[var(--color-line-soft)] max-[701px]:border-t-0">
               <td className="l-title p-2 font-semibold"><span className="min-[701px]:hidden">Rev </span>{r.letter}</td>
               <td className="l-aside p-2"><RevisionStatusBadge status={r.status} /></td>
+              <td className="l-meta p-2">{r.ownerName ?? "—"}</td>
               <td className="l-meta p-2">{r.committedByName ?? "—"}</td>
               <td className="l-meta p-2">{r.committedAt ? formatDateTime(r.committedAt) : (r.status === "draft" ? "in progress" : "—")}</td>
               <td className={`${r.commitMessage ? "l-line" : "l-hide"} p-2 italic text-[var(--color-text-2)] max-[701px]:[overflow-wrap:anywhere]`}>{r.commitMessage ?? "—"}</td>
@@ -44,12 +55,15 @@ export function HistoryTable({
                     ? <Link className="text-[var(--color-info)] hover:underline" href={`/projects/${projectId}/diff?left=${r.parentRevisionId}&right=${r.id}`}>Diff vs parent</Link>
                     : null}
                   {!readOnly && r.status !== "draft" ? (
-                    <CloneRevisionButton
-                      revisionId={r.id}
-                      letter={r.letter}
+                    <BranchRevisionDialog
+                      variant="clone"
+                      parentRevisionId={r.id}
+                      parentLetter={r.letter}
                       projectId={projectId}
                       bomId={bomId}
                       hasOpenDraft={hasOpenDraft}
+                      owner={bomOwner}
+                      owners={owners}
                     />
                   ) : null}
                 </div>

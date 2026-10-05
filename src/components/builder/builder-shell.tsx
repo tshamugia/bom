@@ -13,6 +13,7 @@ import { LayoutToggle } from "./layout-toggle";
 import { CsvImportDialog } from "./csv-import-dialog";
 import { DuplicateDialog } from "./duplicate-dialog";
 import { RevisionHeader } from "@/components/revisions/revision-header";
+import type { BomOwnerOption } from "@/components/revisions/branch-revision-dialog";
 import type { SwitcherBom } from "./bom-switcher";
 import { Icon } from "@/components/icons";
 import { BackLink } from "@/components/master/back-link";
@@ -49,6 +50,8 @@ type Props = {
     parentLetter: string | null;
   };
   hasOpenDraft: boolean;
+  bomOwner: { id: string | null; name: string | null };
+  owners: BomOwnerOption[];
   vendors: { id: string; name: string }[];
   categories: { id: string; name: string; subcategories: { id: string; name: string }[] }[];
   catalog: CatalogItem[];
@@ -112,6 +115,8 @@ export function BuilderShell(p: Props) {
         }}
         hasOpenDraft={p.hasOpenDraft}
         bomsInProject={p.bomsInProject}
+        bomOwner={p.bomOwner}
+        owners={p.owners}
       />
       {p.drawings}
       <div className="mb-5 flex flex-wrap items-center justify-end gap-2">

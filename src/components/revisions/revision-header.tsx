@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Badge, RevisionStatusBadge } from "@/components/ui/badge";
 import { CommitDialog } from "@/components/builder/commit-dialog";
 import { DiscardDraftButton } from "@/components/builder/discard-draft-button";
-import { BranchRevisionButton } from "@/components/builder/branch-revision-button";
+import { BranchRevisionDialog, type BomOwnerOption } from "@/components/revisions/branch-revision-dialog";
 import { InlineProjectName } from "@/components/builder/inline-project-name";
 import { BomSwitcher, type SwitcherBom } from "@/components/builder/bom-switcher";
 import { formatDateTime } from "@/lib/format";
@@ -27,6 +27,9 @@ export type RevisionHeaderProps = {
   preflight?: { lineCount: number; vendorCount: number; hasZeroQty: boolean };
   hasOpenDraft: boolean;
   bomsInProject?: SwitcherBom[];
+  /** The BOM's current owner — it changes only with a new revision. */
+  bomOwner: { id: string | null; name: string | null };
+  owners: BomOwnerOption[];
 };
 
 export function RevisionHeader(p: RevisionHeaderProps) {
@@ -68,7 +71,7 @@ export function RevisionHeader(p: RevisionHeaderProps) {
             </>
           ) : (
             <>
-              Committed by {r.committedByName ?? "—"}
+              Owner: {r.ownerName ?? "—"} · Committed by {r.committedByName ?? "—"}
               {r.committedAt ? <> · {formatDateTime(r.committedAt)}</> : null}
               {r.commitMessage ? <> · <em>&ldquo;{r.commitMessage}&rdquo;</em></> : null}
             </>
@@ -91,7 +94,16 @@ export function RevisionHeader(p: RevisionHeaderProps) {
             )}
           </>
         ) : (
-          <BranchRevisionButton parentRevisionId={r.id} projectId={p.projectId} bomId={p.bomId} hasOpenDraft={p.hasOpenDraft} />
+          <BranchRevisionDialog
+            variant="new"
+            parentRevisionId={r.id}
+            parentLetter={r.letter}
+            projectId={p.projectId}
+            bomId={p.bomId}
+            hasOpenDraft={p.hasOpenDraft}
+            owner={p.bomOwner}
+            owners={p.owners}
+          />
         )}
       </div>
     </div>

@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { desc, eq } from "drizzle-orm";
+import { aliasedTable, desc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { boms, bomRevisions, projects, user } from "@/db/schema";
 import { requireSession } from "@/server/auth-context";
 import { canEdit } from "@/lib/roles";
+import { listOwnerCandidates } from "@/server/queries/projects";
 import { HistoryTable, type HistoryRow } from "@/components/revisions/history-table";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
@@ -22,17 +23,25 @@ export default async function HistoryPage({ params }: { params: Promise<{ id: st
     .limit(1);
   if (!project) notFound();
 
+  const bomOwner = aliasedTable(user, "bom_owner");
+  const revOwner = aliasedTable(user, "rev_owner");
   const bomRows = await db
-    .select({ id: boms.id, name: boms.name })
+    .select({ id: boms.id, name: boms.name, ownerId: boms.ownerId, ownerName: bomOwner.name })
     .from(boms)
+    .leftJoin(bomOwner, eq(bomOwner.id, boms.ownerId))
     .where(eq(boms.projectId, id))
     .orderBy(desc(boms.updatedAt));
+  // Viewers can't change a BOM, so they can't own one either.
+  const owners = readOnly
+    ? []
+    : (await listOwnerCandidates()).filter(u => u.role !== "viewer").map(u => ({ id: u.id, name: u.name }));
 
   const allRevisions = await db
     .select({
       id: bomRevisions.id,
       letter: bomRevisions.letter,
       status: bomRevisions.status,
+      ownerName: revOwner.name,
       committedByName: user.name,
       committedAt: bomRevisions.committedAt,
       commitMessage: bomRevisions.commitMessage,
@@ -41,6 +50,7 @@ export default async function HistoryPage({ params }: { params: Promise<{ id: st
     })
     .from(bomRevisions)
     .leftJoin(user, eq(user.id, bomRevisions.committedById))
+    .leftJoin(revOwner, eq(revOwner.id, bomRevisions.ownerId))
     .innerJoin(boms, eq(boms.id, bomRevisions.bomId))
     .where(eq(boms.projectId, id))
     .orderBy(desc(bomRevisions.createdAt));
@@ -52,6 +62,7 @@ export default async function HistoryPage({ params }: { params: Promise<{ id: st
       id: r.id,
       letter: r.letter,
       status: r.status,
+      ownerName: r.ownerName ?? null,
       committedByName: r.committedByName ?? null,
       committedAt: r.committedAt ?? null,
       commitMessage: r.commitMessage ?? null,
@@ -89,7 +100,14 @@ export default async function HistoryPage({ params }: { params: Promise<{ id: st
                     No revisions yet.
                   </div>
                 ) : (
-                  <HistoryTable projectId={id} bomId={b.id} rows={rows} readOnly={readOnly} />
+                  <HistoryTable
+                    projectId={id}
+                    bomId={b.id}
+                    rows={rows}
+                    bomOwner={{ id: b.ownerId, name: b.ownerName }}
+                    owners={owners}
+                    readOnly={readOnly}
+                  />
                 )}
               </div>
             );
