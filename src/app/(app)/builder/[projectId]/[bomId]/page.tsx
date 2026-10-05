@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { inArray } from "drizzle-orm";
-import { getActiveRevision, getLines, getSections, hasOpenDraftForBom } from "@/server/queries/projects";
+import { getActiveRevision, getLines, getSections, hasOpenDraftForBom, listOwnerCandidates } from "@/server/queries/projects";
 import { getBom, listBomsByProject, listProjectsForPicker } from "@/server/queries/boms";
 import { listItems, listCategories } from "@/server/queries/catalog";
 import { listVendors } from "@/server/queries/vendors";
@@ -14,13 +14,14 @@ import type { Line } from "@/components/builder/sectioned-line-table";
 export default async function BuilderPage({ params }: { params: Promise<{ projectId: string; bomId: string }> }) {
   const { projectId, bomId } = await params;
 
-  const [bom, vendors, cats, catalog, projectsForDuplicate, bomsInProject] = await Promise.all([
+  const [bom, vendors, cats, catalog, projectsForDuplicate, bomsInProject, users] = await Promise.all([
     getBom(bomId),
     listVendors(),
     listCategories(),
     listItems({}),
     listProjectsForPicker(),
     listBomsByProject(projectId),
+    listOwnerCandidates(),
   ]);
   if (!bom || bom.projectId !== projectId) notFound();
 
@@ -51,6 +52,9 @@ export default async function BuilderPage({ params }: { params: Promise<{ projec
     if (it.categoryName) categoryCounts[it.categoryName] = (categoryCounts[it.categoryName] ?? 0) + 1;
   }
 
+  // Viewers can't change a BOM, so they can't own one either.
+  const owners = users.filter(u => u.role !== "viewer").map(u => ({ id: u.id, name: u.name }));
+
   return (
     <BuilderShell
       projectId={bom.projectId}
@@ -70,6 +74,8 @@ export default async function BuilderPage({ params }: { params: Promise<{ projec
         parentLetter: rev.parentLetter ?? null,
       }}
       hasOpenDraft={hasOpenDraft}
+      bomOwner={{ id: bom.ownerId, name: bom.ownerName }}
+      owners={owners}
       vendors={vendors.map(v => ({ id: v.id, name: v.name }))}
       categories={categories}
       catalog={catalog.map(c => ({

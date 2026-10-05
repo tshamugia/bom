@@ -41,7 +41,7 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
   "bom-revisions": {
     title: "BOM revisions",
     summary:
-      "A BOM is built in revisions — Rev A, Rev B… Only a Draft can be edited. Committing locks its lines. To change them later, create a new revision: it starts as a copy of the last one.",
+      "A BOM is built in revisions — Rev A, Rev B… Only a Draft can be edited. Committing locks its lines. To change them later, create a new revision: it starts as a copy of the last one. The BOM's owner changes only with a new revision — pick them in the New revision dialog.",
   },
   "bom-drawings": {
     title: "Drawings linked to a BOM",

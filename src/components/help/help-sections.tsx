@@ -87,6 +87,11 @@ const FAQ: FaqEntry[] = [
     a: <p>The revision is committed or already sent, so it is read-only. Only a Draft can be edited — click <Ui>New revision</Ui> in the builder header to start a draft that copies the current lines. See <a href="#bom-revisions">BOM revisions</a>.</p>,
   },
   {
+    q: "I can't change the owner of a BOM.",
+    roles: EDITORS,
+    a: <p>The owner changes only with a new revision. Commit (or discard) the open draft, then click <Ui>New revision</Ui> and pick the new owner. Viewers can&apos;t own a BOM. See <a href="#bom-revisions">BOM revisions</a>.</p>,
+  },
+  {
     q: "The “Commit revision” button doesn't commit.",
     roles: EDITORS,
     a: <p>A revision needs at least one line and no line with zero quantity. The commit dialog marks what is missing with ✗.</p>,
@@ -276,6 +281,7 @@ export const HELP_SECTIONS: HelpSection[] = [
           <dd>Approved and final.</dd>
         </dl>
         <p>To change a committed BOM, click <Ui>New revision</Ui> in the builder. The new draft copies the sections, lines and drawing links of the one before. <Ui>Discard draft</Ui> throws a draft away. Compare revisions from the project&apos;s <Ui>History</Ui>.</p>
+        <p>A BOM&apos;s owner changes only together with a new revision. Pick the new owner in the <Ui>New revision</Ui> dialog (or <Ui>Clone</Ui> in History): the new draft and the BOM pass to them, earlier revisions keep their owner, and History shows who owned each one. Viewers can&apos;t own a BOM.</p>
       </>
     ),
   },

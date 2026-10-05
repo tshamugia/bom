@@ -1,9 +1,9 @@
 import { beforeEach, expect, test, vi } from "vitest";
 import { eq } from "drizzle-orm";
-import { resetDb } from "@/../tests/test-helpers/db";
+import { ensureUser, resetDb } from "@/../tests/test-helpers/db";
 import { mockSession } from "@/../tests/test-helpers/auth";
 import { db } from "@/db/client";
-import { items, vendors, categories, projects, boms, bomRevisions } from "@/db/schema";
+import { items, vendors, categories, projects, boms, bomRevisions, auditLog, user } from "@/db/schema";
 import { addLine } from "@/server/actions/bom-lines";
 import { commitRevision, branchRevision, discardDraft } from "@/server/actions/revisions";
 import { bomLines as bomLinesT, bomSections as bomSectionsT } from "@/db/schema";
@@ -86,6 +86,60 @@ test("branchRevision rejects when project already has a draft", async () => {
   await commitRevision({ revisionId });
   await branchRevision({ parentRevisionId: revisionId });
   await expect(branchRevision({ parentRevisionId: revisionId })).rejects.toThrow(/DRAFT_ALREADY_EXISTS/);
+});
+
+async function committedBom(bomOwnerId: string) {
+  const ctx = await setup();
+  await db.update(boms).set({ ownerId: bomOwnerId }).where(eq(boms.id, ctx.bomId));
+  await db.update(bomRevisions).set({ ownerId: bomOwnerId }).where(eq(bomRevisions.id, ctx.revisionId));
+  await addLine({ revisionId: ctx.revisionId, itemId: ctx.it.id, qty: 1 });
+  await commitRevision({ revisionId: ctx.revisionId });
+  return ctx;
+}
+
+test("branchRevision keeps the BOM's owner when someone else starts the revision", async () => {
+  const owner = await ensureUser("member");
+  const { revisionId, bomId } = await committedBom(owner.id);
+
+  const newId = await branchRevision({ parentRevisionId: revisionId });
+  const [child] = await db.select().from(bomRevisions).where(eq(bomRevisions.id, newId));
+  const [bom] = await db.select().from(boms).where(eq(boms.id, bomId));
+  expect(child.ownerId).toBe(owner.id);
+  expect(bom.ownerId).toBe(owner.id);
+});
+
+test("branchRevision hands the BOM to a new owner together with the new revision", async () => {
+  const owner = await ensureUser("member");
+  const next = await ensureUser("member");
+  const { revisionId, bomId } = await committedBom(owner.id);
+
+  const newId = await branchRevision({ parentRevisionId: revisionId, ownerId: next.id });
+  const [child] = await db.select().from(bomRevisions).where(eq(bomRevisions.id, newId));
+  const [parent] = await db.select().from(bomRevisions).where(eq(bomRevisions.id, revisionId));
+  const [bom] = await db.select().from(boms).where(eq(boms.id, bomId));
+  expect(child.ownerId).toBe(next.id);
+  expect(bom.ownerId).toBe(next.id);
+  expect(parent.ownerId).toBe(owner.id);
+
+  const [row] = await db.select().from(auditLog).where(eq(auditLog.kind, "bom.revision.branched"));
+  expect(row.summary).toMatch(/owner .* → /);
+  expect(row.payload).toMatchObject({ ownerId: next.id, previousOwnerId: owner.id });
+});
+
+test("branchRevision refuses a viewer or a disabled user as the new owner", async () => {
+  const owner = await ensureUser("member");
+  const viewer = await ensureUser("viewer");
+  const disabled = await ensureUser("member");
+  await db.update(user).set({ disabled: true }).where(eq(user.id, disabled.id));
+  const { revisionId, bomId } = await committedBom(owner.id);
+
+  for (const candidate of [viewer.id, disabled.id, "no-such-user"]) {
+    await expect(branchRevision({ parentRevisionId: revisionId, ownerId: candidate })).rejects.toThrow(/OWNER_NOT_ELIGIBLE/);
+  }
+  const revs = await db.select().from(bomRevisions).where(eq(bomRevisions.bomId, bomId));
+  const [bom] = await db.select().from(boms).where(eq(boms.id, bomId));
+  expect(revs).toHaveLength(1);
+  expect(bom.ownerId).toBe(owner.id);
 });
 
 test("discardDraft removes the revision (cascades lines + sections)", async () => {
