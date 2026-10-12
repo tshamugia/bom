@@ -4,6 +4,7 @@ import { BranchRevisionDialog, type BomOwnerOption } from "./branch-revision-dia
 import { formatDateTime } from "@/lib/format";
 import type { RevisionStatus } from "@/lib/bom-status";
 import { ChangeBomStatusDialog } from "@/components/boms/change-bom-status-dialog";
+import { formatBomRevision } from "@/lib/bom-revision";
 
 export type HistoryRow = {
   id: string;
@@ -50,7 +51,7 @@ export function HistoryTable({
         <tbody>
           {rows.map(r => (
             <tr key={r.id} className="border-t border-[var(--color-line-soft)] max-[701px]:border-t-0">
-              <td className="l-title p-2 font-semibold"><span className="min-[701px]:hidden">Rev </span>{r.letter}</td>
+              <td className="l-title p-2 font-semibold">{formatBomRevision(r.letter)}</td>
               <td className="l-aside p-2">
                 <RevisionStatusBadge status={r.status} />
                 {r.status === "approved" && r.statusChangedByName && (

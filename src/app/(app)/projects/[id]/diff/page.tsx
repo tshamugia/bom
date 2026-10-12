@@ -3,6 +3,7 @@ import { Badge, RevisionStatusBadge } from "@/components/ui/badge";
 import { DiffTable } from "@/components/revisions/diff-table";
 import { getRevisionDiff } from "@/server/queries/revisions";
 import { BackLink } from "@/components/master/back-link";
+import { formatBomRevision } from "@/lib/bom-revision";
 
 export default async function DiffPage({
   params,
@@ -21,9 +22,9 @@ export default async function DiffPage({
       <BackLink href={`/projects/${id}/history`} label="History" />
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <h1 className="text-[20px] font-semibold tracking-tight">Comparing</h1>
-        <Badge tone="gray">Rev {diff.left.letter}</Badge>
+        <Badge tone="gray">{formatBomRevision(diff.left.letter)}</Badge>
         <span className="text-[var(--color-text-3)]">→</span>
-        <Badge tone="gray">Rev {diff.right.letter}</Badge>
+        <Badge tone="gray">{formatBomRevision(diff.right.letter)}</Badge>
         <RevisionStatusBadge status={diff.right.status as never} />
       </div>
 

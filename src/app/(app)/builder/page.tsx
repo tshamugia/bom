@@ -12,6 +12,7 @@ import { NewBomDialog } from "@/components/boms/new-bom-dialog";
 import { BomFilterBar, BomStatusTabs } from "@/components/boms/bom-filters";
 import { DeleteBomDialog } from "@/components/boms/delete-bom-dialog";
 import { formatDateTime } from "@/lib/format";
+import { formatBomRevision } from "@/lib/bom-revision";
 
 type SP = {
   q?: string;
@@ -111,7 +112,7 @@ export default async function BuilderIndex({ searchParams }: { searchParams: Pro
                       ? <RevisionStatusBadge status={b.activeRevisionStatus as RevisionStatus} />
                       : <Badge tone="gray">—</Badge>}
                   </td>
-                  <td className="mono muted l-meta">{b.activeRevisionLetter ? `Rev ${b.activeRevisionLetter}` : "—"}</td>
+                  <td className="mono muted l-meta">{b.activeRevisionLetter ? formatBomRevision(b.activeRevisionLetter) : "—"}</td>
                   <td className="num l-meta" style={{ fontVariantNumeric: "tabular-nums" }}>
                     {b.lineCount}
                     <span className="min-[701px]:hidden"> line{b.lineCount === 1 ? "" : "s"}</span>

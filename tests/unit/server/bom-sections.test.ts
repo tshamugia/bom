@@ -49,7 +49,7 @@ async function setup() {
   const [b] = await db.insert(boms).values({ projectId: p.id, name: "Main BOM" }).returning();
   const [r] = await db
     .insert(bomRevisions)
-    .values({ bomId: b.id, letter: "A", status: "draft" })
+    .values({ bomId: b.id, letter: "1", status: "draft" })
     .returning();
   return { projectId: p.id, bomId: b.id, revisionId: r.id, it1, it2 };
 }

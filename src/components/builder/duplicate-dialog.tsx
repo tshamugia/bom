@@ -64,7 +64,7 @@ export function DuplicateDialog({ sourceBomId, sourceBomName, sourceProjectId, s
         <DialogHeader>
           <DialogTitle>Duplicate BOM</DialogTitle>
           <DialogDescription>
-            Creates a new BOM seeded with a copy of this revision&apos;s sections and lines as a fresh draft (Rev A).
+            Creates a new BOM seeded with a copy of this revision&apos;s sections and lines as a fresh draft (Rev1).
           </DialogDescription>
         </DialogHeader>
 

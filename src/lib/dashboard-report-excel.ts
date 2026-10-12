@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs";
 import { DRAWING_STATUSES, DRAWING_STATUS_LABEL, formatDrawingRevision } from "./drawing-status";
 import { isOverdueOn, type DashboardDrawing, type DrawingSummary, type GroupSummary } from "./drawing-dashboard";
+import { formatBomRevision } from "./bom-revision";
 
 export type ProjectReportRow = {
   id: string;
@@ -173,7 +174,7 @@ export async function buildDashboardWorkbook(input: {
         p.targetDate,
         p.bomCount,
         p.lineCount,
-        p.revLetter ? `Rev ${p.revLetter}` : null,
+        p.revLetter ? formatBomRevision(p.revLetter) : null,
         g?.total ?? 0,
         g?.closed ?? 0,
         g?.overdue ?? 0,

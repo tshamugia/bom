@@ -2,9 +2,11 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { resetDb } from "@/../tests/test-helpers/db";
 import { mockSession } from "@/../tests/test-helpers/auth";
 import { db } from "@/db/client";
-import { categories, vendors } from "@/db/schema";
+import { auditLog, categories, items as itemsTable, subcategories, vendors } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { listItems } from "@/server/queries/catalog";
-import { createItem, deleteItem } from "@/server/actions/items";
+import { createItem, deleteItem, updateItem } from "@/server/actions/items";
+import { READ_ONLY_ERROR } from "@/lib/roles";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/server/auth-context", () => ({
@@ -40,6 +42,63 @@ test("listItems filters by search term across sku/desc/mfr", async () => {
 test("deleteItem removes it", async () => {
   const { vendorId, categoryId } = await setup();
   const it = await createItem({ sku: "RES-1", description: "10k", manufacturer: "Yageo", unit: "pcs", vendorId, categoryId, subcategoryId: null });
+  if (!it.ok) throw new Error(it.error);
   await deleteItem({ id: it.id });
   expect(await listItems({})).toHaveLength(0);
+});
+
+const base = { description: "10k", manufacturer: "Yageo", unit: "pcs", subcategoryId: null };
+
+test("createItem refuses a SKU that is already in the catalog", async () => {
+  const { vendorId, categoryId } = await setup();
+  await createItem({ sku: "RES-1", ...base, vendorId, categoryId });
+  expect(await createItem({ sku: "RES-1", ...base, vendorId, categoryId }))
+    .toEqual({ ok: false, error: "SKU RES-1 is already in the catalog." });
+});
+
+test("updateItem edits the item and audits the changed fields", async () => {
+  const { vendorId, categoryId } = await setup();
+  const it = await createItem({ sku: "RES-1", ...base, vendorId, categoryId });
+  if (!it.ok) throw new Error(it.error);
+
+  expect(await updateItem({ id: it.id, sku: " RES-1A ", description: "10k 1%", manufacturer: "Yageo", unit: "pcs", vendorId: null, categoryId }))
+    .toEqual({ ok: true, id: it.id });
+  const [row] = await listItems({});
+  expect(row).toMatchObject({ sku: "RES-1A", description: "10k 1%", vendorId: null, categoryId });
+
+  const [entry] = await db.select().from(auditLog).where(eq(auditLog.kind, "item.updated"));
+  expect(entry.summary).toBe("Item RES-1 → RES-1A updated");
+  expect(entry.payload).toEqual({ fields: ["sku", "description", "vendorId"] });
+});
+
+test("updateItem refuses a SKU used by another item", async () => {
+  const { vendorId, categoryId } = await setup();
+  await createItem({ sku: "RES-1", ...base, vendorId, categoryId });
+  const cap = await createItem({ sku: "CAP-1", ...base, vendorId, categoryId });
+  if (!cap.ok) throw new Error(cap.error);
+  expect(await updateItem({ id: cap.id, sku: "RES-1" }))
+    .toEqual({ ok: false, error: "SKU RES-1 is already used by another item." });
+});
+
+test("updateItem drops the subcategory when the item moves to another category", async () => {
+  const { vendorId, categoryId } = await setup();
+  const [sub] = await db.insert(subcategories).values({ categoryId, name: "Resistors" }).returning();
+  const [other] = await db.insert(categories).values({ name: "Cables" }).returning();
+  const it = await createItem({ sku: "RES-1", ...base, vendorId, categoryId, subcategoryId: sub.id });
+  if (!it.ok) throw new Error(it.error);
+
+  await updateItem({ id: it.id, description: "10k resistor" });
+  expect((await db.select().from(itemsTable).where(eq(itemsTable.id, it.id)))[0].subcategoryId).toBe(sub.id);
+
+  await updateItem({ id: it.id, categoryId: other.id });
+  const [row] = await db.select().from(itemsTable).where(eq(itemsTable.id, it.id));
+  expect(row).toMatchObject({ categoryId: other.id, subcategoryId: null });
+});
+
+test("viewers can't edit items", async () => {
+  const { vendorId, categoryId } = await setup();
+  const it = await createItem({ sku: "RES-1", ...base, vendorId, categoryId });
+  if (!it.ok) throw new Error(it.error);
+  await mockSession("viewer");
+  expect(await updateItem({ id: it.id, description: "changed" })).toEqual({ ok: false, error: READ_ONLY_ERROR });
 });

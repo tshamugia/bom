@@ -20,16 +20,17 @@ import { BackLink } from "@/components/master/back-link";
 import { BlockedNote } from "@/components/help/blocked-note";
 import type { SectionInfo } from "./section-row";
 import type { RevisionStatus } from "@/lib/bom-status";
+import { formatBomRevision } from "@/lib/bom-revision";
 
 /** Why the lines of a non-draft revision can't be edited, and what to do instead. */
 function lockedReason(letter: string, status: RevisionStatus): string {
   const why = status === "committed"
-    ? `Rev ${letter} is committed`
+    ? `${formatBomRevision(letter)} is committed`
     : status === "approved"
-      ? `Rev ${letter} is approved`
+      ? `${formatBomRevision(letter)} is approved`
       : status === "locked"
-        ? `Rev ${letter} is released`
-        : `Rev ${letter} was sent to procurement`;
+        ? `${formatBomRevision(letter)} is released`
+        : `${formatBomRevision(letter)} was sent to procurement`;
   return `${why}, so its lines are read-only. To change them, click New revision above — it starts a draft copy.`;
 }
 

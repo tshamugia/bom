@@ -13,8 +13,9 @@ import { sendProcurementBomEmail } from "@/lib/mailer";
 import { requestApproval } from "./approvals";
 import { revisionSentSql } from "../lib/revision-status";
 import { canSendToProcurement } from "@/lib/bom-status";
+import { formatBomRevision } from "@/lib/bom-revision";
 
-const DEFAULT_SUBJECT = "BOM for procurement: {projectCode} ({bomName} Rev {revLetter})";
+const DEFAULT_SUBJECT = "BOM for procurement: {projectCode} ({bomName} {revision})";
 const DEFAULT_BODY = [
   "Hi,",
   "",
@@ -22,7 +23,7 @@ const DEFAULT_BODY = [
   "",
   "Project: {projectCode} — {projectName}",
   "BOM: {bomName}",
-  "Revision: {revLetter}",
+  "Revision: {revision}",
   "Sent by: {requesterName}",
   "",
   "Thanks.",
@@ -80,6 +81,8 @@ export async function sendBomToProcurement(input: {
     projectCode: exported.projectCode,
     projectName: exported.projectName,
     bomName: exported.bomName,
+    revision: formatBomRevision(exported.revisionLetter),
+    // Templates saved before revisions were numbered say "Rev {revLetter}".
     revLetter: exported.revisionLetter,
     requesterName: session.user.name ?? session.user.email ?? "Unknown",
   };

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { HelpTip } from "@/components/help/help-tip";
 import { branchRevision } from "@/server/actions/revisions";
+import { formatBomRevision } from "@/lib/bom-revision";
 
 export type BomOwnerOption = { id: string; name: string };
 
@@ -88,7 +89,7 @@ export function BranchRevisionDialog({
             size="sm"
             variant="outline"
             disabled={hasOpenDraft}
-            title={hasOpenDraft ? "A draft already exists for this BOM" : `Clone Rev ${parentLetter} into a new draft`}
+            title={hasOpenDraft ? "A draft already exists for this BOM" : `Clone ${formatBomRevision(parentLetter)} into a new draft`}
           >
             Clone
           </Button>
@@ -96,9 +97,9 @@ export function BranchRevisionDialog({
       />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{variant === "new" ? "New revision" : `Clone Rev ${parentLetter}`}</DialogTitle>
+          <DialogTitle>{variant === "new" ? "New revision" : `Clone ${formatBomRevision(parentLetter)}`}</DialogTitle>
           <DialogDescription>
-            Starts a draft copy of Rev {parentLetter} — its sections, lines and drawing links. Rev {parentLetter} stays as it is.
+            Starts a draft copy of {formatBomRevision(parentLetter)} — its sections, lines and drawing links. {formatBomRevision(parentLetter)} stays as it is.
           </DialogDescription>
         </DialogHeader>
 

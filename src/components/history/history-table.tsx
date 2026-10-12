@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/icons";
 import { formatDateTime } from "@/lib/format";
+import { formatBomRevision } from "@/lib/bom-revision";
 
 type Row = {
   id: string;
@@ -51,7 +52,7 @@ export function HistoryTable({ rows }: { rows: Row[] }) {
               <tr key={r.id}>
                 <td className="l-title">
                   <div style={{ fontWeight: 500 }}>{r.bomName ?? r.projectName}</div>
-                  <div className="mono muted" style={{ fontSize: 11 }}>{r.projectCode} · Rev. {r.revisionLetter}</div>
+                  <div className="mono muted" style={{ fontSize: 11 }}>{r.projectCode} · {formatBomRevision(r.revisionLetter)}</div>
                 </td>
                 <td className="muted l-meta">{formatDateTime(r.generatedAt)}</td>
                 <td className="l-meta">{r.generatedByName ?? "—"}</td>

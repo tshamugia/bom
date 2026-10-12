@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/icons";
-import { formatDateTime, formatRelative } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { formatDrawingRevision } from "@/lib/drawing-status";
 import { TRANSMITTAL_PURPOSE_LABEL } from "@/lib/drawing-meta";
 import { drawingFileHref } from "@/lib/drawing-files";
 import type { listBomSends, listIssuedTransmittals } from "@/server/queries/status-overview";
+import { formatBomRevision } from "@/lib/bom-revision";
 
 type BomSend = Awaited<ReturnType<typeof listBomSends>>[number];
 type Issued = Awaited<ReturnType<typeof listIssuedTransmittals>>[number];
@@ -43,18 +44,18 @@ export function BomSendsTable({ rows }: { rows: BomSend[] }) {
                 <tr key={r.id}>
                   <td className="l-title">
                     <Link href={`/preview/${r.projectId}/${r.bomId}`} style={{ color: "inherit", fontWeight: 600 }}>{r.bomName}</Link>
-                    <span className="mono muted min-[701px]:hidden" style={{ fontSize: 12 }}> Rev {r.revisionLetter}</span>
+                    <span className="mono muted min-[701px]:hidden" style={{ fontSize: 12 }}> {formatBomRevision(r.revisionLetter)}</span>
                   </td>
                   <td className="l-line">
                     <span className="mono muted" style={{ fontSize: 11.5 }}>{r.projectCode}</span>{" "}
                     <span>{r.projectName}</span>
                   </td>
-                  <td className="mono muted l-hide" style={{ fontSize: 11.5 }}>Rev {r.revisionLetter}</td>
+                  <td className="mono muted l-hide" style={{ fontSize: 11.5 }}>{formatBomRevision(r.revisionLetter)}</td>
                   <td className="num tabular l-meta">
                     {r.lineCount}<span className="min-[701px]:hidden"> lines</span>
                   </td>
                   <td className="muted l-meta" title={formatDateTime(r.requestedAt)} style={{ whiteSpace: "nowrap" }}>
-                    {formatRelative(r.requestedAt)}
+                    {formatDate(r.requestedAt)}
                     {r.requestedByName && <span className="min-[701px]:hidden"> by {r.requestedByName}</span>}
                   </td>
                   <td className="l-hide"><Badge tone="success">Sent to procurement</Badge></td>
@@ -65,7 +66,7 @@ export function BomSendsTable({ rows }: { rows: BomSend[] }) {
                         download
                         className="btn btn-icon btn-ghost"
                         title={r.exportFileName ?? "Download"}
-                        aria-label={`Download ${r.bomName} Rev ${r.revisionLetter}`}
+                        aria-label={`Download ${r.bomName} ${formatBomRevision(r.revisionLetter)}`}
                       >
                         <Icon.Download className="ico" />
                       </a>
@@ -126,7 +127,7 @@ export function IssuedDrawingsTable({ rows, userId }: { rows: Issued[]; userId: 
                   </td>
                   <td className="muted l-meta" style={{ whiteSpace: "nowrap" }}>{TRANSMITTAL_PURPOSE_LABEL[r.purpose]}</td>
                   <td className="muted l-meta" title={formatDateTime(r.createdAt)} style={{ whiteSpace: "nowrap" }}>
-                    {formatRelative(r.createdAt)}
+                    {formatDate(r.createdAt)}
                     {r.sentByName && <div className="max-[701px]:hidden" style={{ fontSize: 11 }}>by {r.sentByName}</div>}
                   </td>
                   <td className="l-aside" style={{ whiteSpace: "nowrap" }}>

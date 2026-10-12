@@ -26,7 +26,7 @@ async function seed() {
   const cItem = await it("C", v2.id);
   const [p] = await db.insert(projects).values({ code: "P", name: "P" }).returning();
   const [bom] = await db.insert(boms).values({ projectId: p.id, name: "Main BOM" }).returning();
-  const [r] = await db.insert(bomRevisions).values({ bomId: bom.id, letter: "A", status: "draft", ownerId: u.id }).returning();
+  const [r] = await db.insert(bomRevisions).values({ bomId: bom.id, letter: "1", status: "draft", ownerId: u.id }).returning();
   return { projectId: p.id, bomId: bom.id, leftId: r.id, a, b, c: cItem, v2 };
 }
 

@@ -8,6 +8,7 @@ import { Icon } from "@/components/icons";
 import { toast } from "@/lib/toast";
 import { generateExport } from "@/server/actions/exports";
 import type { ExportOpts } from "./export-options-card";
+import { formatBomRevision } from "@/lib/bom-revision";
 
 /** Saves a base64 workbook via a blob link — no popup, so nothing for the browser to block. */
 function saveXlsx(base64: string, fileName: string) {
@@ -37,7 +38,7 @@ export function GenerateDialog({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
-  const fileName = `BOM_${projectCode}_Rev_${revisionLetter}.xlsx`;
+  const fileName = `BOM_${projectCode}_${formatBomRevision(revisionLetter)}.xlsx`;
 
   function go() {
     start(async () => {

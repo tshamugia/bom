@@ -16,6 +16,7 @@ import {
 } from "@/lib/bom-status";
 import { changeRevisionStatus } from "@/server/actions/revisions";
 import { SELECT_CLASS, TEXTAREA_CLASS } from "@/components/drawings/drawing-form-fields";
+import { formatBomRevision } from "@/lib/bom-revision";
 
 export function ChangeBomStatusDialog({
   revisionId,
@@ -60,7 +61,7 @@ export function ChangeBomStatusDialog({
         toast.error(res.error);
         return;
       }
-      toast.success(`Rev ${letter} is now ${BOM_STATUS_LABEL[to]}`);
+      toast.success(`${formatBomRevision(letter)} is now ${BOM_STATUS_LABEL[to]}`);
       setOpen(false);
       reset();
       router.refresh();
@@ -84,7 +85,7 @@ export function ChangeBomStatusDialog({
       />
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Change status of Rev {letter}</DialogTitle>
+          <DialogTitle>Change status of {formatBomRevision(letter)}</DialogTitle>
           <DialogDescription>
             Currently <strong>{BOM_STATUS_LABEL[status]}</strong>. Your name, the time and the comment are recorded with the change.{" "}
             <HelpTip topic="bom-statuses" />

@@ -12,6 +12,7 @@ import { requireSession } from "../auth-context";
 import { audit } from "../audit";
 import { isRevisionImmutable } from "../lib/revision-status";
 import type { DrawingActionResult } from "./drawings";
+import { formatBomRevision } from "@/lib/bom-revision";
 
 const fail = (error: string) => ({ ok: false as const, error });
 
@@ -94,7 +95,7 @@ export async function linkDrawingsToBom(input: z.infer<typeof LinkInput>): Promi
       kind: "bom.drawing.linked",
       refType: "bom",
       refId: rev.bomId,
-      summary: `Rev ${rev.letter} of "${rev.bomName}" now references ${codes.join(", ")}`,
+      summary: `${formatBomRevision(rev.letter)} of "${rev.bomName}" now references ${codes.join(", ")}`,
       payload: { projectId: rev.projectId, bomRevisionId: rev.id, drawingIds: added.map(a => a.drawingId) },
     });
   }
@@ -132,7 +133,7 @@ export async function unlinkDrawingFromBom(input: { linkId: string }): Promise<D
     kind: "bom.drawing.unlinked",
     refType: "bom",
     refId: rev.bomId,
-    summary: `${link.code} removed from Rev ${rev.letter} of "${rev.bomName}"`,
+    summary: `${link.code} removed from ${formatBomRevision(rev.letter)} of "${rev.bomName}"`,
     payload: { projectId: rev.projectId, bomRevisionId: rev.id, drawingId: link.drawingId },
   });
   return { ok: true };
@@ -184,7 +185,7 @@ export async function updateBomDrawingLinks(input: z.infer<typeof UpdateInput>):
     kind: "bom.drawing.updated",
     refType: "bom",
     refId: rev.bomId,
-    summary: `Rev ${rev.letter} of "${rev.bomName}" updated to ${stale
+    summary: `${formatBomRevision(rev.letter)} of "${rev.bomName}" updated to ${stale
       .map(l => `${l.code} ${formatDrawingRevision(latest.get(l.drawingId)!.number)}`)
       .join(", ")}`,
     payload: { projectId: rev.projectId, bomRevisionId: rev.id, linkIds: stale.map(l => l.id) },
@@ -274,7 +275,7 @@ export async function confirmNoBomChange(
     kind: "bom.drawing.checked",
     refType: "bom",
     refId: rev.bomId,
-    summary: `Rev ${rev.letter} of "${rev.bomName}" checked against ${updates
+    summary: `${formatBomRevision(rev.letter)} of "${rev.bomName}" checked against ${updates
       .map(u => `${u.link.code} ${formatDrawingRevision(u.target.number)}`)
       .join(", ")} — no BOM change`,
     payload: {

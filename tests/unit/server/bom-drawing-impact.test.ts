@@ -21,7 +21,7 @@ beforeEach(async () => { await resetDb(); });
 
 let seq = 0;
 
-/** A committed BOM Rev A built from rev1 of a drawing. */
+/** A committed BOM Rev1 built from rev1 of a drawing. */
 async function setup() {
   const { user: u } = await mockSession("member");
   const [p] = await db.insert(projects).values({ code: "P-1", name: "Project One" }).returning();
@@ -32,7 +32,7 @@ async function setup() {
     .returning();
   await db.insert(drawingRevisions).values({ drawingId: d.id, number: 1, commitMessage: "Initial revision" });
   const [b] = await db.insert(boms).values({ projectId: p.id, name: "Main BOM" }).returning();
-  const [r] = await db.insert(bomRevisions).values({ bomId: b.id, letter: "A", status: "draft", ownerId: u.id }).returning();
+  const [r] = await db.insert(bomRevisions).values({ bomId: b.id, letter: "1", status: "draft", ownerId: u.id }).returning();
   expect(await linkDrawingsToBom({ bomRevisionId: r.id, drawingIds: [d.id] })).toEqual({ ok: true, added: 1 });
   await db.update(bomRevisions).set({ status: "committed" }).where(eq(bomRevisions.id, r.id));
   return { projectId: p.id, disciplineId: disc.id, drawingId: d.id, revisionId: r.id };

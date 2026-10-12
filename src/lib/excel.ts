@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import { formatBomRevision } from "./bom-revision";
 
 export type BomRow = {
   sku: string;
@@ -128,14 +129,14 @@ function buildCoverSheet(wb: ExcelJS.Workbook, input: BuildInput) {
     ws.getCell("A2").value = "Bill of Materials";
     ws.getCell("A2").font = { bold: true, size: 22 };
     ws.getCell("A4").value = `${input.project.code} — ${input.project.name}`;
-    ws.getCell("A5").value = `Revision ${input.revisionLetter}`;
+    ws.getCell("A5").value = formatBomRevision(input.revisionLetter);
     ws.getCell("A6").value = `Owner: ${input.project.owner}`;
     ws.getCell("A7").value = `Target: ${input.project.target}`;
   } else {
     ws.getCell("A1").value = "Bill of Materials";
     ws.getCell("A1").font = { bold: true, size: 22 };
     ws.getCell("A3").value = `${input.project.code} — ${input.project.name}`;
-    ws.getCell("A4").value = `Revision ${input.revisionLetter}`;
+    ws.getCell("A4").value = formatBomRevision(input.revisionLetter);
     ws.getCell("A5").value = `Owner: ${input.project.owner}`;
     ws.getCell("A6").value = `Target: ${input.project.target}`;
   }
@@ -187,7 +188,7 @@ function buildMainSheet(wb: ExcelJS.Workbook, input: BuildInput, name = "BOM") {
   ws.getCell("A1").font = { bold: true, size: 16 };
 
   ws.mergeCells(`A2:${lastColLetter}2`);
-  ws.getCell("A2").value = `${input.project.code} — ${input.project.name}  ·  Rev. ${input.revisionLetter}`;
+  ws.getCell("A2").value = `${input.project.code} — ${input.project.name}  ·  ${formatBomRevision(input.revisionLetter)}`;
   ws.getCell("A2").font = { color: { argb: "FF6B7180" }, size: 11 };
 
   ws.mergeCells(`A3:${lastColLetter}3`);

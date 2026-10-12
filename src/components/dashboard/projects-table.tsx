@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { formatDate } from "@/lib/format";
+import { formatBomRevision } from "@/lib/bom-revision";
 
 type Row = {
   id: string;
@@ -56,7 +57,7 @@ export function ProjectsTable({ rows }: { rows: Row[] }) {
                 <td className={p.ownerName ? "l-meta" : "l-hide"}>{p.ownerName ?? "—"}</td>
                 <td className="num tabular l-meta">{p.bomCount}<span className="min-[701px]:hidden"> BOM{p.bomCount === 1 ? "" : "s"}</span></td>
                 <td className="num tabular l-hide">{p.lineCount}</td>
-                <td className="muted l-hide">{p.revLetter ? `Rev ${p.revLetter}` : "—"}</td>
+                <td className="muted l-hide">{p.revLetter ? formatBomRevision(p.revLetter) : "—"}</td>
                 <td className="muted l-meta">{relativeTime(p.updatedAt)}</td>
                 <td className={`muted ${p.targetDate ? "l-meta" : "l-hide"}`} style={{ whiteSpace: "nowrap" }}>
                   {p.targetDate ? <><span className="min-[701px]:hidden">Due </span>{formatDate(p.targetDate)}</> : "—"}

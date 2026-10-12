@@ -1,10 +1,10 @@
 import { z } from "zod";
 
 export const ItemInput = z.object({
-  sku: z.string().min(1).max(64),
-  description: z.string().min(1),
-  manufacturer: z.string().min(1),
-  unit: z.string().min(1),
+  sku: z.string().trim().min(1).max(64),
+  description: z.string().trim().min(1),
+  manufacturer: z.string().trim().min(1),
+  unit: z.string().trim().min(1),
   vendorId: z.string().nullable(),
   categoryId: z.string().nullable(),
   subcategoryId: z.string().nullable(),

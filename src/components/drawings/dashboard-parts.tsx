@@ -6,6 +6,7 @@ import type { DrawingSummary, GroupSummary, StatusCounts } from "@/lib/drawing-d
 import type { OutdatedBomReference } from "@/server/queries/drawing-dashboard";
 import { Meter } from "@/components/dashboard/meter";
 import { DrawingStatusBadge } from "./drawing-status-badge";
+import { formatBomRevision } from "@/lib/bom-revision";
 
 /** Drawings per status as a bar list — one hue, the value printed at each bar's end. */
 export function StatusBars({ counts, total }: { counts: StatusCounts; total: number }) {
@@ -267,7 +268,7 @@ export function OutdatedBomTable({ rows }: { rows: OutdatedBomReference[] }) {
             <tr key={`${r.bomId}:${r.drawingId}`}>
               <td className="l-title">
                 <Link href={`/builder/${r.projectId}/${r.bomId}`} style={{ color: "inherit", fontWeight: 500 }}>{r.bomName}</Link>
-                <div className="muted" style={{ fontSize: 11.5 }}>{r.projectCode} · Rev {r.bomRevisionLetter}</div>
+                <div className="muted" style={{ fontSize: 11.5 }}>{r.projectCode} · {formatBomRevision(r.bomRevisionLetter)}</div>
               </td>
               <td className="mono l-meta"><Link href={`/drawings/${r.drawingId}`} style={{ color: "inherit" }}>{r.code}</Link></td>
               <td className="mono l-meta" style={{ color: "var(--red)" }}><span className="min-[701px]:hidden">built from </span>{formatDrawingRevision(r.linkedNumber)}</td>

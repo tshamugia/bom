@@ -23,14 +23,14 @@ beforeEach(async () => { await resetDb(); });
 
 let seq = 0;
 
-/** A BOM whose Rev A is committed with one line. */
+/** A BOM whose Rev1 is committed with one line. */
 async function setup(name = "Main BOM", projectCode = "P-1") {
   const [v] = await db.insert(vendors).values({ name: `V${++seq}`, code: `V${seq}`, country: "US", leadTime: "3d", rating: 4, status: "approved" }).returning();
   const [c] = await db.insert(categories).values({ name: `C${seq}` }).returning();
   const [it] = await db.insert(items).values({ sku: `S${seq}`, description: "d", manufacturer: "m", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null }).returning();
   const [p] = await db.insert(projects).values({ code: projectCode, name: `Project ${projectCode}` }).returning();
   const [b] = await db.insert(boms).values({ projectId: p.id, name }).returning();
-  const [r] = await db.insert(bomRevisions).values({ bomId: b.id, letter: "A", status: "committed" }).returning();
+  const [r] = await db.insert(bomRevisions).values({ bomId: b.id, letter: "1", status: "committed" }).returning();
   await db.insert(bomLines).values({ revisionId: r.id, itemId: it.id, qty: 1, position: 0 });
   return { projectId: p.id, bomId: b.id, revisionId: r.id };
 }
@@ -53,7 +53,7 @@ test("a member records the client's approval with who, when and the comment", as
 
   const [entry] = await auditOf("bom.status.changed");
   expect(entry.actorId).toBe(u.id);
-  expect(entry.summary).toBe("Main BOM Rev A: Committed → Approved — Client email of 5 Oct");
+  expect(entry.summary).toBe("Main BOM Rev1: Committed → Approved — Client email of 5 Oct");
   expect(entry.payload).toMatchObject({ revisionId: s.revisionId, from: "committed", to: "approved", comment: "Client email of 5 Oct" });
 
   expect(await getActiveRevision(s.bomId)).toMatchObject({
@@ -90,10 +90,10 @@ test("only the latest committed revision changes status, even with a draft on to
   const s = await setup();
   await mockSession("member");
   const [b] = await db.insert(bomRevisions)
-    .values({ bomId: s.bomId, letter: "B", status: "draft", parentRevisionId: s.revisionId, createdAt: new Date(Date.now() + 1000) })
+    .values({ bomId: s.bomId, letter: "2", status: "draft", parentRevisionId: s.revisionId, createdAt: new Date(Date.now() + 1000) })
     .returning();
 
-  // Rev B is still a draft, so Rev A is the latest committed revision.
+  // Rev2 is still a draft, so Rev1 is the latest committed revision.
   expect(await changeRevisionStatus({ revisionId: s.revisionId, to: "approved", comment: "Approved by phone" }))
     .toEqual({ ok: true });
 
@@ -132,7 +132,7 @@ test("an approved revision goes to procurement once and stays approved", async (
   expect((await getActiveRevision(s.bomId))?.sent).toBe(true);
   expect(await changeRevisionStatus({ revisionId: s.revisionId, to: "committed", comment: "x" }))
     .toEqual({ ok: false, error: BOM_STATUS_ERROR_MESSAGE.NOT_ALLOWED });
-  expect(await changeRevisionStatus({ revisionId: s.revisionId, to: "review", comment: "Approval was for Rev B" }))
+  expect(await changeRevisionStatus({ revisionId: s.revisionId, to: "review", comment: "Approval was for Rev2" }))
     .toEqual({ ok: true });
   expect((await revision(s.revisionId)).status).toBe("review");
 });
@@ -194,7 +194,7 @@ test("the BOM Builder list filters by project, owner and search, and counts outd
   expect((await listAllBoms({ search: "fire" })).map(r => r.name)).toEqual(["Fire alarm"]);
   expect(await listAllBoms({ search: "100%" })).toHaveLength(0);
 
-  // Rev A of "Fire alarm" was built from rev1; rev2 changes the BOM.
+  // Rev1 of "Fire alarm" was built from rev1; rev2 changes the BOM.
   const [disc] = await db.insert(drawingDisciplines).values({ name: `Status test ${Date.now()}` }).returning();
   const [d] = await db.insert(drawings).values({ projectId: a.projectId, code: "E-01", name: "Layout", disciplineId: disc.id }).returning();
   const [r1] = await db.insert(drawingRevisions).values({ drawingId: d.id, number: 1, commitMessage: "First" }).returning();
