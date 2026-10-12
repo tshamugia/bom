@@ -7,6 +7,7 @@ import { db } from "@/db/client";
 import { boms, bomRevisions, projects } from "@/db/schema";
 import { EDITOR_ROLES } from "@/lib/roles";
 import { BOM_DELETE_REASON_MIN } from "@/lib/bom-status";
+import { FIRST_BOM_REVISION } from "@/lib/bom-revision";
 import { requireRole } from "../auth-context";
 import { audit } from "../audit";
 import { copyDrawingLinks, copyRevisionContent } from "../lib/copy-revision";
@@ -76,7 +77,7 @@ export async function createBom(input: BomCreateInputType): Promise<{ bomId: str
     }).returning();
     const [revision] = await tx.insert(bomRevisions).values({
       bomId: bom.id,
-      letter: "A",
+      letter: FIRST_BOM_REVISION,
       status: "draft",
       ownerId: session.user.id,
     }).returning();
@@ -178,7 +179,7 @@ export async function duplicateBom(input: BomDuplicateInputType): Promise<{ bomI
 
     const [createdRev] = await tx.insert(bomRevisions).values({
       bomId: createdBom.id,
-      letter: "A",
+      letter: FIRST_BOM_REVISION,
       status: "draft",
       ownerId: session.user.id,
     }).returning();

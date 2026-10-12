@@ -6,6 +6,7 @@ import { Icon } from "@/components/icons";
 import { Badge, RevisionStatusBadge } from "@/components/ui/badge";
 import { canEdit } from "@/lib/roles";
 import { requireSession } from "@/server/auth-context";
+import { formatBomRevision } from "@/lib/bom-revision";
 
 export default async function PreviewIndex() {
   const session = await requireSession();
@@ -59,7 +60,7 @@ export default async function PreviewIndex() {
                       : <Badge tone="gray">—</Badge>}
                   </td>
                   <td className="l-meta px-4 py-2.5 font-mono text-[11px] text-[var(--color-text-3)]">
-                    {b.activeRevisionLetter ? `Rev ${b.activeRevisionLetter}` : "—"}
+                    {b.activeRevisionLetter ? formatBomRevision(b.activeRevisionLetter) : "—"}
                   </td>
                   <td className="l-meta px-4 py-2.5 text-right tabular-nums">
                     {b.lineCount}

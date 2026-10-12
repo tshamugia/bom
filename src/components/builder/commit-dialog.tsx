@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { commitRevision } from "@/server/actions/revisions";
+import { formatBomRevision } from "@/lib/bom-revision";
 
 type Props = {
   revisionId: string;
@@ -30,7 +31,7 @@ export function CommitDialog({ revisionId, letter, lineCount, vendorCount, hasZe
     start(async () => {
       try {
         await commitRevision({ revisionId, commitMessage: message.trim() || undefined });
-        toast.success(`Rev ${letter} committed`);
+        toast.success(`${formatBomRevision(letter)} committed`);
         setOpen(false);
         router.refresh();
       } catch (e) {
@@ -44,7 +45,7 @@ export function CommitDialog({ revisionId, letter, lineCount, vendorCount, hasZe
       <DialogTrigger render={<Button>Commit revision</Button>} />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Commit Rev {letter}</DialogTitle>
+          <DialogTitle>Commit {formatBomRevision(letter)}</DialogTitle>
           <DialogDescription>
             Locks the revision. After commit the lines are read-only and the revision becomes procurement-eligible.
           </DialogDescription>
@@ -75,7 +76,7 @@ export function CommitDialog({ revisionId, letter, lineCount, vendorCount, hasZe
 
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
-          <Button onClick={submit} disabled={pending || blocked}>Commit Rev {letter}</Button>
+          <Button onClick={submit} disabled={pending || blocked}>Commit {formatBomRevision(letter)}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

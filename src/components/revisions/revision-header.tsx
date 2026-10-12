@@ -10,6 +10,7 @@ import { HelpTip } from "@/components/help/help-tip";
 import { ChangeBomStatusDialog } from "@/components/boms/change-bom-status-dialog";
 import { DeleteBomDialog } from "@/components/boms/delete-bom-dialog";
 import type { RevisionStatus } from "@/lib/bom-status";
+import { formatBomRevision } from "@/lib/bom-revision";
 
 export type RevisionHeaderProps = {
   projectId: string;
@@ -71,14 +72,14 @@ export function RevisionHeader(p: RevisionHeaderProps) {
             </Link>
           )}
           <RevisionStatusBadge status={r.status} />
-          <Badge tone="gray">Rev {r.letter}</Badge>
+          <Badge tone="gray">{formatBomRevision(r.letter)}</Badge>
           <HelpTip topic="bom-revisions" />
         </div>
         <div className="mt-1 text-[12px] text-[var(--color-text-3)] [overflow-wrap:anywhere]">
           {isDraft ? (
             <>
               Owner: {r.ownerName ?? "—"}
-              {r.parentLetter ? <> · Branched from Rev {r.parentLetter}</> : null}
+              {r.parentLetter ? <> · Branched from {formatBomRevision(r.parentLetter)}</> : null}
             </>
           ) : (
             <>

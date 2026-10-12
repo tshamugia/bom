@@ -3,6 +3,7 @@ import { Badge, RevisionStatusBadge } from "@/components/ui/badge";
 import { formatDrawingRevision } from "@/lib/drawing-status";
 import { HelpTip } from "@/components/help/help-tip";
 import type { BomLinkForDrawingRow } from "@/server/queries/drawing-control";
+import { formatBomRevision } from "@/lib/bom-revision";
 
 /**
  * BOM revisions built from this drawing. Only a BOM's current revision can be
@@ -59,7 +60,7 @@ export function BomUsageCard({
                       {!l.isCurrentBomRevision && <div className="muted" style={{ fontSize: 11 }}>older revision</div>}
                     </td>
                     <td className="l-meta" style={{ whiteSpace: "nowrap" }}>
-                      <span className="mono">Rev {l.bomRevisionLetter}</span>{" "}
+                      <span className="mono">{formatBomRevision(l.bomRevisionLetter)}</span>{" "}
                       <RevisionStatusBadge status={l.bomRevisionStatus} />
                     </td>
                     <td className="l-aside" style={{ whiteSpace: "nowrap" }}>

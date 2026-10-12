@@ -194,7 +194,7 @@ export const HELP_SECTIONS: HelpSection[] = [
           <li>Everything lives in a <strong>project</strong>: its drawings and its BOMs.</li>
           <li>Projects and drawings get their <strong>code</strong> from their name when they are created — the initials (Georgian is spelt in Latin letters) and the next free number, e.g. <span className="mono">BS-001</span> for &ldquo;BMW showroom&rdquo;. Nobody types a code, and renaming keeps it, because files and transmittals carry it.</li>
           <li><strong>Drawings</strong> are the engineering drawing register. Each drawing has revisions (rev1, rev2…), a status, an owner and a due date.</li>
-          <li><strong>BOMs</strong> (bills of materials) list what to buy. Each BOM has revisions too (Rev A, Rev B…). Lines come from the item catalog, which knows each item&apos;s vendor.</li>
+          <li><strong>BOMs</strong> (bills of materials) list what to buy. Each BOM has revisions too (Rev1, Rev2…), numbered like drawing revisions. Lines come from the item catalog, which knows each item&apos;s vendor.</li>
           <li>The two meet where a <strong>BOM revision is built from drawing revisions</strong>. When a drawing gets a revision that changes the BOM, the BOMs built from the older one show it as outdated.</li>
           <li>
             What leaves the app: BOMs sent to procurement and drawing revisions issued to people — both listed under <Link href="/approvals">Sent</Link>.
@@ -261,13 +261,13 @@ export const HELP_SECTIONS: HelpSection[] = [
     roles: EDITORS,
     body: () => (
       <ol className="help-steps">
-        <li>Open the project and click <Ui>New BOM</Ui>. It starts as a Draft Rev A. (Or <Ui>Duplicate</Ui> an existing BOM from the builder, or pick <Ui>From file</Ui> to build it from the BOM template — see below.)</li>
+        <li>Open the project and click <Ui>New BOM</Ui>. It starts as a Draft Rev1. (Or <Ui>Duplicate</Ui> an existing BOM from the builder, or pick <Ui>From file</Ui> to build it from the BOM template — see below.)</li>
         <li>In the <Link href="/builder">BOM Builder</Link>, add lines by searching the catalog, or with <Ui>Import</Ui> from the BOM template. Group lines into sections such as “Fire alarm” or “IT network”.</li>
         <li>Link the drawings the BOM is built from with <Ui>Manage</Ui> on the drawings strip — they are linked at their current revision.</li>
         <li>Click <Ui>Commit revision</Ui>. The lines lock.</li>
         <li>Click <Ui>Preview</Ui> to check the document, then <Ui>Generate Excel</Ui> to download it, or <Ui>Send to procurement</Ui> to email it.</li>
         <li>When the client confirms the BOM, click <Ui>Change status</Ui> → <Ui>Approved</Ui> and say who confirmed it.</li>
-        <li>Something changed later? Click <Ui>New revision</Ui>: Rev B starts as a draft copy of Rev A.</li>
+        <li>Something changed later? Click <Ui>New revision</Ui>: Rev2 starts as a draft copy of Rev1.</li>
       </ol>
     ),
   },
@@ -297,7 +297,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     roles: EDITORS,
     body: () => (
       <>
-        <p>A BOM keeps every version as a revision: Rev A, Rev B, Rev C… Only a <strong>Draft</strong> can be edited, and a BOM has at most one draft at a time. Committing locks the lines; after that the revision only changes status — see <a href="#bom-statuses">BOM statuses</a>.</p>
+        <p>A BOM keeps every version as a revision: Rev1, Rev2, Rev3… Only a <strong>Draft</strong> can be edited, and a BOM has at most one draft at a time. Committing locks the lines; after that the revision only changes status — see <a href="#bom-statuses">BOM statuses</a>.</p>
         <p>To change a committed BOM, click <Ui>New revision</Ui> in the builder. The new draft copies the sections, lines and drawing links of the one before. <Ui>Discard draft</Ui> throws a draft away. Compare revisions from the project&apos;s <Ui>History</Ui>.</p>
         <p>A BOM&apos;s owner changes only together with a new revision. Pick the new owner in the <Ui>New revision</Ui> dialog (or <Ui>Clone</Ui> in History): the new draft and the BOM pass to them, earlier revisions keep their owner, and History shows who owned each one. Viewers can&apos;t own a BOM.</p>
       </>
@@ -382,7 +382,7 @@ export const HELP_SECTIONS: HelpSection[] = [
       <>
         <p><Ui>Send to procurement</Ui> on the Preview page emails the latest <strong>committed</strong> revision as an Excel file to the procurement list. A committed revision becomes <strong>Sent to procurement</strong>; one the client already approved stays <strong>Approved</strong>. It shows up under <Link href="/approvals">Sent</Link>.</p>
         <ul>
-          <li>If you are looking at a draft, the button sends the latest committed revision — its letter is shown on the button.</li>
+          <li>If you are looking at a draft, the button sends the latest committed revision — its number is shown on the button.</li>
           <li>A revision is sent once. To send changes, create a new revision, commit it and send that.</li>
           <li>The recipients and the email text are set by an admin in Settings → Procurement email. If they are missing, the app says so in a red message.</li>
         </ul>

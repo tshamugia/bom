@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { boms, bomLines, bomRevisions, bomSections, items, projects, vendors } from "@/db/schema";
 import { EDITOR_ROLES } from "@/lib/roles";
+import { FIRST_BOM_REVISION } from "@/lib/bom-revision";
 import {
   BOM_IMPORT_MAX_BYTES,
   type BomImportCommitResult,
@@ -124,7 +125,7 @@ function isUniqueViolation(e: unknown): boolean {
 }
 
 /**
- * Imports the file as a new BOM (Rev A draft) or into an existing draft, in one
+ * Imports the file as a new BOM (Rev1 draft) or into an existing draft, in one
  * transaction. SKUs missing from the catalog are added to it first, with any
  * vendor, category and subcategory they name. Refuses the whole file while any
  * row has an error.
@@ -198,7 +199,7 @@ export async function commitBomImport(formData: FormData): Promise<BomImportComm
         }).returning({ id: boms.id });
         const [revision] = await tx.insert(bomRevisions).values({
           bomId: bom.id,
-          letter: "A",
+          letter: FIRST_BOM_REVISION,
           status: "draft",
           ownerId: userId,
         }).returning({ id: bomRevisions.id });

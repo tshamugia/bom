@@ -69,7 +69,7 @@ test("preview describes the import and saves nothing", async () => {
   expect(await db.select().from(items)).toHaveLength(1);
 });
 
-test("new BOM from file: creates the BOM, Rev A draft, sections, lines and the missing SKUs", async () => {
+test("new BOM from file: creates the BOM, Rev1 draft, sections, lines and the missing SKUs", async () => {
   const { user } = await mockSession("member");
   const { project, item } = await seed();
 
@@ -80,7 +80,7 @@ test("new BOM from file: creates the BOM, Rev A draft, sections, lines and the m
   const [bom] = await db.select().from(boms).where(eq(boms.id, r.bomId));
   expect(bom).toMatchObject({ name: "Fire alarm", ownerId: user.id, projectId: project.id });
   const [rev] = await db.select().from(bomRevisions).where(eq(bomRevisions.id, r.revisionId));
-  expect(rev).toMatchObject({ letter: "A", status: "draft", ownerId: user.id });
+  expect(rev).toMatchObject({ letter: "1", status: "draft", ownerId: user.id });
 
   const sections = await db.select().from(bomSections).where(eq(bomSections.revisionId, r.revisionId)).orderBy(asc(bomSections.position));
   expect(sections.map(s => [s.name, s.position])).toEqual([["Fire alarm", 0], ["IT network", 1]]);
@@ -132,7 +132,7 @@ test("import into a draft: reuses sections by name, adds to SKUs already there, 
   await mockSession();
   const { project, item } = await seed();
   const [bom] = await db.insert(boms).values({ projectId: project.id, name: "Main" }).returning();
-  const [rev] = await db.insert(bomRevisions).values({ bomId: bom.id, letter: "A", status: "draft" }).returning();
+  const [rev] = await db.insert(bomRevisions).values({ bomId: bom.id, letter: "1", status: "draft" }).returning();
   const [fire] = await db.insert(bomSections).values({ revisionId: rev.id, name: "Fire Alarm", position: 0 }).returning();
   await db.insert(bomLines).values({ revisionId: rev.id, sectionId: fire.id, itemId: item.id, qty: 3, skuSnapshot: "CAT-1", position: 0 });
 
@@ -164,7 +164,7 @@ test("a committed revision can't be imported into", async () => {
   await mockSession();
   const { project } = await seed();
   const [bom] = await db.insert(boms).values({ projectId: project.id, name: "Main" }).returning();
-  const [rev] = await db.insert(bomRevisions).values({ bomId: bom.id, letter: "A", status: "committed" }).returning();
+  const [rev] = await db.insert(bomRevisions).values({ bomId: bom.id, letter: "1", status: "committed" }).returning();
   const f = await file([["", "CAT-1", 1]]);
   expect(await previewBomImport(form(f, { revisionId: rev.id }))).toMatchObject({ ok: false, error: "revision_locked" });
   expect(await commitBomImport(form(f, { mode: "revision", revisionId: rev.id }))).toMatchObject({ ok: false, error: "revision_locked" });

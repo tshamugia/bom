@@ -13,6 +13,7 @@ import {
 import { Icon } from "@/components/icons";
 import { NewBomDialog } from "@/components/boms/new-bom-dialog";
 import { RenameBomDialog } from "@/components/boms/rename-bom-dialog";
+import { formatBomRevision } from "@/lib/bom-revision";
 
 export type SwitcherBom = {
   id: string;
@@ -53,7 +54,7 @@ export function BomSwitcher({
                 {active ? <Icon.Check size={14} /> : <span className="w-3.5 shrink-0" />}
                 <span className="flex-1 truncate">{b.name}</span>
                 <span className="font-mono text-[11px] text-[var(--color-text-3)]">
-                  {b.activeRevisionLetter ? `Rev ${b.activeRevisionLetter}` : "—"}
+                  {b.activeRevisionLetter ? formatBomRevision(b.activeRevisionLetter) : "—"}
                 </span>
               </DropdownMenuItem>
             );

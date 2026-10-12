@@ -26,7 +26,7 @@ describe("buildDashboardWorkbook", () => {
       bom: { activeBoms: 3, approvalsPending: 1, avgLeadTimeDays: 4.5 },
       projects: [{
         id: "p1", code: "HLT", name: "Hilton", clientName: "Hilton Tbilisi", ownerName: "Nino",
-        startDate: "2026-01-10", targetDate: "2026-12-01", bomCount: 2, lineCount: 40, revLetter: "B",
+        startDate: "2026-01-10", targetDate: "2026-12-01", bomCount: 2, lineCount: 40, revLetter: "2",
       }],
       deadlines: [{ projectCode: "HLT", projectName: "Hilton", label: "Design submission", date: "2026-09-20" }],
       drawings: [drawing],
@@ -42,7 +42,7 @@ describe("buildDashboardWorkbook", () => {
     ]);
     const projects = wb.getWorksheet("Projects")!;
     expect(projects.getRow(2).values).toEqual([
-      undefined, "HLT", "Hilton", "Hilton Tbilisi", "Nino", "2026-01-10", "2026-12-01", 2, 40, "Rev B", 1, 1, 0,
+      undefined, "HLT", "Hilton", "Hilton Tbilisi", "Nino", "2026-01-10", "2026-12-01", 2, 40, "Rev2", 1, 1, 0,
     ]);
     expect(wb.getWorksheet("Deadlines")!.getCell("E2").value).toBe("Overdue");
     const summary = wb.getWorksheet("Summary")!;

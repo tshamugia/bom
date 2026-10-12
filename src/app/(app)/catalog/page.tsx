@@ -57,6 +57,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
               <tr>
                 <th>SKU</th><th>Description</th><th>Category</th><th>Manufacturer</th>
                 <th>Vendor</th><th>Unit</th>
+                {!readOnly && <th></th>}
               </tr>
             </thead>
             <tbody>
@@ -68,11 +69,25 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
                   <td data-label="Manufacturer">{it.manufacturer}</td>
                   <td data-label="Vendor">{it.vendorName ?? "—"}</td>
                   <td className="muted" data-label="Unit">{it.unit}</td>
+                  {!readOnly && (
+                    <td className="td-end" style={{ textAlign: "right" }}>
+                      <ItemDialog
+                        existing={it}
+                        vendors={vendors}
+                        categories={cats}
+                        trigger={
+                          <button type="button" className="btn btn-icon btn-ghost" aria-label={`Edit ${it.sku}`} title="Edit">
+                            <Icon.Edit className="ico" />
+                          </button>
+                        }
+                      />
+                    </td>
+                  )}
                 </tr>
               ))}
               {results.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="muted" style={{ textAlign: "center", padding: "28px 14px" }}>
+                  <td colSpan={readOnly ? 6 : 7} className="muted" style={{ textAlign: "center", padding: "28px 14px" }}>
                     No items match your search.
                   </td>
                 </tr>

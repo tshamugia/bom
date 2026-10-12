@@ -86,7 +86,7 @@ export function HelpDiagram() {
           <Down />
           <Node
             title="BOM revisions"
-            chain={["Rev A", "Rev B"]}
+            chain={["Rev1", "Rev2"]}
             sub="Lines from the item catalog (items → vendors)"
           />
           <Down />

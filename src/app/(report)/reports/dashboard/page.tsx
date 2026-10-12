@@ -6,6 +6,7 @@ import { DUE_SOON_DAYS, isOverdueOn, type GroupSummary } from "@/lib/drawing-das
 import { DRAWING_STATUSES, DRAWING_STATUS_LABEL, formatDrawingRevision } from "@/lib/drawing-status";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { roundHours } from "@/lib/drawing-meta";
+import { formatBomRevision } from "@/lib/bom-revision";
 
 export const metadata: Metadata = { title: "Dashboard report — Revline" };
 
@@ -134,7 +135,7 @@ export default async function DashboardReportPage({ searchParams }: { searchPara
                     <td className={p.targetDate && p.targetDate < today ? "late" : undefined}>{p.targetDate ? formatDate(p.targetDate) : "—"}</td>
                     <td className="num">{p.bomCount}</td>
                     <td className="num">{p.lineCount}</td>
-                    <td>{p.revLetter ? `Rev ${p.revLetter}` : "—"}</td>
+                    <td>{p.revLetter ? formatBomRevision(p.revLetter) : "—"}</td>
                     <td className="num">{g?.total ?? 0}</td>
                     <td className="num">{g?.closed ?? 0}</td>
                   </tr>
@@ -252,7 +253,7 @@ export default async function DashboardReportPage({ searchParams }: { searchPara
                 {data.outdatedBoms.map(b => (
                   <tr key={`${b.bomId}:${b.drawingId}`}>
                     <td className="mono">{b.projectCode}</td>
-                    <td>{b.bomName} <span className="muted">Rev {b.bomRevisionLetter}</span></td>
+                    <td>{b.bomName} <span className="muted">{formatBomRevision(b.bomRevisionLetter)}</span></td>
                     <td className="mono">{b.code}</td>
                     <td className="mono late">{formatDrawingRevision(b.linkedNumber)}</td>
                     <td className="mono">{formatDrawingRevision(b.latestNumber)}</td>

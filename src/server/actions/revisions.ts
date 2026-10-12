@@ -14,6 +14,7 @@ import { audit } from "../audit";
 import { isRevisionImmutable, revisionSentSql } from "../lib/revision-status";
 import { copyDrawingLinks, copyRevisionContentRefreshed } from "../lib/copy-revision";
 import { touchBom } from "../lib/touch-bom";
+import { formatBomRevision, nextBomRevision } from "@/lib/bom-revision";
 
 async function loadRevision(revisionId: string) {
   await requireRole(...EDITOR_ROLES);
@@ -72,7 +73,7 @@ export async function commitRevision(input: z.infer<typeof CommitInput>) {
     kind: "bom.revision.committed",
     refType: "bom",
     refId: rev.bomId,
-    summary: `Rev ${rev.letter} committed`,
+    summary: `${formatBomRevision(rev.letter)} committed`,
     payload: { revisionId, letter: rev.letter, projectId: rev.projectId, commitMessage: commitMessage ?? null },
   });
 }
@@ -102,20 +103,6 @@ async function userName(id: string | null) {
   return u?.name ?? null;
 }
 
-function nextLetter(existing: string[]): string {
-  const used = new Set(existing);
-  for (let i = 0; i < 26; i++) {
-    const c = String.fromCharCode(65 + i);
-    if (!used.has(c)) return c;
-  }
-  for (let i = 0; i < 26; i++)
-    for (let j = 0; j < 26; j++) {
-      const c = `${String.fromCharCode(65 + i)}${String.fromCharCode(65 + j)}`;
-      if (!used.has(c)) return c;
-    }
-  throw new Error("REVISION_LETTER_EXHAUSTED");
-}
-
 export async function branchRevision(input: z.infer<typeof BranchInput>): Promise<string> {
   const { parentRevisionId, ownerId: requestedOwnerId } = BranchInput.parse(input);
   const parent = await loadRevision(parentRevisionId);
@@ -140,7 +127,7 @@ export async function branchRevision(input: z.infer<typeof BranchInput>): Promis
     .select({ letter: bomRevisions.letter })
     .from(bomRevisions)
     .where(eq(bomRevisions.bomId, parent.bomId));
-  const letter = nextLetter(existing.map(e => e.letter));
+  const letter = nextBomRevision(existing.map(e => e.letter));
 
   const newId = await db.transaction(async tx => {
     const [child] = await tx.insert(bomRevisions).values({
@@ -171,8 +158,8 @@ export async function branchRevision(input: z.infer<typeof BranchInput>): Promis
     refType: "bom",
     refId: parent.bomId,
     summary: newOwner
-      ? `Rev ${letter} branched from Rev ${parent.letter} · owner ${previousOwnerName ?? "—"} → ${newOwner.name}`
-      : `Rev ${letter} branched from Rev ${parent.letter}`,
+      ? `${formatBomRevision(letter)} branched from ${formatBomRevision(parent.letter)} · owner ${previousOwnerName ?? "—"} → ${newOwner.name}`
+      : `${formatBomRevision(letter)} branched from ${formatBomRevision(parent.letter)}`,
     payload: {
       parentRevisionId: parent.id,
       newRevisionId: newId,
@@ -204,7 +191,7 @@ export async function discardDraft(input: z.infer<typeof DiscardInput>) {
     kind: "bom.revision.discarded",
     refType: "bom",
     refId: rev.bomId,
-    summary: `Rev ${rev.letter} draft discarded`,
+    summary: `${formatBomRevision(rev.letter)} draft discarded`,
     payload: { revisionId, letter: rev.letter, projectId: rev.projectId },
   });
 }
@@ -243,7 +230,7 @@ export async function changeRevisionStatus(input: z.input<typeof StatusInput>): 
     .limit(1);
   if (!rev) return { ok: false, error: "Revision not found." };
 
-  // An open draft on top doesn't count: the client may approve Rev A while Rev B is being drawn up.
+  // An open draft on top doesn't count: the client may approve Rev1 while Rev2 is being drawn up.
   const [latest] = await db
     .select({ id: bomRevisions.id })
     .from(bomRevisions)
@@ -290,7 +277,7 @@ export async function changeRevisionStatus(input: z.input<typeof StatusInput>): 
     kind: "bom.status.changed",
     refType: "bom",
     refId: rev.bomId,
-    summary: `${rev.bomName} Rev ${rev.letter}: ${BOM_STATUS_LABEL[rev.status]} → ${BOM_STATUS_LABEL[data.to]} — ${data.comment}`,
+    summary: `${rev.bomName} ${formatBomRevision(rev.letter)}: ${BOM_STATUS_LABEL[rev.status]} → ${BOM_STATUS_LABEL[data.to]} — ${data.comment}`,
     payload: {
       projectId: rev.projectId,
       revisionId: rev.id,

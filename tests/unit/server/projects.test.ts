@@ -23,7 +23,7 @@ async function setup() {
 
   const [p] = await db.insert(projects).values({ code: "P-1", name: "Project One" }).returning();
   const [b] = await db.insert(boms).values({ projectId: p.id, name: "Main BOM" }).returning();
-  const [r] = await db.insert(bomRevisions).values({ bomId: b.id, letter: "A", status: "in-progress" }).returning();
+  const [r] = await db.insert(bomRevisions).values({ bomId: b.id, letter: "1", status: "in-progress" }).returning();
   await db.insert(bomLines).values({ revisionId: r.id, itemId: it.id, qty: 3, position: 0 });
 
   return { projectId: p.id, bomId: b.id, revId: r.id };

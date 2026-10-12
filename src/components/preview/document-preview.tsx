@@ -1,5 +1,6 @@
 import type { Line } from "@/components/builder/sectioned-line-table";
 import type { SectionInfo } from "@/components/builder/section-row";
+import { formatBomRevision } from "@/lib/bom-revision";
 
 export function DocumentPreview({
   project, revisionLetter, lines, sections, referenceDrawings = [], generatedOn,
@@ -28,7 +29,7 @@ export function DocumentPreview({
         <div>
           <h2 className="doc-title">Bill of Materials</h2>
           <div className="doc-meta" style={{ marginTop: 4 }}>
-            {project.code} — {project.name} · Rev. {revisionLetter} · {generatedOn}
+            {project.code} — {project.name} · {formatBomRevision(revisionLetter)} · {generatedOn}
           </div>
         </div>
         <div style={{ textAlign: "right" }}>

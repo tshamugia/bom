@@ -22,7 +22,7 @@ async function setup() {
   const [it] = await db.insert(items).values({ sku: "S", description: "d", manufacturer: "m", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null }).returning();
   const [p] = await db.insert(projects).values({ code: "P1", name: "P1" }).returning();
   const [b] = await db.insert(boms).values({ projectId: p.id, name: "Main BOM" }).returning();
-  const [r] = await db.insert(bomRevisions).values({ bomId: b.id, letter: "A", status: "draft", ownerId: u.id }).returning();
+  const [r] = await db.insert(bomRevisions).values({ bomId: b.id, letter: "1", status: "draft", ownerId: u.id }).returning();
   return { projectId: p.id, bomId: b.id, revisionId: r.id, it, userId: u.id };
 }
 
@@ -57,7 +57,7 @@ test("branchRevision creates next-letter draft and copies sections + lines", asy
 
   const newId = await branchRevision({ parentRevisionId: revisionId });
   const [child] = await db.select().from(bomRevisions).where(eq(bomRevisions.id, newId));
-  expect(child.letter).toBe("B");
+  expect(child.letter).toBe("2");
   expect(child.status).toBe("draft");
   expect(child.parentRevisionId).toBe(revisionId);
   expect(child.ownerId).toBe(userId);

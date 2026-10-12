@@ -17,7 +17,7 @@ async function setup() {
   const [it] = await db.insert(items).values({ sku: "X", description: "x", manufacturer: "Y", unit: "pcs", vendorId: v.id, categoryId: c.id, subcategoryId: null }).returning();
   const [p] = await db.insert(projects).values({ code: "P", name: "P" }).returning();
   const [b] = await db.insert(boms).values({ projectId: p.id, name: "Main BOM" }).returning();
-  const [r] = await db.insert(bomRevisions).values({ bomId: b.id, letter: "A", status: "committed" }).returning();
+  const [r] = await db.insert(bomRevisions).values({ bomId: b.id, letter: "1", status: "committed" }).returning();
   await db.insert(bomLines).values({ revisionId: r.id, itemId: it.id, qty: 1, position: 0 });
   return { projectId: p.id, bomId: b.id, revisionId: r.id };
 }

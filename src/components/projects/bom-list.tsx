@@ -8,6 +8,7 @@ import { RenameBomDialog } from "@/components/boms/rename-bom-dialog";
 import { DeleteBomDialog } from "@/components/boms/delete-bom-dialog";
 import { formatDateTime } from "@/lib/format";
 import type { RevisionStatus } from "@/lib/bom-status";
+import { formatBomRevision } from "@/lib/bom-revision";
 
 export type BomRow = {
   id: string;
@@ -88,7 +89,7 @@ export function BomList({
                   : <Badge tone="gray">—</Badge>}
               </td>
               <td className="l-meta px-4 py-2.5 font-mono text-[11px] text-[var(--color-text-3)]">
-                {b.activeRevisionLetter ? `Rev ${b.activeRevisionLetter}` : "—"}
+                {b.activeRevisionLetter ? formatBomRevision(b.activeRevisionLetter) : "—"}
               </td>
               <td className="l-meta px-4 py-2.5 text-right tabular-nums">
                 {b.lineCount}

@@ -64,9 +64,9 @@ test("BOM sends skip cancelled workflows and filter by project", async () => {
   const [p1, p2] = await db.insert(projects).values([{ code: "P-1", name: "One" }, { code: "P-2", name: "Two" }]).returning();
   const [b1, b2] = await db.insert(boms).values([{ projectId: p1.id, name: "Main" }, { projectId: p2.id, name: "Other" }]).returning();
   const [ra, rb, rc] = await db.insert(bomRevisions).values([
-    { bomId: b1.id, letter: "A", status: "locked" },
-    { bomId: b1.id, letter: "B", status: "locked" },
-    { bomId: b2.id, letter: "A", status: "locked" },
+    { bomId: b1.id, letter: "1", status: "locked" },
+    { bomId: b1.id, letter: "2", status: "locked" },
+    { bomId: b2.id, letter: "1", status: "locked" },
   ]).returning();
   await db.insert(approvalWorkflows).values([
     { revisionId: ra.id, status: "approved", requestedAt: new Date(Date.now() - 86_400_000) },
@@ -74,7 +74,7 @@ test("BOM sends skip cancelled workflows and filter by project", async () => {
     { revisionId: rc.id, status: "pending" },
   ]);
 
-  expect((await listBomSends()).map(s => `${s.bomName} ${s.revisionLetter}`)).toEqual(["Other A", "Main A"]);
-  expect((await listBomSends({ projectId: p1.id })).map(s => s.revisionLetter)).toEqual(["A"]);
+  expect((await listBomSends()).map(s => `${s.bomName} ${s.revisionLetter}`)).toEqual(["Other 1", "Main 1"]);
+  expect((await listBomSends({ projectId: p1.id })).map(s => s.revisionLetter)).toEqual(["1"]);
   expect((await getStatusFeed({ projectId: p2.id })).bomSends.map(s => s.bomName)).toEqual(["Other"]);
 });

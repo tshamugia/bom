@@ -13,6 +13,7 @@ import { DUE_SOON_DAYS, type DashboardDrawing, type DrawingSummary } from "@/lib
 import type { Deadline } from "@/server/queries/dashboard";
 import type { FeedBomSend, FeedTransmittal, StatusFeed } from "@/server/queries/status-overview";
 import { StatusBar, StatusLegend } from "./status-mix";
+import { formatBomRevision } from "@/lib/bom-revision";
 
 /** Project dates this far ahead show up under "Coming up". */
 const DEADLINE_HORIZON_DAYS = 30;
@@ -222,7 +223,7 @@ function BomSendRow({ b }: { b: FeedBomSend }) {
       <span className="irow-ico tone-green"><Icon.Doc className="ico" /></span>
       <Link href={`/preview/${b.projectId}/${b.bomId}`} className="irow-body" style={{ color: "inherit" }}>
         <div className="irow-title">
-          {b.bomName} <span className="mono muted">Rev {b.revisionLetter}</span>
+          {b.bomName} <span className="mono muted">{formatBomRevision(b.revisionLetter)}</span>
         </div>
         <div className="irow-text">Sent to procurement</div>
         <div className="irow-meta">
@@ -234,7 +235,7 @@ function BomSendRow({ b }: { b: FeedBomSend }) {
           href={`/api/exports/${b.exportId}/download`}
           download
           className="btn btn-icon btn-ghost"
-          aria-label={`Download ${b.bomName} Rev ${b.revisionLetter}`}
+          aria-label={`Download ${b.bomName} ${formatBomRevision(b.revisionLetter)}`}
           title="Download Excel"
         >
           <Icon.Download className="ico" />

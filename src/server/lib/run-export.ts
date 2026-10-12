@@ -12,6 +12,7 @@ import { EDITOR_ROLES } from "@/lib/roles";
 import { requireRole, requireSession } from "../auth-context";
 import { audit } from "../audit";
 import { buildBomWorkbook, type BomRow } from "@/lib/excel";
+import { formatBomRevision } from "@/lib/bom-revision";
 
 const Columns = z
   .object({
@@ -143,7 +144,7 @@ export async function runExport(input: { revisionId: string; options: ExportOpti
   const isDraft = rev.status === "draft";
   const draftSuffix = isDraft ? `_DRAFT_${new Date().toISOString().slice(0, 10)}` : "";
   const buf = await buildRevisionWorkbook(rev, options, isDraft, session.user.name);
-  const fileName = `BOM_${rev.projectCode}_Rev_${rev.letter}${draftSuffix}.xlsx`;
+  const fileName = `BOM_${rev.projectCode}_${formatBomRevision(rev.letter)}${draftSuffix}.xlsx`;
 
   const [row] = await db.insert(bomExports).values({
     revisionId: rev.id,

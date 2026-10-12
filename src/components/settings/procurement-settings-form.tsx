@@ -9,7 +9,7 @@ import { Icon } from "@/components/icons";
 import { updateProcurementSettings } from "@/server/actions/system-settings";
 import type { ProcurementSettings } from "@/server/queries/system-settings";
 
-const TEMPLATE_VARS = ["{projectCode}", "{projectName}", "{bomName}", "{revLetter}", "{requesterName}"];
+const TEMPLATE_VARS = ["{projectCode}", "{projectName}", "{bomName}", "{revision}", "{requesterName}"];
 
 function isValidEmail(s: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
@@ -154,7 +154,7 @@ export function ProcurementSettingsForm({ initial }: { initial: ProcurementSetti
           value={body}
           onChange={(e) => setBody(e.target.value)}
           rows={8}
-          placeholder="Hi, please find the BOM for {projectCode} ({bomName} Rev {revLetter}) attached..."
+          placeholder="Hi, please find the BOM for {projectCode} ({bomName} {revision}) attached..."
           className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-[13px] outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
         />
       </div>

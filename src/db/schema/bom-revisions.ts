@@ -10,6 +10,7 @@ export const bomRevisions = pgTable(
     id: text("id").primaryKey().$defaultFn(() => createId()),
     bomId: text("bom_id").notNull().references(() => boms.id, { onDelete: "cascade" }),
     parentRevisionId: text("parent_revision_id").references((): AnyPgColumn => bomRevisions.id, { onDelete: "set null" }),
+    /** The revision number as text ("1", "2"…), shown as Rev1 — see `src/lib/bom-revision.ts`. */
     letter: text("letter").notNull(),
     status: revisionStatusEnum("status").notNull().default("draft"),
     notes: text("notes"),

@@ -15,6 +15,7 @@ import { sendBomToProcurement } from "@/server/actions/procurement";
 import { toast } from "@/lib/toast";
 import { formatDate } from "@/lib/format";
 import { BlockedNote } from "@/components/help/blocked-note";
+import { formatBomRevision } from "@/lib/bom-revision";
 
 type Props = {
   projectId: string;
@@ -83,13 +84,13 @@ export function PreviewShell(p: Props) {
   // Said out loud next to the button — a disabled button's tooltip never shows on a phone.
   const procurementNote = p.procurementRevision
     ? p.procurementRevision.letter !== p.revisionLetter
-      ? `Send to procurement sends Rev ${p.procurementRevision.letter}, the latest committed revision. Rev ${p.revisionLetter} is still a draft.`
+      ? `Send to procurement sends ${formatBomRevision(p.procurementRevision.letter)}, the latest committed revision. ${formatBomRevision(p.revisionLetter)} is still a draft.`
       : null
     : !p.lastSentLetter
       ? "Nothing to send yet — commit this revision in the builder first."
       : p.lastSentLetter === p.revisionLetter
-        ? `Rev ${p.lastSentLetter} was already sent to procurement. To send changes, create a new revision in the builder, commit it and send that.`
-        : `Rev ${p.lastSentLetter} was already sent to procurement. Commit Rev ${p.revisionLetter} in the builder to send the changes.`;
+        ? `${formatBomRevision(p.lastSentLetter)} was already sent to procurement. To send changes, create a new revision in the builder, commit it and send that.`
+        : `${formatBomRevision(p.lastSentLetter)} was already sent to procurement. Commit ${formatBomRevision(p.revisionLetter)} in the builder to send the changes.`;
 
   const totalUnits = p.lines.reduce((s, l) => s + l.qty, 0);
   const vendorCount = new Set(p.lines.map(l => l.vendorName).filter(Boolean)).size;
@@ -136,7 +137,7 @@ export function PreviewShell(p: Props) {
               >
                 <Icon.Send className="ico" /> Send to procurement
                 {p.procurementRevision && p.procurementRevision.letter !== p.revisionLetter
-                  ? <span className="ml-1 text-[11px] text-[var(--color-text-3)]">(Rev {p.procurementRevision.letter})</span>
+                  ? <span className="ml-1 text-[11px] text-[var(--color-text-3)]">({formatBomRevision(p.procurementRevision.letter)})</span>
                   : null}
               </button>
               <GenerateDialog
