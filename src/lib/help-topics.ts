@@ -7,6 +7,7 @@
 
 export const HELP_TOPIC_IDS = [
   "overview",
+  "my-work",
   "roles",
   "bom-revisions",
   "bom-statuses",
@@ -34,6 +35,11 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
     title: "How it fits together",
     summary:
       "A project holds drawings and BOMs. Each BOM revision records which drawing revisions it was built from, so a drawing change shows up on the BOMs it affects.",
+  },
+  "my-work": {
+    title: "My work",
+    summary:
+      "Everything that is yours in one list: drawings to approve, revisions to confirm, open remarks and outdated BOMs, your deadlines, and what others changed on your work. The number on the bell counts what needs you plus updates you haven't seen.",
   },
   "roles": {
     title: "Roles",

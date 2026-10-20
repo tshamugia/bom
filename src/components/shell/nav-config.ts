@@ -31,6 +31,7 @@ export const NAV: NavGroup[] = [
     accent: "var(--color-cat-indigo)",
     items: [
       { href: "/dashboard", label: "Dashboard", icon: "Home", viewerLabel: "Overview" },
+      { href: "/my-work", label: "My work", icon: "Inbox" },
       { href: "/projects", label: "Projects", icon: "Folder" },
       { href: "/builder", label: "BOM Builder", icon: "List", roles: EDITORS },
       { href: "/preview", label: "Preview & Generate", icon: "Doc", roles: EDITORS },

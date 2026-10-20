@@ -53,11 +53,16 @@ export type Deadline = {
 
 /**
  * Open milestones and project completion dates, earliest first — overdue ones
- * included, since they still need attention.
+ * included, since they still need attention. `ownerId` keeps the projects one
+ * user manages.
  */
-export async function listDeadlines(opts: { projectId?: string } = {}): Promise<Deadline[]> {
+export async function listDeadlines(opts: { projectId?: string; ownerId?: string } = {}): Promise<Deadline[]> {
   await requireSession();
-  const live = and(isNull(projects.deletedAt), opts.projectId ? eq(projects.id, opts.projectId) : undefined);
+  const live = and(
+    isNull(projects.deletedAt),
+    opts.projectId ? eq(projects.id, opts.projectId) : undefined,
+    opts.ownerId ? eq(projects.ownerId, opts.ownerId) : undefined,
+  );
   const [targets, milestones] = await Promise.all([
     db
       .select({ projectId: projects.id, projectCode: projects.code, projectName: projects.name, date: projects.targetDate })

@@ -9,6 +9,7 @@ import { ThemeButton } from "./theme-toggle";
 
 const CRUMBS: Record<string, [string, string]> = {
   "/dashboard": ["Workspace", "Dashboard"],
+  "/my-work": ["Workspace", "My work"],
   "/projects": ["Workspace", "Projects"],
   "/builder": ["Workspace", "BOM Builder"],
   "/preview": ["Workspace", "Preview & Generate"],
@@ -27,10 +28,13 @@ export function Topbar({
   onMenuToggle,
   navOpen,
   readOnly = false,
+  myWorkCount = 0,
 }: {
   onMenuToggle?: () => void;
   navOpen?: boolean;
   readOnly?: boolean;
+  /** Shown on the bell — see `bellCount`. */
+  myWorkCount?: number;
 }) {
   const path = usePathname();
   const key = Object.keys(CRUMBS).find(k => path === k || path.startsWith(`${k}/`)) ?? "/projects";
@@ -62,6 +66,18 @@ export function Topbar({
             <HelpTip topic="roles" />
           </span>
         )}
+        <Link
+          href="/my-work"
+          className="btn btn-icon btn-ghost tb-bell"
+          aria-label={myWorkCount > 0 ? `My work — ${myWorkCount} for you` : "My work"}
+          title="My work"
+          aria-current={key === "/my-work" ? "page" : undefined}
+        >
+          <Icon.Bell className="ico" />
+          {myWorkCount > 0 && (
+            <span className="tb-bell-dot" aria-hidden>{myWorkCount > 99 ? "99+" : myWorkCount}</span>
+          )}
+        </Link>
         <ThemeButton />
         <Link
           href="/help"

@@ -212,10 +212,35 @@ export const HELP_SECTIONS: HelpSection[] = [
     body: () => (
       <ol className="help-steps">
         <li><strong>Overview</strong> shows what was issued to you, drawing progress, what waits for approval, what was sent and what is coming up. Filter it by project at the top.</li>
-        <li>When a drawing revision is issued to you, confirm it under <Ui>Issued to you</Ui> — the sender sees that you received it.</li>
+        <li>When a drawing revision is issued to you, confirm it under <Ui>Issued to you</Ui> or on <Link href="/my-work">My work</Link> (the bell) — the sender sees that you received it.</li>
         <li><strong>Drawings</strong> lists every drawing with its latest revision and status; open one to see its PDF, history, remarks and transmittals.</li>
         <li><strong>Sent</strong> lists BOMs sent to procurement (with the Excel file) and drawing revisions issued to people.</li>
       </ol>
+    ),
+  },
+  {
+    ...topic("my-work"),
+    group: "Start here",
+    body: role => (
+      <>
+        <p>
+          <Link href="/my-work">My work</Link> (the bell at the top) collects what is yours, so you don&apos;t have to look for it.
+          {role !== "viewer" && <> The dashboard shows the same counts under <Ui>Your work</Ui>.</>}
+        </p>
+        <ul>
+          <li>
+            <strong>To do</strong> — what waits for you:
+            {role !== "viewer"
+              ? <> drawings you were asked to approve, revisions issued to you to confirm, open remarks on your drawings and your BOMs built from older drawings.</>
+              : <> drawing revisions issued to you to confirm.</>}
+            {" "}An item leaves the list once it&apos;s done — there is nothing to tick off.
+          </li>
+          <li><strong>Deadlines</strong> — {role !== "viewer" && <>your drawings due in the next 14 days (late ones first) and </>}dates of the projects you manage in the next 30.</li>
+          <li><strong>Updates</strong> — what others did on your work in the last 30 days: comments, status changes, remarks, revisions issued to you{role !== "viewer" && <>, BOMs approved or handed to you</>}. Updates since your last visit are marked <span className="mw-new">New</span>; opening My work marks them seen.</li>
+          {role !== "viewer" && <li><strong>Waiting on others</strong> — your drawings sent for approval and how long they have waited.</li>}
+        </ul>
+        <p>The number on the bell is what needs you (to do and overdue) plus updates you haven&apos;t seen.</p>
+      </>
     ),
   },
   {

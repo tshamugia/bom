@@ -161,17 +161,12 @@ export async function listBomSends(opts: { projectId?: string; limit?: number } 
     .limit(opts.limit ?? 200);
 }
 
-/**
- * What the status overview shows besides the drawing summary: revisions waiting
- * for the signed-in user's receipt, and what was sent out lately (drawing
- * issues and BOMs to procurement).
- */
-export async function getStatusFeed(opts: { projectId?: string; limit?: number } = {}) {
+/** Current drawing revisions issued to the signed-in user and not confirmed yet, newest first. */
+export async function listMyPendingReceipts(opts: { projectId?: string } = {}) {
   const session = await requireSession();
-  const limit = opts.limit ?? 12;
   const { recipient, sender, columns } = transmittalColumns();
   const latest = latestRevisions();
-  const [mine, issued, bomSends, gate] = await Promise.all([
+  const [rows, gate] = await Promise.all([
     db
       .select(columns)
       .from(drawingTransmittals)
@@ -187,11 +182,27 @@ export async function getStatusFeed(opts: { projectId?: string; limit?: number }
         isNull(drawingTransmittals.acknowledgedAt),
       ))
       .orderBy(desc(drawingTransmittals.createdAt)),
-    listIssuedTransmittals({ projectId: opts.projectId, limit }),
-    listBomSends({ projectId: opts.projectId, limit }),
     loadDrawingFileGate(),
   ]);
-  return { mine: withPdf(mine, gate), issued, bomSends };
+  return withPdf(rows, gate);
+}
+
+export type PendingReceipt = Awaited<ReturnType<typeof listMyPendingReceipts>>[number];
+
+/**
+ * What the status overview shows besides the drawing summary: revisions waiting
+ * for the signed-in user's receipt, and what was sent out lately (drawing
+ * issues and BOMs to procurement).
+ */
+export async function getStatusFeed(opts: { projectId?: string; limit?: number } = {}) {
+  await requireSession();
+  const limit = opts.limit ?? 12;
+  const [mine, issued, bomSends] = await Promise.all([
+    listMyPendingReceipts({ projectId: opts.projectId }),
+    listIssuedTransmittals({ projectId: opts.projectId, limit }),
+    listBomSends({ projectId: opts.projectId, limit }),
+  ]);
+  return { mine, issued, bomSends };
 }
 
 export type StatusFeed = Awaited<ReturnType<typeof getStatusFeed>>;
