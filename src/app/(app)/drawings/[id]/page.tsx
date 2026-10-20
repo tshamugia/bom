@@ -234,7 +234,7 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
         )}
       </div>
 
-      <div className="mb-2 flex items-center justify-between">
+      <div id="revisions" className="anchor-target mb-2 flex items-center justify-between">
         <h2 className="text-[15px] font-semibold tracking-tight">Revisions</h2>
         <span className="text-[12px] text-[var(--color-text-3)]">{revisions.length} total</span>
       </div>

@@ -11,11 +11,11 @@ import type { UserRole } from "@/lib/roles";
 
 export function Sidebar({
   user,
-  pendingReceipts = 0,
+  myWorkCount = 0,
   onNavigate,
 }: {
   user: { name: string; email: string; role: UserRole } | null;
-  pendingReceipts?: number;
+  myWorkCount?: number;
   onNavigate?: () => void;
 }) {
   const path = usePathname();
@@ -43,9 +43,8 @@ export function Sidebar({
               {visibleItems.map((it) => {
                 const active = path === it.href || path.startsWith(`${it.href}/`);
                 const I = Icon[it.icon];
-                // Viewers confirm receipts on their overview, so the count sits there.
-                const badge = it.badge ?? (role === "viewer" && it.href === "/dashboard" && pendingReceipts > 0
-                  ? String(pendingReceipts)
+                const badge = it.badge ?? (it.href === "/my-work" && myWorkCount > 0
+                  ? (myWorkCount > 99 ? "99+" : String(myWorkCount))
                   : undefined);
                 return (
                   <Link

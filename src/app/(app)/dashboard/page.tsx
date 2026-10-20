@@ -21,6 +21,8 @@ import { canEdit } from "@/lib/roles";
 import { requireSession } from "@/server/auth-context";
 import { getAwaitingSince, getStatusFeed } from "@/server/queries/status-overview";
 import { ViewerOverview } from "@/components/overview/viewer-overview";
+import { MyWorkStrip } from "@/components/my-work/my-work-strip";
+import { getMyWork } from "@/server/queries/my-work";
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return <h2 className="mb-2 text-[15px] font-semibold tracking-tight">{children}</h2>;
@@ -71,7 +73,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     );
   }
 
-  const activity = await getRecentActivity(8, project?.id);
+  const [activity, myWork] = await Promise.all([getRecentActivity(8, project?.id), getMyWork()]);
   const t = s.totals;
   const { upcoming: upcomingDates, overdue: overdueDates } = countDeadlines(deadlines, today);
   const oldestWait = s.reviewQueue[0]?.daysWaiting ?? 0;
@@ -96,6 +98,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </>
         }
       />
+
+      <MyWorkStrip counts={myWork.counts} />
 
       <SectionTitle>Projects &amp; BOMs</SectionTitle>
       <div className="stat-grid">

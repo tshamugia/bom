@@ -93,6 +93,64 @@ export function buildDrawingStatusEmail(i: DrawingStatusEmailInput): { subject: 
   return { subject, text: lines.join("\n") };
 }
 
+export type DrawingStatusDigestItem = {
+  drawingId: string;
+  projectCode: string;
+  code: string;
+  name: string;
+  revisionNumber: number;
+  from: DrawingStatus;
+  kind: TransitionKind;
+};
+
+export type DrawingStatusDigestInput = {
+  appUrl: string;
+  to: DrawingStatus;
+  actorName: string;
+  /** Approving engineer picked for a Need to be approved request. */
+  reviewerName: string | null;
+  comment: string | null;
+  items: DrawingStatusDigestItem[];
+};
+
+function digestHeadline(i: DrawingStatusDigestInput): string {
+  const n = `${i.items.length} drawings`;
+  const kinds = new Set(i.items.map(item => item.kind));
+  const kind = kinds.size === 1 ? [...kinds][0] : "plain";
+  switch (kind) {
+    case "request":
+      return `${i.actorName} requested approval of ${n} from ${i.reviewerName ?? "a second engineer"}.`;
+    case "approve":
+      return `${i.actorName} approved the internal check of ${n} — they are now awaiting approval.`;
+    case "reject":
+      return `${i.actorName} sent ${n} back for rework.`;
+    default:
+      return `${i.actorName} changed the status of ${n} to ${DRAWING_STATUS_LABEL[i.to]}.`;
+  }
+}
+
+/** One email for a bulk status change, listing every drawing the recipient follows. */
+export function buildDrawingStatusDigestEmail(i: DrawingStatusDigestInput): { subject: string; text: string } {
+  const base = i.appUrl.replace(/\/$/, "");
+  const to = DRAWING_STATUS_LABEL[i.to];
+  const projects = new Set(i.items.map(item => item.projectCode));
+  const prefix = projects.size === 1 ? `[${[...projects][0]}] ` : "";
+  const subject = `${prefix}${i.items.length} drawings — ${to}`;
+
+  const lines = [digestHeadline(i)];
+  if (i.comment?.trim()) lines.push("", "Comment:", i.comment.trim());
+  for (const item of i.items) {
+    lines.push(
+      "",
+      `${item.projectCode} · ${item.code} ${formatDrawingRevision(item.revisionNumber)} — ${item.name}`,
+      `  ${DRAWING_STATUS_LABEL[item.from]} → ${to}`,
+      `  ${base}/drawings/${item.drawingId}`,
+    );
+  }
+
+  return { subject, text: lines.join("\n") };
+}
+
 export type TransmittalEmailInput = {
   appUrl: string;
   drawingId: string;

@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { canEdit } from "@/lib/roles";
 import { viewerRedirect } from "@/lib/viewer-routes";
 
-const PROTECTED = ["/dashboard", "/builder", "/preview", "/catalog", "/vendors", "/approvals", "/history", "/users", "/audit", "/projects", "/settings", "/drawings", "/reports", "/help"];
+const PROTECTED = ["/dashboard", "/my-work", "/builder", "/preview", "/catalog", "/vendors", "/approvals", "/history", "/users", "/audit", "/projects", "/settings", "/drawings", "/reports", "/help"];
 
 const under = (path: string, base: string) => path === base || path.startsWith(`${base}/`);
 
@@ -46,6 +46,7 @@ export async function proxy(req: NextRequest) {
 export const config = {
   matcher: [
     "/dashboard/:path*",
+    "/my-work/:path*",
     "/builder/:path*",
     "/preview/:path*",
     "/catalog/:path*",

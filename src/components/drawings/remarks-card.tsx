@@ -166,7 +166,7 @@ export function RemarksCard({
   const resolved = remarks.filter(r => r.resolvedAt);
 
   return (
-    <div className="card">
+    <div id="remarks" className="card anchor-target">
       <div className="card-head max-[701px]:flex-wrap">
         <div className="min-w-0">
           <h3 className="card-title">Remarks</h3>

@@ -24,6 +24,14 @@ export type DrawingTableRow = {
   lastModifiedByName: string | null;
 };
 
+/** Checkboxes for bulk edits; only the /drawings register passes it, from a client component. */
+export type DrawingSelection = {
+  selected: ReadonlySet<string>;
+  /** `range` is a shift-click: everything from the last clicked row gets the same state. */
+  onToggle: (id: string, checked: boolean, range: boolean) => void;
+  onToggleAll: (checked: boolean) => void;
+};
+
 /** Phones get compact list rows (`tbl-list`): code + status, name, then a meta line. */
 export function DrawingsTable({
   rows,
@@ -31,6 +39,7 @@ export function DrawingsTable({
   showProject = true,
   showHours = true,
   emptyText = "No drawings match these filters.",
+  selection,
 }: {
   rows: DrawingTableRow[];
   today: string;
@@ -38,13 +47,27 @@ export function DrawingsTable({
   /** Hours are an engineering figure; viewers don't see them. */
   showHours?: boolean;
   emptyText?: string;
+  selection?: DrawingSelection;
 }) {
-  const cols = 8 + (showProject ? 1 : 0) + (showHours ? 1 : 0);
+  const cols = 8 + (showProject ? 1 : 0) + (showHours ? 1 : 0) + (selection ? 1 : 0);
+  const selectedCount = selection ? rows.filter(r => selection.selected.has(r.id)).length : 0;
   return (
     <div className="table-wrap">
       <table className="tbl tbl-list">
         <thead>
           <tr>
+            {selection && (
+              <th className="col-check">
+                <input
+                  type="checkbox"
+                  aria-label="Select all drawings shown"
+                  disabled={rows.length === 0}
+                  checked={rows.length > 0 && selectedCount === rows.length}
+                  ref={el => { if (el) el.indeterminate = selectedCount > 0 && selectedCount < rows.length; }}
+                  onChange={e => selection.onToggleAll(e.target.checked)}
+                />
+              </th>
+            )}
             <th>Code</th>
             <th>Name</th>
             {showProject && <th>Project</th>}
@@ -67,8 +90,24 @@ export function DrawingsTable({
           )}
           {rows.map(r => {
             const overdue = isDrawingOverdue(r.dueDate, r.status, today);
+            const selected = selection?.selected.has(r.id) ?? false;
             return (
-              <tr key={r.id}>
+              <tr key={r.id} data-selected={selected || undefined}>
+                {selection && (
+                  <td className="col-check l-check">
+                    <label className="check-hit">
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${r.code}`}
+                        checked={selected}
+                        onChange={e => {
+                          const native = e.nativeEvent as MouseEvent;
+                          selection.onToggle(r.id, e.target.checked, !!native.shiftKey);
+                        }}
+                      />
+                    </label>
+                  </td>
+                )}
                 <td className="mono l-title" style={{ whiteSpace: "nowrap" }}>
                   <Link href={`/drawings/${r.id}`} style={{ color: "inherit", fontWeight: 600 }}>{r.code}</Link>
                   <span className="muted min-[701px]:hidden"> {formatDrawingRevision(r.revisionNumber)}</span>

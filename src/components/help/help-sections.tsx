@@ -212,10 +212,35 @@ export const HELP_SECTIONS: HelpSection[] = [
     body: () => (
       <ol className="help-steps">
         <li><strong>Overview</strong> shows what was issued to you, drawing progress, what waits for approval, what was sent and what is coming up. Filter it by project at the top.</li>
-        <li>When a drawing revision is issued to you, confirm it under <Ui>Issued to you</Ui> — the sender sees that you received it.</li>
+        <li>When a drawing revision is issued to you, confirm it under <Ui>Issued to you</Ui> or on <Link href="/my-work">My work</Link> (the bell) — the sender sees that you received it.</li>
         <li><strong>Drawings</strong> lists every drawing with its latest revision and status; open one to see its PDF, history, remarks and transmittals.</li>
         <li><strong>Sent</strong> lists BOMs sent to procurement (with the Excel file) and drawing revisions issued to people.</li>
       </ol>
+    ),
+  },
+  {
+    ...topic("my-work"),
+    group: "Start here",
+    body: role => (
+      <>
+        <p>
+          <Link href="/my-work">My work</Link> (the bell at the top) collects what is yours, so you don&apos;t have to look for it.
+          {role !== "viewer" && <> The dashboard shows the same counts under <Ui>Your work</Ui>.</>}
+        </p>
+        <ul>
+          <li>
+            <strong>To do</strong> — what waits for you:
+            {role !== "viewer"
+              ? <> drawings you were asked to approve, revisions issued to you to confirm, open remarks on your drawings and your BOMs built from older drawings.</>
+              : <> drawing revisions issued to you to confirm.</>}
+            {" "}An item leaves the list once it&apos;s done — there is nothing to tick off.
+          </li>
+          <li><strong>Deadlines</strong> — {role !== "viewer" && <>your drawings due in the next 14 days (late ones first) and </>}dates of the projects you manage in the next 30.</li>
+          <li><strong>Updates</strong> — what others did on your work in the last 30 days: comments, status changes, remarks, revisions issued to you{role !== "viewer" && <>, BOMs approved or handed to you</>}. Updates since your last visit are marked <span className="mw-new">New</span>; opening My work marks them seen.</li>
+          {role !== "viewer" && <li><strong>Waiting on others</strong> — your drawings sent for approval and how long they have waited.</li>}
+        </ul>
+        <p>The number on the bell is what needs you (to do and overdue) plus updates you haven&apos;t seen.</p>
+      </>
     ),
   },
   {
@@ -473,6 +498,24 @@ export const HELP_SECTIONS: HelpSection[] = [
         </ol>
         <p>Only the assigned engineer can approve. The engineer approving the latest revision can&apos;t become the drawing&apos;s owner either — so nobody can check their own work.</p>
         {role === "viewer" && <p className="muted">Viewers can&apos;t own or approve drawings.</p>}
+      </>
+    ),
+  },
+  {
+    ...topic("drawing-bulk"),
+    group: "Drawings",
+    roles: EDITORS,
+    body: () => (
+      <>
+        <p>On <Link href="/drawings">Drawings</Link>, tick the drawings to change — the box in the header ticks every drawing shown, and shift-click ticks a range. A bar appears under the list with <Ui>Change status</Ui>, <Ui>Change owner</Ui> and <Ui>Change due date</Ui>.</p>
+        <ul>
+          <li>Each drawing follows the same rules as changing it on its own page. Before you save, the dialog says how many will change and lists the ones that won&apos;t, with the reason — e.g. Approved A before the internal check, or an owner who is approving the drawing.</li>
+          <li><Ui>Need to be approved</Ui> asks one engineer to approve all of them; drawings that engineer owns are skipped. The approving engineer can approve many at once with <Ui>Awaiting approval</Ui>, or send them back with a comment.</li>
+          <li>Everyone following the drawings gets one email that lists them, not one email per drawing.</li>
+          <li>Every change is recorded in each drawing&apos;s history. Drawings that weren&apos;t changed stay ticked, so you can deal with them next.</li>
+          <li>Codes aren&apos;t edited here — a drawing gets its code from its name when it is created.</li>
+        </ul>
+        <p>Changing the filters or the status tab clears the ticks.</p>
       </>
     ),
   },

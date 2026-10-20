@@ -8,6 +8,7 @@ import { Icon } from "@/components/icons";
 import { NewDrawingDialog } from "@/components/drawings/new-drawing-dialog";
 import { DrawingFilterBar, DrawingStatusTabs } from "@/components/drawings/drawing-filters";
 import { DrawingsTable } from "@/components/drawings/drawings-table";
+import { DrawingsRegister } from "@/components/drawings/drawings-register";
 import { DRAWING_STATUSES, isDrawingOverdue, todayIso, type DrawingStatus } from "@/lib/drawing-status";
 
 type SP = {
@@ -52,6 +53,9 @@ export default async function DrawingsPage({ searchParams }: { searchParams: Pro
   const visible = status ? base.filter(r => r.status === status) : base;
 
   const overdueCount = rows.filter(r => isDrawingOverdue(r.dueDate, r.status, today)).length;
+  const emptyText = rows.length === 0 && !sp.q && !sp.project && !sp.discipline && !sp.owner && !sp.received
+    ? readOnly ? "No drawings yet." : "No drawings yet — click “New drawing” to add the first one."
+    : "No drawings match these filters.";
 
   return (
     <>
@@ -84,14 +88,20 @@ export default async function DrawingsPage({ searchParams }: { searchParams: Pro
           <div className="spacer" />
           <span className="muted" style={{ fontSize: 12 }}>{visible.length} drawing{visible.length === 1 ? "" : "s"}</span>
         </div>
-        <DrawingsTable
-          rows={visible}
-          today={today}
-          showHours={!readOnly}
-          emptyText={rows.length === 0 && !sp.q && !sp.project && !sp.discipline && !sp.owner && !sp.received
-            ? readOnly ? "No drawings yet." : "No drawings yet — click “New drawing” to add the first one."
-            : "No drawings match these filters."}
-        />
+        {readOnly ? (
+          <DrawingsTable rows={visible} today={today} showHours={false} emptyText={emptyText} />
+        ) : (
+          // Remounting on a filter change clears the selection, so a bulk edit
+          // never reaches drawings that are no longer on screen.
+          <DrawingsRegister
+            key={JSON.stringify(sp)}
+            rows={visible}
+            today={today}
+            emptyText={emptyText}
+            users={engineers}
+            currentUserId={session.user.id}
+          />
+        )}
       </div>
     </>
   );

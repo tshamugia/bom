@@ -30,8 +30,13 @@ function latestDrawingRevisions() {
     .as("latest");
 }
 
-/** BOMs whose current revision is built from a drawing that has since changed the BOM. */
-async function listOutdatedBomReferences(projectId?: string) {
+/**
+ * BOMs whose current revision is built from a drawing that has since changed
+ * the BOM — in one project, or only the BOMs one user owns. No session check:
+ * callers have done it.
+ */
+export async function listOutdatedBomReferences(opts: { projectId?: string; ownerId?: string } = {}) {
+  const { projectId, ownerId } = opts;
   const current = db
     .selectDistinctOn([bomRevisions.bomId], {
       bomId: bomRevisions.bomId,
@@ -75,6 +80,7 @@ async function listOutdatedBomReferences(projectId?: string) {
       isNull(projects.deletedAt),
       isNull(drawings.deletedAt),
       projectId ? eq(boms.projectId, projectId) : undefined,
+      ownerId ? eq(boms.ownerId, ownerId) : undefined,
     ))
     .orderBy(projects.code, boms.name, drawings.code);
 }
@@ -136,7 +142,7 @@ export async function getDrawingDashboard(opts: { projectId?: string } = {}) {
   }));
 
   const [outdatedBoms, openTransmittals] = await Promise.all([
-    listOutdatedBomReferences(opts.projectId),
+    listOutdatedBomReferences({ projectId: opts.projectId }),
     countOpenTransmittals(opts.projectId),
   ]);
   return { drawings: drawingRows, outdatedBoms, openTransmittals };

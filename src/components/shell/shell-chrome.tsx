@@ -12,12 +12,12 @@ type ShellUser = { name: string; email: string; role: UserRole };
 
 export function ShellChrome({
   user,
-  pendingReceipts = 0,
+  myWorkCount = 0,
   children,
 }: {
   user: ShellUser;
-  /** Drawing revisions issued to this user that they haven't confirmed yet. */
-  pendingReceipts?: number;
+  /** What needs this user plus updates they haven't seen (`bellCount`). */
+  myWorkCount?: number;
   children: React.ReactNode;
 }) {
   const [navOpen, setNavOpen] = useState(false);
@@ -48,7 +48,7 @@ export function ShellChrome({
 
   return (
     <div className="app" data-nav-open={navOpen || undefined}>
-      <Sidebar user={user} pendingReceipts={pendingReceipts} onNavigate={() => setNavOpen(false)} />
+      <Sidebar user={user} myWorkCount={myWorkCount} onNavigate={() => setNavOpen(false)} />
       <button
         type="button"
         className="nav-scrim"
@@ -61,6 +61,7 @@ export function ShellChrome({
           onMenuToggle={() => setNavOpen((v) => !v)}
           navOpen={navOpen}
           readOnly={user.role === "viewer"}
+          myWorkCount={myWorkCount}
         />
         <div className="content">{children}</div>
       </div>
@@ -68,7 +69,6 @@ export function ShellChrome({
         onMore={() => setNavOpen((v) => !v)}
         navOpen={navOpen}
         role={user.role}
-        badge={user.role === "viewer" ? pendingReceipts : 0}
       />
     </div>
   );

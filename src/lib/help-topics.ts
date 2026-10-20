@@ -7,6 +7,7 @@
 
 export const HELP_TOPIC_IDS = [
   "overview",
+  "my-work",
   "roles",
   "bom-revisions",
   "bom-statuses",
@@ -16,6 +17,7 @@ export const HELP_TOPIC_IDS = [
   "drawing-revisions",
   "drawing-statuses",
   "drawing-approval",
+  "drawing-bulk",
   "drawing-pdf",
   "transmittals",
   "procurement",
@@ -33,6 +35,11 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
     title: "How it fits together",
     summary:
       "A project holds drawings and BOMs. Each BOM revision records which drawing revisions it was built from, so a drawing change shows up on the BOMs it affects.",
+  },
+  "my-work": {
+    title: "My work",
+    summary:
+      "Everything that is yours in one list: drawings to approve, revisions to confirm, open remarks and outdated BOMs, your deadlines, and what others changed on your work. The number on the bell counts what needs you plus updates you haven't seen.",
   },
   "roles": {
     title: "Roles",
@@ -78,6 +85,11 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
     title: "Internal check by a second engineer",
     summary:
       "Set Need to be approved and pick the approving engineer — not the owner and not yourself. Only that engineer can approve it, or send it back to In Progress with a comment.",
+  },
+  "drawing-bulk": {
+    title: "Changing many drawings at once",
+    summary:
+      "Tick drawings on the Drawings list (shift-click ticks a range), then change their status, owner or due date together. Each drawing follows the usual rules: the dialog lists the ones that can't change and why, and only the others are saved.",
   },
   "drawing-pdf": {
     title: "Drawing PDF",
