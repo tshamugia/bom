@@ -41,6 +41,8 @@ export async function listDrawings(filter: DrawingListFilter = {}) {
       number: drawingRevisions.number,
       status: drawingRevisions.status,
       reviewerId: drawingRevisions.reviewerId,
+      reviewedById: drawingRevisions.reviewedById,
+      reviewedAt: drawingRevisions.reviewedAt,
     })
     .from(drawingRevisions)
     .orderBy(drawingRevisions.drawingId, desc(drawingRevisions.number))
@@ -99,6 +101,9 @@ export async function listDrawings(filter: DrawingListFilter = {}) {
       status: latest.status,
       reviewerId: latest.reviewerId,
       reviewerName: reviewer.name,
+      reviewedById: latest.reviewedById,
+      /** The latest revision passed the internal check (the bulk status rules need it). */
+      reviewed: sql<boolean>`${latest.reviewedAt} is not null`,
     })
     .from(drawings)
     .innerJoin(projects, eq(projects.id, drawings.projectId))

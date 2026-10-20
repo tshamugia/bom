@@ -477,6 +477,24 @@ export const HELP_SECTIONS: HelpSection[] = [
     ),
   },
   {
+    ...topic("drawing-bulk"),
+    group: "Drawings",
+    roles: EDITORS,
+    body: () => (
+      <>
+        <p>On <Link href="/drawings">Drawings</Link>, tick the drawings to change — the box in the header ticks every drawing shown, and shift-click ticks a range. A bar appears under the list with <Ui>Change status</Ui>, <Ui>Change owner</Ui> and <Ui>Change due date</Ui>.</p>
+        <ul>
+          <li>Each drawing follows the same rules as changing it on its own page. Before you save, the dialog says how many will change and lists the ones that won&apos;t, with the reason — e.g. Approved A before the internal check, or an owner who is approving the drawing.</li>
+          <li><Ui>Need to be approved</Ui> asks one engineer to approve all of them; drawings that engineer owns are skipped. The approving engineer can approve many at once with <Ui>Awaiting approval</Ui>, or send them back with a comment.</li>
+          <li>Everyone following the drawings gets one email that lists them, not one email per drawing.</li>
+          <li>Every change is recorded in each drawing&apos;s history. Drawings that weren&apos;t changed stay ticked, so you can deal with them next.</li>
+          <li>Codes aren&apos;t edited here — a drawing gets its code from its name when it is created.</li>
+        </ul>
+        <p>Changing the filters or the status tab clears the ticks.</p>
+      </>
+    ),
+  },
+  {
     ...topic("drawing-pdf"),
     group: "Drawings",
     body: role => (

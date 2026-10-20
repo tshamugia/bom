@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  buildDrawingStatusDigestEmail,
   buildDrawingStatusEmail,
   buildTransmittalEmail,
   pickDrawingRecipients,
@@ -82,6 +83,49 @@ describe("buildDrawingStatusEmail", () => {
   test("send-back wording", () => {
     const { text } = buildDrawingStatusEmail({ ...base, kind: "reject", from: "need-approval", to: "in-progress" });
     expect(text).toContain("sent the drawing back for rework");
+  });
+});
+
+describe("buildDrawingStatusDigestEmail", () => {
+  const item = (code: string, projectCode = "HLT") => ({
+    drawingId: code.toLowerCase(),
+    projectCode,
+    code,
+    name: `Drawing ${code}`,
+    revisionNumber: 1,
+    from: "in-progress" as const,
+    kind: "plain" as const,
+  });
+  const digest = {
+    appUrl: "https://bom.example.com/",
+    to: "approved-a" as const,
+    actorName: "Nino",
+    reviewerName: null,
+    comment: null,
+    items: [item("ELV-101"), item("ELV-102")],
+  };
+
+  test("one email lists every drawing with its old status and link", () => {
+    const { subject, text } = buildDrawingStatusDigestEmail(digest);
+    expect(subject).toBe("[HLT] 2 drawings — Approved A");
+    expect(text).toContain("Nino changed the status of 2 drawings to Approved A.");
+    expect(text).toContain("HLT · ELV-101 rev1 — Drawing ELV-101");
+    expect(text).toContain("In Progress → Approved A");
+    expect(text).toContain("https://bom.example.com/drawings/elv-102");
+    expect(text).not.toContain("Comment:");
+  });
+
+  test("drops the project tag across projects and words an approval request", () => {
+    const { subject, text } = buildDrawingStatusDigestEmail({
+      ...digest,
+      to: "need-approval",
+      reviewerName: "Giorgi",
+      comment: "Ready for checking",
+      items: [{ ...item("ELV-101"), kind: "request" }, { ...item("FA-001", "BMW"), kind: "request" }],
+    });
+    expect(subject).toBe("2 drawings — Need to be approved");
+    expect(text).toContain("Nino requested approval of 2 drawings from Giorgi.");
+    expect(text).toContain("Comment:\nReady for checking");
   });
 });
 

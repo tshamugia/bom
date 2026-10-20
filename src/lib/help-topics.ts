@@ -16,6 +16,7 @@ export const HELP_TOPIC_IDS = [
   "drawing-revisions",
   "drawing-statuses",
   "drawing-approval",
+  "drawing-bulk",
   "drawing-pdf",
   "transmittals",
   "procurement",
@@ -78,6 +79,11 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
     title: "Internal check by a second engineer",
     summary:
       "Set Need to be approved and pick the approving engineer — not the owner and not yourself. Only that engineer can approve it, or send it back to In Progress with a comment.",
+  },
+  "drawing-bulk": {
+    title: "Changing many drawings at once",
+    summary:
+      "Tick drawings on the Drawings list (shift-click ticks a range), then change their status, owner or due date together. Each drawing follows the usual rules: the dialog lists the ones that can't change and why, and only the others are saved.",
   },
   "drawing-pdf": {
     title: "Drawing PDF",

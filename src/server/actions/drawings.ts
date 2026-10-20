@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { and, desc, eq, isNull, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { db } from "@/db/client";
@@ -14,14 +14,17 @@ import {
   checkDrawingTransition,
   formatDrawingRevision,
   isOwnerChangeBlocked,
+  type DrawingStatus,
+  type TransitionKind,
 } from "@/lib/drawing-status";
+import { MAX_BULK_DRAWINGS, planBulkDueDate, planBulkOwner, planBulkStatus, type BulkSkip } from "@/lib/drawing-bulk";
 import { MAX_ESTIMATE_HOURS, formatHours } from "@/lib/drawing-meta";
 import { ADMIN_ONLY_ERROR, READ_ONLY_ERROR, canEdit, isAdmin } from "@/lib/roles";
 import { requireSession } from "../auth-context";
 import { audit } from "../audit";
 import { isUniqueViolation } from "../lib/db-errors";
 import { drawingCodeInProject, lockDrawingCodes, nextDrawingCode } from "../lib/codes";
-import { notifyDrawingStatusChange } from "../lib/drawing-notify";
+import { notifyDrawingStatusChange, notifyDrawingStatusChanges, type DrawingStatusNotice } from "../lib/drawing-notify";
 
 // Expected failures are returned, not thrown: Next.js hides thrown messages
 // from the client in production, and these are meant to be read by the user.
@@ -431,6 +434,72 @@ const StatusInput = z.object({
   reviewerId: Id.optional(),
 });
 
+const REVIEWER_NOT_ELIGIBLE = "The approving engineer must be an active user who isn't a viewer.";
+const STATUS_RACE_ERROR = "The status was just changed by someone else — refresh the page.";
+
+/** A drawing's latest revision, as a status change reads and writes it. */
+type StatusTarget = {
+  revisionId: string;
+  number: number;
+  status: DrawingStatus;
+  drawingId: string;
+  code: string;
+  projectId: string;
+};
+
+type StatusWrite = {
+  to: DrawingStatus;
+  kind: TransitionKind;
+  resetsReview: boolean;
+  nextReviewerId: string | null;
+  comment: string | null;
+  actorId: string;
+};
+
+/**
+ * Saves a status change `checkDrawingTransition` allowed. The update only moves
+ * the revision from the status that was checked, so `false` means someone else
+ * changed it in between and nothing was written.
+ */
+async function writeStatusChange(t: StatusTarget, w: StatusWrite, now: Date): Promise<boolean> {
+  return db.transaction(async tx => {
+    const [row] = await tx.update(drawingRevisions)
+      .set({
+        status: w.to,
+        updatedAt: now,
+        ...(w.kind === "request" ? { reviewerId: w.nextReviewerId } : {}),
+        ...(w.resetsReview ? { reviewedById: null, reviewedAt: null } : {}),
+        ...(w.kind === "approve" ? { reviewedById: w.actorId, reviewedAt: now } : {}),
+      })
+      .where(and(eq(drawingRevisions.id, t.revisionId), eq(drawingRevisions.status, t.status)))
+      .returning({ id: drawingRevisions.id });
+    if (!row) return false;
+    await tx.insert(drawingEvents).values({
+      drawingId: t.drawingId,
+      revisionId: t.revisionId,
+      kind: "status",
+      fromStatus: t.status,
+      toStatus: w.to,
+      body: w.comment,
+      actorId: w.actorId,
+    });
+    await tx.update(drawings)
+      .set({ lastModifiedById: w.actorId, updatedAt: now })
+      .where(eq(drawings.id, t.drawingId));
+    return true;
+  });
+}
+
+async function auditStatusChange(t: StatusTarget, to: DrawingStatus, comment: string | null, bulk = false) {
+  await audit({
+    kind: "drawing.status.changed",
+    refType: "drawing",
+    refId: t.drawingId,
+    summary: `${t.code} ${formatDrawingRevision(t.number)}: ${DRAWING_STATUS_LABEL[t.status]} → ${DRAWING_STATUS_LABEL[to]}`,
+    payload: { projectId: t.projectId, revisionId: t.revisionId, from: t.status, to, comment, ...(bulk ? { bulk } : {}) },
+  });
+}
+
 export async function changeDrawingStatus(input: z.infer<typeof StatusInput>): Promise<DrawingActionResult> {
   const data = StatusInput.parse(input);
   const session = await requireSession();
@@ -439,7 +508,7 @@ export async function changeDrawingStatus(input: z.infer<typeof StatusInput>): P
 
   const [rev] = await db
     .select({
-      id: drawingRevisions.id,
+      revisionId: drawingRevisions.id,
       number: drawingRevisions.number,
       status: drawingRevisions.status,
       reviewerId: drawingRevisions.reviewerId,
@@ -457,9 +526,7 @@ export async function changeDrawingStatus(input: z.infer<typeof StatusInput>): P
 
   const latest = await latestRevision(rev.drawingId);
   const nextReviewerId = data.to === "need-approval" ? data.reviewerId ?? null : null;
-  if (nextReviewerId && !(await findActiveEngineer(nextReviewerId))) {
-    return fail("The approving engineer must be an active user who isn't a viewer.");
-  }
+  if (nextReviewerId && !(await findActiveEngineer(nextReviewerId))) return fail(REVIEWER_NOT_ELIGIBLE);
 
   const check = checkDrawingTransition({
     from: rev.status,
@@ -469,52 +536,19 @@ export async function changeDrawingStatus(input: z.infer<typeof StatusInput>): P
     reviewerId: rev.reviewerId,
     nextReviewerId,
     reviewed: rev.reviewedAt !== null,
-    isLatest: latest?.id === rev.id,
+    isLatest: latest?.id === rev.revisionId,
     comment,
   });
   if (!check.ok) return fail(TRANSITION_ERROR_MESSAGE[check.error]);
 
-  const now = new Date();
-  const updated = await db.transaction(async tx => {
-    const [row] = await tx.update(drawingRevisions)
-      .set({
-        status: data.to,
-        updatedAt: now,
-        ...(check.kind === "request" ? { reviewerId: nextReviewerId } : {}),
-        ...(check.resetsReview ? { reviewedById: null, reviewedAt: null } : {}),
-        ...(check.kind === "approve" ? { reviewedById: session.user.id, reviewedAt: now } : {}),
-      })
-      // Guard against a concurrent change: only move from the status we checked.
-      .where(and(eq(drawingRevisions.id, rev.id), eq(drawingRevisions.status, rev.status)))
-      .returning({ id: drawingRevisions.id });
-    if (!row) return false;
-    await tx.insert(drawingEvents).values({
-      drawingId: rev.drawingId,
-      revisionId: rev.id,
-      kind: "status",
-      fromStatus: rev.status,
-      toStatus: data.to,
-      body: comment,
-      actorId: session.user.id,
-    });
-    await tx.update(drawings)
-      .set({ lastModifiedById: session.user.id, updatedAt: now })
-      .where(eq(drawings.id, rev.drawingId));
-    return true;
-  });
-  if (!updated) return fail("The status was just changed by someone else — refresh the page.");
+  const write = { to: data.to, kind: check.kind, resetsReview: check.resetsReview, nextReviewerId, comment, actorId: session.user.id };
+  if (!(await writeStatusChange(rev, write, new Date()))) return fail(STATUS_RACE_ERROR);
 
   revalidateDrawing(rev.drawingId, rev.projectId);
-  await audit({
-    kind: "drawing.status.changed",
-    refType: "drawing",
-    refId: rev.drawingId,
-    summary: `${rev.code} ${formatDrawingRevision(rev.number)}: ${DRAWING_STATUS_LABEL[rev.status]} → ${DRAWING_STATUS_LABEL[data.to]}`,
-    payload: { projectId: rev.projectId, revisionId: rev.id, from: rev.status, to: data.to, comment },
-  });
+  await auditStatusChange(rev, data.to, comment);
 
   const notice = {
-    revisionId: rev.id,
+    revisionId: rev.revisionId,
     from: rev.status,
     to: data.to,
     kind: check.kind,
@@ -525,6 +559,216 @@ export async function changeDrawingStatus(input: z.infer<typeof StatusInput>): P
   after(() => notifyDrawingStatusChange(notice));
 
   return { ok: true };
+}
+
+// ── Bulk edits from the /drawings list ─────────────────────────────────────
+// Each selected drawing is checked with the same rules as a single edit
+// (`src/lib/drawing-bulk.ts`); the ones that can't change are skipped and
+// reported, the rest are saved one by one with their own history and audit.
+
+export type BulkDrawingResult = DrawingActionResult<{ updated: string[]; skipped: BulkSkip[] }>;
+
+const BulkIds = z.array(Id).min(1).max(MAX_BULK_DRAWINGS).transform(ids => [...new Set(ids)]);
+
+const NOT_FOUND_SKIP = "Not found — it may have been deleted.";
+
+/** The selected drawings with their latest revision; deleted ones come back as skipped. */
+async function loadBulkDrawings(ids: string[]) {
+  const latest = db
+    .selectDistinctOn([drawingRevisions.drawingId], {
+      drawingId: drawingRevisions.drawingId,
+      revisionId: drawingRevisions.id,
+      number: drawingRevisions.number,
+      status: drawingRevisions.status,
+      reviewerId: drawingRevisions.reviewerId,
+      reviewedById: drawingRevisions.reviewedById,
+      reviewedAt: drawingRevisions.reviewedAt,
+    })
+    .from(drawingRevisions)
+    .where(inArray(drawingRevisions.drawingId, ids))
+    .orderBy(drawingRevisions.drawingId, desc(drawingRevisions.number))
+    .as("latest");
+  const rows = await db
+    .select({
+      id: drawings.id,
+      drawingId: drawings.id,
+      code: drawings.code,
+      projectId: drawings.projectId,
+      ownerId: drawings.ownerId,
+      dueDate: drawings.dueDate,
+      revisionId: latest.revisionId,
+      number: latest.number,
+      status: latest.status,
+      reviewerId: latest.reviewerId,
+      reviewedById: latest.reviewedById,
+      reviewedAt: latest.reviewedAt,
+    })
+    .from(drawings)
+    .innerJoin(latest, eq(latest.drawingId, drawings.id))
+    .where(and(inArray(drawings.id, ids), isNull(drawings.deletedAt)));
+
+  const found = new Set(rows.map(r => r.id));
+  return {
+    rows: rows.map(r => ({ ...r, reviewed: r.reviewedAt !== null })),
+    missing: ids.filter(id => !found.has(id)).map((id): BulkSkip => ({ id, code: "", reason: NOT_FOUND_SKIP })),
+  };
+}
+
+type BulkRow = Awaited<ReturnType<typeof loadBulkDrawings>>["rows"][number];
+
+function revalidateDrawings(rows: { id: string; projectId: string }[]) {
+  if (rows.length === 0) return;
+  revalidatePath("/drawings");
+  for (const r of rows) revalidatePath(`/drawings/${r.id}`);
+  for (const p of new Set(rows.map(r => r.projectId))) revalidatePath(`/projects/${p}`);
+}
+
+const BulkStatusInput = z.object({
+  ids: BulkIds,
+  to: z.enum(DRAWING_STATUSES),
+  comment: z.string().trim().max(2000).optional(),
+  reviewerId: Id.optional(),
+});
+
+/** One status for every selected drawing's latest revision; each follower gets one email for all of them. */
+export async function bulkChangeDrawingStatus(input: z.input<typeof BulkStatusInput>): Promise<BulkDrawingResult> {
+  const data = BulkStatusInput.parse(input);
+  const session = await requireSession();
+  if (!canEdit(session.user)) return fail(READ_ONLY_ERROR);
+  const comment = data.comment || null;
+  const actorId = session.user.id;
+
+  const nextReviewerId = data.to === "need-approval" ? data.reviewerId ?? null : null;
+  if (data.to === "need-approval") {
+    // These would skip every drawing, so they are answered once.
+    if (!nextReviewerId) return fail(TRANSITION_ERROR_MESSAGE.REVIEWER_REQUIRED);
+    if (nextReviewerId === actorId) return fail(TRANSITION_ERROR_MESSAGE.REVIEWER_IS_REQUESTER);
+    if (!(await findActiveEngineer(nextReviewerId))) return fail(REVIEWER_NOT_ELIGIBLE);
+  }
+
+  const { rows, missing } = await loadBulkDrawings(data.ids);
+  const plan = planBulkStatus(rows, { to: data.to, actorId, nextReviewerId, comment });
+  const skipped = [...missing, ...plan.skipped];
+  const done: BulkRow[] = [];
+  const notices: DrawingStatusNotice[] = [];
+  const now = new Date();
+
+  for (const { row, kind, resetsReview } of plan.ready) {
+    if (!(await writeStatusChange(row, { to: data.to, kind, resetsReview, nextReviewerId, comment, actorId }, now))) {
+      skipped.push({ id: row.id, code: row.code, reason: STATUS_RACE_ERROR });
+      continue;
+    }
+    await auditStatusChange(row, data.to, comment, true);
+    done.push(row);
+    notices.push({
+      revisionId: row.revisionId,
+      from: row.status,
+      to: data.to,
+      kind,
+      comment,
+      actorId,
+      actorName: session.user.name || session.user.email,
+    });
+  }
+
+  revalidateDrawings(done);
+  if (notices.length) after(() => notifyDrawingStatusChanges(notices));
+  return { ok: true, updated: done.map(r => r.id), skipped };
+}
+
+/**
+ * Saves one field of a bulk edit with its history line, the way `updateDrawing`
+ * records it. `false` when the drawing was deleted in the meantime.
+ */
+async function writeBulkFieldChange(
+  row: BulkRow,
+  set: Pick<typeof drawings.$inferInsert, "ownerId" | "dueDate">,
+  change: string,
+  actorId: string,
+  now: Date,
+): Promise<boolean> {
+  const written = await db.transaction(async tx => {
+    const [d] = await tx.update(drawings)
+      .set({ ...set, lastModifiedById: actorId, updatedAt: now })
+      .where(and(eq(drawings.id, row.id), isNull(drawings.deletedAt)))
+      .returning({ id: drawings.id });
+    if (!d) return false;
+    await tx.insert(drawingEvents).values({
+      drawingId: row.id,
+      revisionId: row.revisionId,
+      kind: "updated",
+      body: change,
+      actorId,
+    });
+    return true;
+  });
+  if (!written) return false;
+  await audit({
+    kind: "drawing.updated",
+    refType: "drawing",
+    refId: row.id,
+    summary: `${row.code} updated — ${change.split(":")[0].toLowerCase()}`,
+    payload: { projectId: row.projectId, changes: [change], bulk: true },
+  });
+  return true;
+}
+
+const BulkOwnerInput = z.object({ ids: BulkIds, ownerId: Id });
+
+export async function bulkSetDrawingOwner(input: z.input<typeof BulkOwnerInput>): Promise<BulkDrawingResult> {
+  const { ids, ownerId } = BulkOwnerInput.parse(input);
+  const session = await requireSession();
+  if (!canEdit(session.user)) return fail(READ_ONLY_ERROR);
+  const owner = await findActiveEngineer(ownerId);
+  if (!owner) return fail("The owner must be an active user who isn't a viewer.");
+
+  const { rows, missing } = await loadBulkDrawings(ids);
+  const plan = planBulkOwner(rows, ownerId);
+  const skipped = [...missing, ...plan.skipped];
+
+  const previousIds = [...new Set(plan.ready.map(r => r.ownerId).filter((id): id is string => !!id))];
+  const previous = previousIds.length
+    ? await db.select({ id: user.id, name: user.name }).from(user).where(inArray(user.id, previousIds))
+    : [];
+  const nameOf = new Map(previous.map(u => [u.id, u.name]));
+
+  const done: BulkRow[] = [];
+  const now = new Date();
+  for (const row of plan.ready) {
+    const change = `Owner: ${(row.ownerId && nameOf.get(row.ownerId)) || "—"} → ${owner.name}`;
+    if (await writeBulkFieldChange(row, { ownerId }, change, session.user.id, now)) done.push(row);
+    else skipped.push({ id: row.id, code: row.code, reason: NOT_FOUND_SKIP });
+  }
+
+  revalidateDrawings(done);
+  return { ok: true, updated: done.map(r => r.id), skipped };
+}
+
+const BulkDueDateInput = z.object({
+  ids: BulkIds,
+  /** null clears the due date. */
+  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+});
+
+export async function bulkSetDrawingDueDate(input: z.input<typeof BulkDueDateInput>): Promise<BulkDrawingResult> {
+  const { ids, dueDate } = BulkDueDateInput.parse(input);
+  const session = await requireSession();
+  if (!canEdit(session.user)) return fail(READ_ONLY_ERROR);
+
+  const { rows, missing } = await loadBulkDrawings(ids);
+  const plan = planBulkDueDate(rows, dueDate);
+  const skipped = [...missing, ...plan.skipped];
+
+  const done: BulkRow[] = [];
+  const now = new Date();
+  for (const row of plan.ready) {
+    const change = `Due date: ${row.dueDate ?? "—"} → ${dueDate ?? "—"}`;
+    if (await writeBulkFieldChange(row, { dueDate }, change, session.user.id, now)) done.push(row);
+    else skipped.push({ id: row.id, code: row.code, reason: NOT_FOUND_SKIP });
+  }
+
+  revalidateDrawings(done);
+  return { ok: true, updated: done.map(r => r.id), skipped };
 }
 
 const CommentInput = z.object({

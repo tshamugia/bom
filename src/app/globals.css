@@ -1360,6 +1360,49 @@ html {
   .tbl-list .row-actions { opacity: 1; }
 }
 
+/* ── Bulk selection (the /drawings register) ──
+   `col-check` cells hold the row checkboxes (`l-check` puts them in front of
+   the title on phones); `check-hit` widens the tap area without moving the
+   row. The bar sticks to the bottom of the screen — above the phone tab bar —
+   while drawings are selected. */
+.tbl .col-check { width: 1%; padding-right: 0; }
+.col-check input[type="checkbox"] {
+  width: 15px; height: 15px; margin: 0;
+  vertical-align: middle;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.check-hit { display: inline-flex; align-items: center; margin: -8px 0 -8px -8px; padding: 8px 0 8px 8px; cursor: pointer; }
+.tbl tbody tr[data-selected],
+.tbl tbody tr[data-selected]:hover { background: var(--accent-soft); }
+@media (max-width: 700.98px) {
+  .tbl-list .l-check { order: 1; flex: none; width: auto; align-self: center; }
+}
+@media (hover: none) and (pointer: coarse) {
+  .col-check input[type="checkbox"] { width: 18px; height: 18px; }
+}
+.bulk-bar {
+  position: sticky;
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+  z-index: 30;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 var(--r-3) var(--r-3);
+  box-shadow: var(--shadow-2);
+}
+.bulk-count { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--text-2); }
+.bulk-count strong { color: var(--text); font-variant-numeric: tabular-nums; }
+.bulk-actions { order: 3; flex: 1 1 100%; display: flex; gap: 8px; }
+.bulk-actions > * { flex: 1 1 0; justify-content: center; }
+.bulk-clear { margin-left: auto; }
+@media (min-width: 701px) {
+  .bulk-bar { bottom: 0; flex-wrap: nowrap; }
+  .bulk-actions { order: 0; flex: none; }
+  .bulk-actions > * { flex: none; }
+}
+
 /* Card heads wrap on phones instead of squeezing the title. */
 @media (max-width: 700.98px) {
   .card-head { flex-wrap: wrap; }
