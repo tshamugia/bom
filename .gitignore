@@ -55,3 +55,9 @@ tests/fixtures/catalog-import/big.xlsx
 /doc/superpowers/
 /.superpowers/
 
+
+# python (services/*)
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
