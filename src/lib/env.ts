@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+/** `VAR=` (empty) in an env file or a Railway variable means "not set". */
+const blankIsUnset = <T extends z.ZodType>(schema: T) => z.preprocess(v => (v === "" ? undefined : v), schema);
+
 const Schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   DATABASE_URL: z.string().url(),
@@ -27,6 +30,14 @@ const Schema = z.object({
   // Baked into the image by the Docker build (.github/workflows/images.yml); /api/health reports them.
   APP_VERSION: z.string().optional(),
   APP_REVISION: z.string().optional(),
+  // Automatic DXF checks (services/dxf-checker, issue #18). Without all three the
+  // check card says the checker isn't connected and uploads are refused.
+  /** e.g. http://dxf-checker.railway.internal:8080 — private network only. */
+  DXF_CHECKER_URL: blankIsUnset(z.string().url().optional()),
+  /** The same value as the service's DXF_CHECKER_SECRET; signs requests both ways. */
+  DXF_CHECKER_SECRET: blankIsUnset(z.string().min(32).optional()),
+  /** Where the checker posts results, e.g. http://bom.railway.internal:3000 */
+  APP_INTERNAL_URL: blankIsUnset(z.string().url().optional()),
 });
 
 const parsed = Schema.safeParse(process.env);

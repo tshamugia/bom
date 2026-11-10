@@ -216,6 +216,7 @@ export type UpdateKind =
   | "updated"
   | "created"
   | "file"
+  | "check"
   | "remark"
   | "remark-resolved"
   | "transmittal"
@@ -226,7 +227,7 @@ export type UpdateKind =
 export type RawUpdate = { id: string; at: Date; actorName: string | null; projectCode: string } & (
   | {
       source: "drawing-event";
-      kind: "comment" | "status" | "updated" | "created" | "file";
+      kind: "comment" | "status" | "updated" | "created" | "file" | "check";
       drawingId: string;
       code: string;
       name: string;
@@ -309,6 +310,9 @@ export function describeUpdate(u: RawUpdate): MyWorkUpdate {
     if (u.kind === "created") return { ...common, kind: "created", verb: "created", body: null };
     if (u.kind === "updated") return { ...common, kind: "updated", verb: "updated", body: u.body };
     if (u.kind === "file") return { ...common, kind: "file", verb: "changed the PDF of", body: u.body };
+    if (u.kind === "check") {
+      return { ...common, kind: "check", verb: "checked the DXF of", body: u.body, href: `/drawings/${u.drawingId}#dxf-check` };
+    }
 
     const from = u.fromStatus ? DRAWING_STATUS_LABEL[u.fromStatus] : "—";
     const to = u.toStatus ? DRAWING_STATUS_LABEL[u.toStatus] : "—";
@@ -335,6 +339,10 @@ export function describeUpdate(u: RawUpdate): MyWorkUpdate {
     };
     if (u.resolved) {
       return { ...common, kind: "remark-resolved", verb: "resolved your remark on", body: u.resolution || `“${u.body}”` };
+    }
+    // Nobody raised it: the automatic DXF check did.
+    if (u.remarkSource === "check") {
+      return { ...common, actorName: REMARK_SOURCE_LABEL.check, kind: "remark", verb: "raised a remark on", body: u.body };
     }
     return { ...common, kind: "remark", verb: `raised a ${REMARK_SOURCE_LABEL[u.remarkSource].toLowerCase()} remark on`, body: u.body };
   }

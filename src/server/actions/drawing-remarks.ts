@@ -4,10 +4,11 @@ import { z } from "zod";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import { drawingRemarks, drawings } from "@/db/schema";
-import { REMARK_SOURCES, REMARK_SOURCE_LABEL } from "@/lib/drawing-meta";
+import { MANUAL_REMARK_SOURCES, REMARK_SOURCE_LABEL } from "@/lib/drawing-meta";
 import { READ_ONLY_ERROR, canEdit } from "@/lib/roles";
 import { requireSession } from "../auth-context";
 import { audit } from "../audit";
+import { isUniqueViolation } from "../lib/db-errors";
 import { findDrawingRevision, findLatestRevision, revalidateDrawingViews } from "../lib/drawing-lookup";
 import type { DrawingActionResult } from "./drawings";
 
@@ -15,7 +16,8 @@ const fail = (error: string) => ({ ok: false as const, error });
 
 const AddInput = z.object({
   revisionId: z.string().min(1),
-  source: z.enum(REMARK_SOURCES),
+  // `check` remarks come only from the automatic DXF check.
+  source: z.enum(MANUAL_REMARK_SOURCES),
   body: z.string().trim().min(1).max(4000),
 });
 
@@ -104,10 +106,16 @@ export async function reopenDrawingRemark(input: { id: string }): Promise<Drawin
   if (!remark) return fail("Remark not found.");
   if (!remark.resolvedAt) return { ok: true };
 
-  await db
-    .update(drawingRemarks)
-    .set({ resolvedAt: null, resolvedById: null, resolvedInRevisionId: null, resolution: null })
-    .where(eq(drawingRemarks.id, id));
+  try {
+    await db
+      .update(drawingRemarks)
+      .set({ resolvedAt: null, resolvedById: null, resolvedInRevisionId: null, resolution: null })
+      .where(eq(drawingRemarks.id, id));
+  } catch (e) {
+    // One open automatic remark per rule: a later check already raised this one again.
+    if (isUniqueViolation(e)) return fail("The automatic check has already reopened this rule in a newer remark.");
+    throw e;
+  }
 
   revalidateDrawingViews(remark.drawingId, remark.projectId);
   await audit({

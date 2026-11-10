@@ -107,3 +107,9 @@ gh workflow run deploy.yml -f version=0.1.2
 - The GHCR packages `bom` and `bom-dxf-checker` are public, so Railway pulls
   them without credentials. The images hold no secrets; the runtime config is
   the Railway service variables.
+- Automatic DXF checks: the `bom` service needs `DXF_CHECKER_URL`
+  (`http://dxf-checker.railway.internal:8080`), `DXF_CHECKER_SECRET` (the same
+  value as on `dxf-checker`) and `APP_INTERNAL_URL` (its own private address,
+  `http://bom.railway.internal:<PORT>`); `dxf-checker` needs
+  `ALLOWED_DOWNLOAD_HOSTS` (the bucket host) and `ALLOWED_CALLBACK_HOSTS`
+  (`bom.railway.internal`). An admin then turns checks on in Settings → Drawings.

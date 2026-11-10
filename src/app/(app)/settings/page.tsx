@@ -48,7 +48,7 @@ export default async function SettingsPage() {
                 Drawings
               </div>
               <div className="mt-0.5 text-[12.5px] text-[var(--color-text-3)]">
-                Status email recipients and disciplines.
+                Status emails, reminders, PDFs, DXF checks and disciplines.
               </div>
             </div>
           </Link>

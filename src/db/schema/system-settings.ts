@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 
 export const SYSTEM_SETTINGS_ID = "system";
@@ -13,6 +13,8 @@ export const systemSettings = pgTable("system_settings", {
   drawingReminders: jsonb("drawing_reminders").notNull().$type<Record<string, unknown>>().default({}),
   /** From which status a revision's PDF can be uploaded — parsed with `parseDrawingFileGate`. */
   drawingFileGate: text("drawing_file_gate").notNull().default("approved"),
+  /** Automatic DXF checks (issue #18). Off until they have been tried on real drawings. */
+  drawingCheckEnabled: boolean("drawing_check_enabled").notNull().default(false),
   updatedById: text("updated_by_id").references(() => user.id, { onDelete: "set null" }),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

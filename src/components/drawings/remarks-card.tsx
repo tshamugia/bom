@@ -7,16 +7,30 @@ import { Button } from "@/components/ui/button";
 import { Badge, type Tone } from "@/components/ui/badge";
 import { Icon } from "@/components/icons";
 import { formatDateTime } from "@/lib/format";
-import { REMARK_SOURCES, REMARK_SOURCE_LABEL, type RemarkSource } from "@/lib/drawing-meta";
+import { MANUAL_REMARK_SOURCES, REMARK_SOURCE_LABEL, type RemarkSource } from "@/lib/drawing-meta";
+import { CHECK_SEVERITY_LABEL } from "@/lib/drawing-checks";
 import { addDrawingRemark, reopenDrawingRemark, resolveDrawingRemark } from "@/server/actions/drawing-remarks";
 import type { RemarkRow } from "@/server/queries/drawing-control";
 import { SELECT_CLASS, TEXTAREA_CLASS } from "./drawing-form-fields";
 import type { RevisionOption } from "./time-card";
 
-const SOURCE_TONE: Record<RemarkSource, Tone> = { client: "pink", site: "warning", internal: "gray" };
+const SOURCE_TONE: Record<RemarkSource, Tone> = { client: "pink", site: "warning", internal: "gray", check: "info" };
+
+type ManualSource = (typeof MANUAL_REMARK_SOURCES)[number];
+
+/** Automatic remarks name the rule they report; a WARNING is marked "To check" — some checks are heuristics. */
+function CheckTags({ r }: { r: RemarkRow }) {
+  if (r.source !== "check") return null;
+  return (
+    <>
+      {r.checkRuleId && <span className="mono muted text-[11.5px]">{r.checkRuleId}</span>}
+      {r.checkSeverity === "WARNING" && <Badge tone="warning">{CHECK_SEVERITY_LABEL.WARNING}</Badge>}
+    </>
+  );
+}
 
 function AddRemarkForm({ revisions, onDone }: { revisions: RevisionOption[]; onDone: () => void }) {
-  const [source, setSource] = useState<RemarkSource>("client");
+  const [source, setSource] = useState<ManualSource>("client");
   const [revisionId, setRevisionId] = useState(revisions[0]?.id ?? "");
   const [body, setBody] = useState("");
   const [pending, start] = useTransition();
@@ -38,8 +52,8 @@ function AddRemarkForm({ revisions, onDone }: { revisions: RevisionOption[]; onD
   return (
     <div className="grid gap-2 border-b border-[var(--color-line)] p-4">
       <div className="grid grid-cols-2 gap-2">
-        <select className={SELECT_CLASS} value={source} onChange={e => setSource(e.target.value as RemarkSource)} aria-label="Raised by">
-          {REMARK_SOURCES.map(s => <option key={s} value={s}>{REMARK_SOURCE_LABEL[s]}</option>)}
+        <select className={SELECT_CLASS} value={source} onChange={e => setSource(e.target.value as ManualSource)} aria-label="Raised by">
+          {MANUAL_REMARK_SOURCES.map(s => <option key={s} value={s}>{REMARK_SOURCE_LABEL[s]}</option>)}
         </select>
         <select className={SELECT_CLASS} value={revisionId} onChange={e => setRevisionId(e.target.value)} aria-label="Revision">
           {revisions.map(r => <option key={r.id} value={r.id}>On {r.label}</option>)}
@@ -83,8 +97,11 @@ function OpenRemark({ r, readOnly }: { r: RemarkRow; readOnly: boolean }) {
     <div className="grid gap-1.5 px-4 py-3" style={{ borderBottom: "1px solid var(--line-soft)" }}>
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone={SOURCE_TONE[r.source]}>{REMARK_SOURCE_LABEL[r.source]}</Badge>
+        <CheckTags r={r} />
         <span className="mono muted text-[11.5px]">{r.revisionLabel}</span>
-        <span className="muted text-[11.5px]">{r.raisedByName ?? "—"} · {formatDateTime(r.createdAt)}</span>
+        <span className="muted text-[11.5px]">
+          {r.source === "check" ? formatDateTime(r.createdAt) : <>{r.raisedByName ?? "—"} · {formatDateTime(r.createdAt)}</>}
+        </span>
         <span className="spacer" />
         {!resolving && !readOnly && (
           <button type="button" className="btn btn-sm" onClick={() => setResolving(true)}>
@@ -123,7 +140,7 @@ function ResolvedRemark({ r, readOnly }: { r: RemarkRow; readOnly: boolean }) {
         <span className="muted text-[11.5px]">
           {REMARK_SOURCE_LABEL[r.source]} · raised on {r.revisionLabel}
           {r.resolvedInRevisionNumber ? `, resolved in ${r.resolvedInRevisionLabel}` : ""}
-          {" "}by {r.resolvedByName ?? "—"}
+          {r.resolvedByName ? ` by ${r.resolvedByName}` : r.source === "check" ? " by the automatic check" : " by —"}
         </span>
         <span className="spacer" />
         {!readOnly && (
@@ -169,7 +186,7 @@ export function RemarksCard({
       <div className="card-head max-[701px]:flex-wrap">
         <div className="min-w-0">
           <h3 className="card-title">Remarks</h3>
-          <p className="card-sub">Comments from the client, the site or the team that the drawing has to address.</p>
+          <p className="card-sub">Comments from the client, the site or the team, and what the automatic DXF check found, that the drawing has to address.</p>
         </div>
         <span className="spacer" />
         {open.length > 0 && <Badge tone="warning">{open.length} open</Badge>}

@@ -1,14 +1,18 @@
 // Shared by the Drizzle schema, server actions and client components, so this
 // module must stay free of server-only and DB imports.
 
-/** Who raised a remark against a drawing revision. */
-export const REMARK_SOURCES = ["client", "site", "internal"] as const;
+/** Who raised a remark against a drawing revision; `check` is the automatic DXF check. */
+export const REMARK_SOURCES = ["client", "site", "internal", "check"] as const;
 export type RemarkSource = (typeof REMARK_SOURCES)[number];
+
+/** What people pick when they add a remark by hand — only the checker raises `check` remarks. */
+export const MANUAL_REMARK_SOURCES = ["client", "site", "internal"] as const satisfies readonly RemarkSource[];
 
 export const REMARK_SOURCE_LABEL: Record<RemarkSource, string> = {
   client: "Client",
   site: "Site",
   internal: "Internal",
+  check: "Automatic check",
 };
 
 /** Why a revision was issued to someone. */

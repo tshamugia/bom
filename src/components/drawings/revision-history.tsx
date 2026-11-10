@@ -62,6 +62,16 @@ function EventItem({ e, revisionLabel }: { e: DrawingEventRow; revisionLabel: st
           <div className="mt-1 text-[12.5px] text-[var(--color-text-2)] [overflow-wrap:anywhere]">{e.body}</div>
         </div>
       );
+    case "check":
+      // The actor is who uploaded the DXF; the result itself came from the checker.
+      return (
+        <div className="tl-item">
+          <div className="tl-dot" />
+          <div className="tl-title">Automatic DXF check</div>
+          {meta}
+          <div className="mt-1 text-[12.5px] text-[var(--color-text-2)] [overflow-wrap:anywhere]">{e.body}</div>
+        </div>
+      );
     case "comment":
       return (
         <div className="tl-item">
