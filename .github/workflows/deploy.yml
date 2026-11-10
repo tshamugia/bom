@@ -1,0 +1,70 @@
+# Deploys one image version to Railway production: dxf-checker first, then the
+# app (which runs its migrations at start). Called by release.yml; run it by
+# hand with an older version to roll back the images. A rollback does not undo
+# migrations.
+#
+# Needs the RAILWAY_TOKEN secret (a Railway project token for the production
+# environment) and, for the live-version check, the APP_URL variable.
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Image version already in GHCR, e.g. 0.1.2
+        type: string
+        required: true
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  railway:
+    name: Railway production
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: ${{ vars.APP_URL }}
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Deploy images
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          node scripts/railway-deploy.mjs \
+            "dxf-checker=ghcr.io/$owner/bom-dxf-checker:$VERSION" \
+            "bom=ghcr.io/$owner/bom:$VERSION"
+
+      - name: Check the live version
+        if: ${{ vars.APP_URL != '' }}
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          for i in $(seq 1 36); do
+            live="$(curl -fsS --max-time 10 "$APP_URL/api/health" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const j=JSON.parse(s);console.log(j.ok?j.version:"down")}catch{console.log("?")}})' || true)"
+            echo "live: ${live:-unreachable}"
+            if [ "$live" = "$VERSION" ]; then
+              echo "### Deployed $VERSION to $APP_URL" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::$APP_URL/api/health did not report $VERSION within 3 minutes"
+          exit 1

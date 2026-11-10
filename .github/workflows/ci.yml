@@ -1,0 +1,90 @@
+# Every pull request and every push to main: the app (lint, types, migrations,
+# Vitest) and the dxf-checker service (pytest), then both Docker images.
+# Images are pushed to GHCR only from main (`main`, `sha-…`); pull requests just
+# build them. Release tags call this workflow first (see release.yml).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  app:
+    name: App · lint, types, tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: bom
+          POSTGRES_PASSWORD: bom
+          POSTGRES_DB: bom_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U bom -d bom_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    # Throwaway values: src/lib/env.ts validates them at import. The server
+    # tests TRUNCATE every table, which is why they get their own database.
+    env:
+      DATABASE_URL: postgres://bom:bom@localhost:5432/bom_test
+      BETTER_AUTH_SECRET: ci-only-placeholder-secret-0123456789abcdef
+      BETTER_AUTH_URL: http://localhost:3000
+      NEXT_PUBLIC_BETTER_AUTH_URL: http://localhost:3000
+      AWS_REGION: us-east-1
+      S3_BUCKET: bom-ci
+      EMAIL_FROM: ci@example.com
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Lint
+        run: npm run lint
+      - name: Types
+        run: npx tsc --noEmit
+      - name: Migrations
+        # The same migrator the container runs at start (Dockerfile CMD).
+        run: node scripts/migrate.mjs
+      - name: Unit and server tests
+        run: npx vitest run
+
+  dxf-checker:
+    name: dxf-checker · pytest
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: services/dxf-checker
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: services/dxf-checker/requirements*.txt
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m pytest -q
+
+  images:
+    name: Images
+    needs: [app, dxf-checker]
+    # A release tag builds and pushes its own images in release.yml.
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+    uses: ./.github/workflows/images.yml
+    with:
+      push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    permissions:
+      contents: read
+      packages: write

@@ -22,6 +22,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Static design mockups, not app code (also left out of the Docker image).
+    "sample-designe/**",
   ]),
 ]);
 

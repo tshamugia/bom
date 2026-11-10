@@ -1,5 +1,8 @@
 # Phase C — Metrics & Lifecycle
 
+> **Historical plan (May 2026), kept for reference.** The current state is in `CLAUDE.md` and `README.md`; open work is tracked in GitHub issues.
+
+
 _Source: `docs/plan.md` §2.4, §2.5, §3 steps 15–18 · Priority: **P1–P2** · Estimate: ~2 days_
 
 ## Context

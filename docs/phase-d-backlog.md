@@ -1,5 +1,8 @@
 # Phase D — Backlog
 
+> **Historical plan (May 2026), kept for reference.** The current state is in `CLAUDE.md` and `README.md`; open work is tracked in GitHub issues.
+
+
 _Source: `docs/plan.md` §2.6, §2.7, §3 steps 19–23 · Priority: **P2–P3** · Estimate: multi-week_
 
 ## Context

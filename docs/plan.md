@@ -1,5 +1,8 @@
 # BOM Project — Implementation Plan
 
+> **Historical plan (May 2026), kept for reference.** The current state is in `CLAUDE.md` and `README.md`; open work is tracked in GitHub issues.
+
+
 _Last updated: 2026-05-06 · Branch: `main` (HEAD `1da19a5`)_
 
 This document tracks the gap between the current implementation on `main` and the intended product. It is the single source of truth for "what's left to build" — supersedes the deleted `docs/superpowers/plans/*` files.

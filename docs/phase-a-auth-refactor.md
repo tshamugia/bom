@@ -1,5 +1,8 @@
 # Phase A — Auth Refactor (Single-Tenant)
 
+> **Historical plan (May 2026), kept for reference.** The current state is in `CLAUDE.md` and `README.md`; open work is tracked in GitHub issues.
+
+
 _Source: `docs/plan.md` §2.1, §2.2, §3 steps 1–10 · Priority: **P0** · Estimate: 2–3 days_
 
 ## Context
