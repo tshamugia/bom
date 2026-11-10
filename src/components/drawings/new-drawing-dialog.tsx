@@ -92,7 +92,7 @@ export function NewDrawingDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>New drawing</DialogTitle>
-          <DialogDescription>The drawing starts at rev1 with status In Progress.</DialogDescription>
+          <DialogDescription>The drawing starts at P01 with status In Progress.</DialogDescription>
         </DialogHeader>
 
         <DrawingFormFields
@@ -112,7 +112,7 @@ export function NewDrawingDialog({
         />
         <div className="grid gap-1.5">
           <Label htmlFor="new-drawing-note">
-            rev1 note <span className="text-[var(--color-text-3)]">(optional)</span>
+            P01 note <span className="text-[var(--color-text-3)]">(optional)</span>
           </Label>
           <textarea
             id="new-drawing-note"

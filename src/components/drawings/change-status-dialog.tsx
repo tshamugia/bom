@@ -14,7 +14,7 @@ import { BlockedNote } from "@/components/help/blocked-note";
 import { HelpTip } from "@/components/help/help-tip";
 import {
   DRAWING_STATUSES, DRAWING_STATUS_LABEL, TRANSITION_ERROR_MESSAGE,
-  checkDrawingTransition, formatDrawingRevision, type DrawingStatus, type TransitionError,
+  checkDrawingTransition, type DrawingStatus, type TransitionError,
 } from "@/lib/drawing-status";
 import { changeDrawingStatus } from "@/server/actions/drawings";
 import { SELECT_CLASS, TEXTAREA_CLASS, type UserOption } from "./drawing-form-fields";
@@ -31,7 +31,7 @@ const STAND_IN_REVIEWER = "(stand-in reviewer)";
 
 export function ChangeStatusDialog({
   revisionId,
-  revisionNumber,
+  revisionLabel,
   status,
   ownerId,
   reviewerId,
@@ -40,7 +40,7 @@ export function ChangeStatusDialog({
   users,
 }: {
   revisionId: string;
-  revisionNumber: number;
+  revisionLabel: string;
   status: DrawingStatus;
   ownerId: string | null;
   reviewerId: string | null;
@@ -132,7 +132,7 @@ export function ChangeStatusDialog({
       />
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Change status of {formatDrawingRevision(revisionNumber)}</DialogTitle>
+          <DialogTitle>Change status of {revisionLabel}</DialogTitle>
           <DialogDescription>
             Currently <strong>{DRAWING_STATUS_LABEL[status]}</strong>. Everyone following the drawing gets an email with the revision note and your comment.{" "}
             <HelpTip topic="drawing-statuses" />

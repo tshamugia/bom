@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import { DRAWING_STATUSES, DRAWING_STATUS_LABEL, formatDrawingRevision } from "./drawing-status";
+import { DRAWING_STATUSES, DRAWING_STATUS_LABEL } from "./drawing-status";
 import { isOverdueOn, type DashboardDrawing, type DrawingSummary, type GroupSummary } from "./drawing-dashboard";
 import { formatBomRevision } from "./bom-revision";
 
@@ -24,7 +24,9 @@ export type OutdatedBomRow = {
   bomRevisionLetter: string;
   code: string;
   linkedNumber: number;
+  linkedLabel: string;
   latestNumber: number;
+  latestLabel: string;
 };
 
 const HEADER_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFEEF0F4" } };
@@ -234,7 +236,7 @@ export async function buildDashboardWorkbook(input: {
         d.code,
         d.name,
         d.disciplineName,
-        formatDrawingRevision(d.revisionNumber),
+        d.revisionLabel,
         DRAWING_STATUS_LABEL[d.status],
         d.ownerName,
         d.dueDate,
@@ -281,10 +283,10 @@ export async function buildDashboardWorkbook(input: {
     input.outdatedBoms.map(b => [
       b.projectCode,
       b.bomName,
-      b.bomRevisionLetter,
+      formatBomRevision(b.bomRevisionLetter),
       b.code,
-      formatDrawingRevision(b.linkedNumber),
-      formatDrawingRevision(b.latestNumber),
+      b.linkedLabel,
+      b.latestLabel,
     ]),
   );
 

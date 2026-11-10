@@ -24,6 +24,7 @@ function latestRevisions() {
       drawingId: drawingRevisions.drawingId,
       revisionId: drawingRevisions.id,
       number: drawingRevisions.number,
+      label: drawingRevisions.label,
       status: drawingRevisions.status,
     })
     .from(drawingRevisions)
@@ -38,6 +39,7 @@ export async function listTimeEntries(drawingId: string) {
       id: drawingTimeEntries.id,
       revisionId: drawingTimeEntries.revisionId,
       revisionNumber: drawingRevisions.number,
+      revisionLabel: drawingRevisions.label,
       userId: drawingTimeEntries.userId,
       userName: user.name,
       hours: drawingTimeEntries.hours,
@@ -67,6 +69,7 @@ export async function listRemarks(drawingId: string) {
       id: drawingRemarks.id,
       revisionId: drawingRemarks.revisionId,
       revisionNumber: raisedIn.number,
+      revisionLabel: raisedIn.label,
       source: drawingRemarks.source,
       body: drawingRemarks.body,
       raisedByName: raisedBy.name,
@@ -74,6 +77,7 @@ export async function listRemarks(drawingId: string) {
       resolvedAt: drawingRemarks.resolvedAt,
       resolvedByName: resolvedBy.name,
       resolvedInRevisionNumber: resolvedIn.number,
+      resolvedInRevisionLabel: resolvedIn.label,
       resolution: drawingRemarks.resolution,
     })
     .from(drawingRemarks)
@@ -96,6 +100,7 @@ export async function listTransmittals(drawingId: string) {
       id: drawingTransmittals.id,
       revisionId: drawingTransmittals.revisionId,
       revisionNumber: drawingRevisions.number,
+      revisionLabel: sql<string>`coalesce(${drawingTransmittals.revisionLabel}, ${drawingRevisions.label})`,
       purpose: drawingTransmittals.purpose,
       recipientUserId: drawingTransmittals.recipientUserId,
       recipientName: recipient.name,
@@ -136,7 +141,9 @@ export async function listBomLinksForDrawing(drawingId: string) {
       bomRevisionStatus: bomRevisions.status,
       isCurrentBomRevision: sql<boolean>`${current.revisionId} = ${bomRevisions.id}`,
       drawingRevisionNumber: drawingRevisions.number,
+      drawingRevisionLabel: drawingRevisions.label,
       checkedRevisionNumber: checked.number,
+      checkedRevisionLabel: checked.label,
       outdated: isOutdatedSql(impact.number, drawingRevisions.number, checked.number),
     })
     .from(bomRevisionDrawings)
@@ -173,12 +180,15 @@ export async function listDrawingLinksForBomRevision(bomRevisionId: string) {
       deleted: sql<boolean>`${drawings.deletedAt} IS NOT NULL`,
       linkedRevisionId: bomRevisionDrawings.drawingRevisionId,
       linkedRevisionNumber: drawingRevisions.number,
+      linkedRevisionLabel: drawingRevisions.label,
       linkedStatus: drawingRevisions.status,
       checkedRevisionNumber: checked.number,
+      checkedRevisionLabel: checked.label,
       checkedByName: checkedBy.name,
       checkedAt: bomRevisionDrawings.checkedAt,
       latestRevisionId: latest.revisionId,
       latestRevisionNumber: latest.number,
+      latestRevisionLabel: latest.label,
       latestStatus: latest.status,
       outdated: isOutdatedSql(impact.number, drawingRevisions.number, checked.number),
     })
@@ -199,6 +209,7 @@ export async function listDrawingLinksForBomRevision(bomRevisionId: string) {
       .select({
         drawingId: drawingRevisions.drawingId,
         number: drawingRevisions.number,
+        label: drawingRevisions.label,
         commitMessage: drawingRevisions.commitMessage,
         bomImpact: drawingRevisions.bomImpact,
       })
@@ -213,7 +224,7 @@ export async function listDrawingLinksForBomRevision(bomRevisionId: string) {
     ...r,
     newerRevisions: newer
       .filter(n => n.drawingId === r.drawingId)
-      .map(({ number, commitMessage, bomImpact }) => ({ number, commitMessage, bomImpact })),
+      .map(({ number, label, commitMessage, bomImpact }) => ({ number, label, commitMessage, bomImpact })),
   }));
 }
 
@@ -230,6 +241,7 @@ export async function listLinkableDrawings(projectId: string) {
       name: drawings.name,
       revisionId: latest.revisionId,
       revisionNumber: latest.number,
+      revisionLabel: latest.label,
       status: latest.status,
     })
     .from(drawings)

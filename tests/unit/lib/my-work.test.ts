@@ -22,7 +22,7 @@ function drawing(over: Partial<MyDrawing> = {}): MyDrawing {
     code: "CC-001",
     name: "Cameras",
     projectCode: "BS-001",
-    revisionNumber: 1,
+    revisionNumber: 1, revisionLabel: "P01",
     status: "in-progress",
     dueDate: null,
     reviewerName: null,
@@ -98,11 +98,11 @@ test("counts add up to the bell: to do + overdue + new updates", () => {
 test("groupBomTasks gives one task per BOM with each outdated drawing once", () => {
   const ref = {
     bomId: "b1", bomName: "Main BOM", projectId: "p1", projectCode: "BS-001", bomRevisionLetter: "2",
-    drawingId: "d2", code: "CC-002", linkedNumber: 1, latestNumber: 3,
+    drawingId: "d2", code: "CC-002", linkedNumber: 1, linkedLabel: "P01", latestNumber: 3, latestLabel: "P03",
   };
   const tasks = groupBomTasks([
     ref,
-    { ...ref, drawingId: "d1", code: "CC-001", linkedNumber: 2, latestNumber: 4 },
+    { ...ref, drawingId: "d1", code: "CC-001", linkedNumber: 2, linkedLabel: "P02", latestNumber: 4 },
     { ...ref },
     { ...ref, bomId: "b0", bomName: "Aux BOM" },
   ]);
@@ -131,7 +131,7 @@ describe("describeUpdate", () => {
     drawingId: "d1",
     code: "CC-001",
     name: "Cameras",
-    revisionNumber: 2,
+    revisionNumber: 2, revisionLabel: "P02",
     fromStatus: null,
     toStatus: null,
     body: "Check the lens",
@@ -141,7 +141,7 @@ describe("describeUpdate", () => {
 
   test("a comment links to the drawing's revisions", () => {
     expect(describeUpdate(event())).toMatchObject({
-      kind: "comment", actorName: "Nino", verb: "commented on", subject: "CC-001", subjectRev: "rev2",
+      kind: "comment", actorName: "Nino", verb: "commented on", subject: "CC-001", subjectRev: "P02",
       body: "Check the lens", context: "BS-001 · Cameras", href: "/drawings/d1#revisions",
     });
   });
@@ -164,7 +164,7 @@ describe("describeUpdate", () => {
     const base = { at, actorName: null, projectCode: "BS-001" };
     const remark = describeUpdate({
       ...base, source: "remark", id: "remark:1", resolved: false, drawingId: "d1", code: "CC-001", name: "Cameras",
-      revisionNumber: 1, remarkSource: "client", body: "Move camera 3", resolution: null,
+      revisionNumber: 1, revisionLabel: "P01", remarkSource: "client", body: "Move camera 3", resolution: null,
     });
     expect(remark).toMatchObject({
       kind: "remark", actorName: "Someone", verb: "raised a client remark on", body: "Move camera 3", href: "/drawings/d1#remarks",
@@ -172,27 +172,27 @@ describe("describeUpdate", () => {
 
     const resolved = describeUpdate({
       ...base, source: "remark", id: "resolved:1", resolved: true, drawingId: "d1", code: "CC-001", name: "Cameras",
-      revisionNumber: 1, remarkSource: "site", body: "Move camera 3", resolution: "Moved in rev2",
+      revisionNumber: 1, revisionLabel: "P01", remarkSource: "site", body: "Move camera 3", resolution: "Moved in rev2",
     });
     expect(resolved).toMatchObject({ kind: "remark-resolved", verb: "resolved your remark on", body: "Moved in rev2" });
 
     const issued = describeUpdate({
       ...base, source: "transmittal", id: "issued:1", drawingId: "d1", code: "CC-001", name: "Cameras",
-      revisionNumber: 3, purpose: "construction", note: "Site copy",
+      revisionNumber: 3, revisionLabel: "P03", purpose: "construction", note: "Site copy",
     });
-    expect(issued).toMatchObject({ verb: "issued you", subjectRev: "rev3", body: "For construction · “Site copy”" });
+    expect(issued).toMatchObject({ verb: "issued you", subjectRev: "P03", body: "For construction · “Site copy”" });
 
     const approvedBom = describeUpdate({
       ...base, source: "bom-status", id: "bom-status:1", bomId: "b1", projectId: "p1", bomName: "Main BOM",
       revisionLetter: "2", status: "approved", comment: "Client signed",
     });
     expect(approvedBom).toMatchObject({
-      kind: "bom-status", verb: "set Approved on", subject: "Main BOM", subjectRev: "Rev2", href: "/builder/p1/b1",
+      kind: "bom-status", verb: "set Approved on", subject: "Main BOM", subjectRev: "P02", href: "/builder/p1/b1",
     });
 
     const handed = describeUpdate({
       ...base, source: "bom-owner", id: "bom-owner:1", bomId: "b1", projectId: "p1", bomName: "Main BOM", revisionLetter: "3",
     });
-    expect(handed).toMatchObject({ kind: "bom-owner", verb: "handed you", subjectRev: "Rev3" });
+    expect(handed).toMatchObject({ kind: "bom-owner", verb: "handed you", subjectRev: "P03" });
   });
 });

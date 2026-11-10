@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { formatDate } from "@/lib/format";
 import { formatHours, roundHours } from "@/lib/drawing-meta";
-import { DRAWING_STATUSES, DRAWING_STATUS_LABEL, formatDrawingRevision } from "@/lib/drawing-status";
+import { DRAWING_STATUSES, DRAWING_STATUS_LABEL } from "@/lib/drawing-status";
 import type { DrawingSummary, GroupSummary, StatusCounts } from "@/lib/drawing-dashboard";
 import type { OutdatedBomReference } from "@/server/queries/drawing-dashboard";
 import { Meter } from "@/components/dashboard/meter";
@@ -53,12 +53,12 @@ function Empty({ cols, text }: { cols: number; text: string }) {
   );
 }
 
-function DrawingCell({ d }: { d: { id: string; code: string; name: string; projectCode: string; revisionNumber: number } }) {
+function DrawingCell({ d }: { d: { id: string; code: string; name: string; projectCode: string; revisionLabel: string } }) {
   return (
     <td className="l-title">
       <Link href={`/drawings/${d.id}`} style={{ color: "inherit" }}>
         <span className="mono" style={{ fontWeight: 600 }}>{d.code}</span>{" "}
-        <span className="mono muted">{formatDrawingRevision(d.revisionNumber)}</span>
+        <span className="mono muted">{d.revisionLabel}</span>
         <div style={{ fontSize: 11.5 }} className="muted">{d.projectCode} · {d.name}</div>
       </Link>
     </td>
@@ -271,8 +271,8 @@ export function OutdatedBomTable({ rows }: { rows: OutdatedBomReference[] }) {
                 <div className="muted" style={{ fontSize: 11.5 }}>{r.projectCode} · {formatBomRevision(r.bomRevisionLetter)}</div>
               </td>
               <td className="mono l-meta"><Link href={`/drawings/${r.drawingId}`} style={{ color: "inherit" }}>{r.code}</Link></td>
-              <td className="mono l-meta" style={{ color: "var(--red)" }}><span className="min-[701px]:hidden">built from </span>{formatDrawingRevision(r.linkedNumber)}</td>
-              <td className="mono l-meta"><span className="min-[701px]:hidden">current </span>{formatDrawingRevision(r.latestNumber)}</td>
+              <td className="mono l-meta" style={{ color: "var(--red)" }}><span className="min-[701px]:hidden">built from </span>{r.linkedLabel}</td>
+              <td className="mono l-meta"><span className="min-[701px]:hidden">current </span>{r.latestLabel}</td>
             </tr>
           ))}
         </tbody>

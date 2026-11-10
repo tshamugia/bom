@@ -38,8 +38,28 @@ export function isClosedStatus(status: DrawingStatus): boolean {
   return CLOSED.has(status);
 }
 
-export function formatDrawingRevision(n: number): string {
-  return `rev${n}`;
+/**
+ * Statuses that make a revision a C revision (NAMING §6): the client approved it.
+ * The same set as "closed" today, kept apart because the two rules may drift.
+ */
+export function isCStatus(status: DrawingStatus): boolean {
+  return CLOSED.has(status);
+}
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+/**
+ * What people call a revision: P01, P02… until the drawing is approved, C01,
+ * C02… from then on. Mirrors the generated `drawing_revision.label` column —
+ * use the column when you have it; this is for numbers the client works out.
+ */
+export function revisionLabel(number: number, cNumber: number | null): string {
+  return cNumber != null ? `C${pad2(cNumber)}` : `P${pad2(number)}`;
+}
+
+/** The label the next revision of a drawing gets: C once any revision is C, P otherwise. */
+export function nextRevisionLabel(latest: { number: number; cNumber: number | null }): string {
+  return latest.cNumber != null ? `C${pad2(latest.cNumber + 1)}` : `P${pad2(latest.number + 1)}`;
 }
 
 export type TransitionInput = {

@@ -50,10 +50,12 @@ test("a member records the client's approval with who, when and the comment", as
   expect(rev.statusChangedById).toBe(u.id);
   expect(rev.statusChangedAt).toBeInstanceOf(Date);
   expect(rev.statusComment).toBe("Client email of 5 Oct");
+  // NAMING §6: the client's approval turns the P revision into C01.
+  expect(rev.letter).toBe("C01");
 
   const [entry] = await auditOf("bom.status.changed");
   expect(entry.actorId).toBe(u.id);
-  expect(entry.summary).toBe("Main BOM Rev1: Committed → Approved — Client email of 5 Oct");
+  expect(entry.summary).toBe("Main BOM P01 (now C01): Committed → Approved — Client email of 5 Oct");
   expect(entry.payload).toMatchObject({ revisionId: s.revisionId, from: "committed", to: "approved", comment: "Client email of 5 Oct" });
 
   expect(await getActiveRevision(s.bomId)).toMatchObject({

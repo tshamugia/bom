@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { formatDrawingRevision, isDrawingOverdue, type DrawingStatus } from "@/lib/drawing-status";
+import { isDrawingOverdue, type DrawingStatus } from "@/lib/drawing-status";
 import { formatHours, roundHours } from "@/lib/drawing-meta";
 import { DrawingStatusBadge } from "./drawing-status-badge";
 
@@ -14,6 +14,7 @@ export type DrawingTableRow = {
   disciplineName: string | null;
   ownerName: string | null;
   revisionNumber: number;
+  revisionLabel: string;
   status: DrawingStatus;
   reviewerName: string | null;
   dueDate: string | null;
@@ -110,7 +111,7 @@ export function DrawingsTable({
                 )}
                 <td className="mono l-title" style={{ whiteSpace: "nowrap" }}>
                   <Link href={`/drawings/${r.id}`} style={{ color: "inherit", fontWeight: 600 }}>{r.code}</Link>
-                  <span className="muted min-[701px]:hidden"> {formatDrawingRevision(r.revisionNumber)}</span>
+                  <span className="muted min-[701px]:hidden"> {r.revisionLabel}</span>
                 </td>
                 <td className="l-line">
                   <Link href={`/drawings/${r.id}`} style={{ color: "inherit", fontWeight: 500 }}>{r.name}</Link>
@@ -128,7 +129,7 @@ export function DrawingsTable({
                   </td>
                 )}
                 <td className="muted l-meta">{r.disciplineName ?? "—"}</td>
-                <td className="mono muted l-hide">{formatDrawingRevision(r.revisionNumber)}</td>
+                <td className="mono muted l-hide">{r.revisionLabel}</td>
                 <td className="l-aside">
                   <DrawingStatusBadge status={r.status} />
                   {r.status === "need-approval" && r.reviewerName && (

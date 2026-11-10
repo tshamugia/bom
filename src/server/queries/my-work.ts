@@ -47,6 +47,7 @@ function latestRevisions() {
       drawingId: drawingRevisions.drawingId,
       revisionId: drawingRevisions.id,
       number: drawingRevisions.number,
+      label: drawingRevisions.label,
       status: drawingRevisions.status,
       reviewerId: drawingRevisions.reviewerId,
     })
@@ -87,6 +88,7 @@ async function loadApprovals(userId: string): Promise<ApprovalTask[]> {
       projectCode: projects.code,
       revisionId: latest.revisionId,
       revisionNumber: latest.number,
+      revisionLabel: latest.label,
       ownerName: owner.name,
     })
     .from(drawings)
@@ -112,6 +114,7 @@ async function loadMyDrawings(userId: string): Promise<MyDrawing[]> {
       projectCode: projects.code,
       revisionId: latest.revisionId,
       revisionNumber: latest.number,
+      revisionLabel: latest.label,
       status: latest.status,
       dueDate: drawings.dueDate,
       reviewerName: reviewer.name,
@@ -190,6 +193,7 @@ async function loadUpdates(userId: string, since: Date): Promise<MyWorkUpdate[]>
     name: drawings.name,
     projectCode: projects.code,
     revisionNumber: drawingRevisions.number,
+    revisionLabel: drawingRevisions.label,
   };
 
   const [events, raised, resolved, issued, bomStatus, bomOwner] = await Promise.all([
@@ -257,6 +261,7 @@ async function loadUpdates(userId: string, since: Date): Promise<MyWorkUpdate[]>
     db
       .select({
         ...drawingColumns,
+        revisionLabel: sql<string>`coalesce(${drawingTransmittals.revisionLabel}, ${drawingRevisions.label})`,
         id: drawingTransmittals.id,
         at: drawingTransmittals.createdAt,
         actorName: actor.name,

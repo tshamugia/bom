@@ -1,6 +1,6 @@
 import { Icon } from "@/components/icons";
 import { formatDateTime } from "@/lib/format";
-import { formatDrawingRevision, type DrawingStatus } from "@/lib/drawing-status";
+import { type DrawingStatus } from "@/lib/drawing-status";
 import { drawingFileHref, drawingFileName, formatFileSize } from "@/lib/drawing-files";
 import type { DrawingFileRow } from "@/server/queries/drawing-files";
 import type { DrawingEventRow, DrawingRevisionRow } from "@/server/queries/drawings";
@@ -89,7 +89,7 @@ function RevisionCard({
   isLatest: boolean;
   readOnly: boolean;
 }) {
-  const label = formatDrawingRevision(rev.number);
+  const label = rev.label;
   return (
     <>
       <div className="grid gap-1 px-4 pt-3 text-[12.5px]">
@@ -103,7 +103,7 @@ function RevisionCard({
         {file && !readOnly && (
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <Icon.Doc className="ico shrink-0 text-[var(--color-text-3)]" aria-hidden />
-            <span className="mono">{drawingFileName(drawingCode, rev.number)}</span>
+            <span className="mono">{drawingFileName(drawingCode, file.revisionLabel ?? rev.label)}</span>
             <span className="muted">{formatFileSize(file.sizeBytes)}</span>
             <a href={drawingFileHref(file.id)} target="_blank" rel="noopener" className="hover:underline">Open</a>
             <a href={drawingFileHref(file.id, true)} className="hover:underline">Download</a>
@@ -162,7 +162,7 @@ export function RevisionHistory({
         const isLatest = i === 0;
         const head = (
           <div className="flex flex-wrap items-center gap-2.5">
-            <span className="mono text-[13px] font-semibold">{formatDrawingRevision(rev.number)}</span>
+            <span className="mono text-[13px] font-semibold">{rev.label}</span>
             <DrawingStatusBadge status={rev.status} />
             <span className="pill">{isLatest ? "Current" : "Locked"}</span>
             {!readOnly && !rev.bomImpact && rev.number > 1 && <span className="pill">No BOM change</span>}

@@ -5,20 +5,36 @@ import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { projects } from "@/db/schema";
-import { ProjectInput, ProjectPatch, type ProjectInput as ProjectInputType, type ProjectPatch as ProjectPatchType } from "@/lib/schemas/project";
+import {
+  CodeLetters, CodeYear, ProjectInput, ProjectPatch,
+  type ProjectInput as ProjectInputType, type ProjectPatch as ProjectPatchType,
+} from "@/lib/schemas/project";
+import { projectCodeLetters, projectCodeYear } from "@/lib/codes";
 import { EDITOR_ROLES } from "@/lib/roles";
 import { requireRole } from "../auth-context";
 import { audit } from "../audit";
-import { lockProjectCodes, nextProjectCode } from "../lib/codes";
+import { freeProjectCode, isProjectCodeTaken, lockProjectCodes } from "../lib/codes";
 
 export async function createProject(input: ProjectInputType) {
-  const data = ProjectInput.parse(input);
+  const { codeYear, codeLetters, ...data } = ProjectInput.parse(input);
   const session = await requireRole(...EDITOR_ROLES);
+  const year = codeYear ?? projectCodeYear();
   const project = await db.transaction(async tx => {
     await lockProjectCodes(tx);
+    let code: string | null;
+    if (codeLetters) {
+      // The creator chose these letters and saw them free; someone may have taken them since.
+      code = `${year}${codeLetters}`;
+      if (await isProjectCodeTaken(tx, code)) {
+        throw new Error(`Project code ${code} is already used — choose other letters.`);
+      }
+    } else {
+      code = await freeProjectCode(tx, year, data.name);
+      if (!code) throw new Error("Every code from this name is taken — type the letters yourself.");
+    }
     const [row] = await tx.insert(projects).values({
       ...data,
-      code: await nextProjectCode(tx, data.name),
+      code,
       clientName: data.clientName || null,
       ownerId: data.ownerId ?? session.user.id,
     }).returning();
@@ -36,13 +52,25 @@ export async function createProject(input: ProjectInputType) {
   return project;
 }
 
-const SuggestInput = z.object({ name: z.string().trim().max(200) });
+const CheckInput = z.object({
+  name: z.string().trim().max(200),
+  year: CodeYear.optional(),
+  letters: CodeLetters.optional(),
+});
 
-/** The code a new project with this name would get — the New project dialog shows it before saving. */
-export async function suggestProjectCode(input: z.infer<typeof SuggestInput>) {
-  const { name } = SuggestInput.parse(input);
+export type ProjectCodeCheck = { code: string; taken: boolean; alternative: string | null };
+
+/**
+ * Whether the code the New project dialog shows is free — the letters typed,
+ * or the ones suggested from the name — and a free one from the same name when not.
+ */
+export async function checkProjectCode(input: z.infer<typeof CheckInput>): Promise<ProjectCodeCheck | null> {
+  const { name, year = projectCodeYear(), letters } = CheckInput.parse(input);
   await requireRole(...EDITOR_ROLES);
-  return name ? nextProjectCode(db, name) : "";
+  if (!name && !letters) return null;
+  const code = `${year}${letters ?? projectCodeLetters(name)}`;
+  const taken = await isProjectCodeTaken(db, code);
+  return { code, taken, alternative: taken ? await freeProjectCode(db, year, name) : null };
 }
 
 export async function updateProject(input: ProjectPatchType) {

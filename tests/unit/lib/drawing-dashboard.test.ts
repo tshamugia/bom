@@ -16,7 +16,7 @@ function d(overrides: Partial<DashboardDrawing> = {}): DashboardDrawing {
     disciplineName: "ELV",
     ownerId: "u1",
     ownerName: "Nino",
-    revisionNumber: 1,
+    revisionNumber: 1, revisionLabel: "P01",
     status: "in-progress",
     reviewerName: null,
     dueDate: null,

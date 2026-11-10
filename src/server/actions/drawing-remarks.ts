@@ -5,7 +5,6 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import { drawingRemarks, drawings } from "@/db/schema";
 import { REMARK_SOURCES, REMARK_SOURCE_LABEL } from "@/lib/drawing-meta";
-import { formatDrawingRevision } from "@/lib/drawing-status";
 import { READ_ONLY_ERROR, canEdit } from "@/lib/roles";
 import { requireSession } from "../auth-context";
 import { audit } from "../audit";
@@ -40,7 +39,7 @@ export async function addDrawingRemark(input: z.infer<typeof AddInput>): Promise
     kind: "drawing.remark.added",
     refType: "drawing",
     refId: rev.drawingId,
-    summary: `${REMARK_SOURCE_LABEL[data.source]} remark on ${rev.code} ${formatDrawingRevision(rev.number)}`,
+    summary: `${REMARK_SOURCE_LABEL[data.source]} remark on ${rev.code} ${rev.label}`,
     payload: { projectId: rev.projectId, revisionId: rev.id, source: data.source },
   });
   return { ok: true };
@@ -92,7 +91,7 @@ export async function resolveDrawingRemark(input: z.infer<typeof ResolveInput>):
     kind: "drawing.remark.resolved",
     refType: "drawing",
     refId: remark.drawingId,
-    summary: `Remark on ${remark.code} resolved${latest ? ` in ${formatDrawingRevision(latest.number)}` : ""}`,
+    summary: `Remark on ${remark.code} resolved${latest ? ` in ${latest.label}` : ""}`,
     payload: { projectId: remark.projectId, remarkId: data.id },
   });
   return { ok: true };

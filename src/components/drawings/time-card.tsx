@@ -13,12 +13,12 @@ import { Label } from "@/components/ui/label";
 import { Icon } from "@/components/icons";
 import { formatDate } from "@/lib/format";
 import { formatHours, hoursVariancePct } from "@/lib/drawing-meta";
-import { formatDrawingRevision, todayIso } from "@/lib/drawing-status";
+import { todayIso } from "@/lib/drawing-status";
 import { deleteDrawingTime, logDrawingTime } from "@/server/actions/drawing-time";
 import type { TimeEntryRow } from "@/server/queries/drawing-control";
 import { SELECT_CLASS, TEXTAREA_CLASS, parseHours } from "./drawing-form-fields";
 
-export type RevisionOption = { id: string; number: number };
+export type RevisionOption = { id: string; number: number; label: string };
 
 function LogTimeDialog({ revisions }: { revisions: RevisionOption[] }) {
   const latest = revisions[0];
@@ -94,7 +94,7 @@ function LogTimeDialog({ revisions }: { revisions: RevisionOption[] }) {
               <Label htmlFor="time-rev">Revision</Label>
               <select id="time-rev" className={SELECT_CLASS} value={revisionId} onChange={e => setRevisionId(e.target.value)}>
                 {revisions.map(r => (
-                  <option key={r.id} value={r.id}>{formatDrawingRevision(r.number)}</option>
+                  <option key={r.id} value={r.id}>{r.label}</option>
                 ))}
               </select>
             </div>
@@ -202,7 +202,7 @@ export function TimeCard({
           <div className="flex flex-wrap gap-1.5">
             {perRevision.map(r => (
               <span key={r.id} className="pill">
-                <span className="mono">{formatDrawingRevision(r.number)}</span> {formatHours(r.hours)}
+                <span className="mono">{r.label}</span> {formatHours(r.hours)}
               </span>
             ))}
           </div>
@@ -228,7 +228,7 @@ export function TimeCard({
                     {e.userName ?? "—"}
                     {e.note && <div className="muted max-[701px]:[overflow-wrap:anywhere]" style={{ fontSize: 11.5 }}>{e.note}</div>}
                   </td>
-                  <td className="mono muted l-meta">{formatDrawingRevision(e.revisionNumber)}</td>
+                  <td className="mono muted l-meta">{e.revisionLabel}</td>
                   <td className="num l-aside">{formatHours(e.hours)}</td>
                   {!readOnly && (
                     <td className="l-aside" style={{ width: 40 }}>

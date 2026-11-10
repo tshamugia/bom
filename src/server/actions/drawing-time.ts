@@ -5,7 +5,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import { drawingRevisions, drawingTimeEntries, drawings } from "@/db/schema";
 import { MAX_ENTRY_HOURS, formatHours } from "@/lib/drawing-meta";
-import { formatDrawingRevision, todayIso } from "@/lib/drawing-status";
+import { todayIso } from "@/lib/drawing-status";
 import { READ_ONLY_ERROR, canEdit, roleOf } from "@/lib/roles";
 import { requireSession } from "../auth-context";
 import { audit } from "../audit";
@@ -46,7 +46,7 @@ export async function logDrawingTime(input: z.infer<typeof LogInput>): Promise<D
     kind: "drawing.time.logged",
     refType: "drawing",
     refId: rev.drawingId,
-    summary: `${formatHours(hours)} logged on ${rev.code} ${formatDrawingRevision(rev.number)}`,
+    summary: `${formatHours(hours)} logged on ${rev.code} ${rev.label}`,
     payload: { projectId: rev.projectId, revisionId: rev.id, hours, workDate: data.workDate },
   });
   return { ok: true };
@@ -67,6 +67,7 @@ export async function deleteDrawingTime(input: { id: string }): Promise<DrawingA
       code: drawings.code,
       projectId: drawings.projectId,
       revisionNumber: drawingRevisions.number,
+      revisionLabel: drawingRevisions.label,
     })
     .from(drawingTimeEntries)
     .innerJoin(drawings, eq(drawings.id, drawingTimeEntries.drawingId))
@@ -85,7 +86,7 @@ export async function deleteDrawingTime(input: { id: string }): Promise<DrawingA
     kind: "drawing.time.deleted",
     refType: "drawing",
     refId: entry.drawingId,
-    summary: `${formatHours(entry.hours)} removed from ${entry.code} ${formatDrawingRevision(entry.revisionNumber)}`,
+    summary: `${formatHours(entry.hours)} removed from ${entry.code} ${entry.revisionLabel}`,
     payload: { projectId: entry.projectId, entryId: id, hours: entry.hours },
   });
   return { ok: true };

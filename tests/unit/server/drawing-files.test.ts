@@ -40,7 +40,7 @@ beforeEach(async () => {
   store.clear();
 });
 
-/** A drawing owned by the signed-in member, with rev1 in `status`. */
+/** A drawing owned by the signed-in member, with its first revision (P01) in `status`. */
 async function setup(status: DrawingStatus = "approved-a") {
   const { user: owner } = await mockSession("member");
   const [p] = await db.insert(projects).values({ code: "HLT", name: "Hilton" }).returning();
@@ -67,13 +67,13 @@ test("the owner uploads the PDF of an approved revision, filed under project, dr
 
   const [file] = await db.select().from(drawingFiles);
   expect(file).toMatchObject({ status: "ready", originalName: "layout final.pdf", sizeBytes: PDF.length, archivedAt: null });
-  expect(file.objectKey).toMatch(/^drawings\/HLT\/ELV-101\/rev1\/ELV-101_rev1_\w+\.pdf$/);
+  expect(file.objectKey).toMatch(/^drawings\/HLT\/ELV-101\/P01\/ELV-101_P01_\w+\.pdf$/);
   expect(store.has(file.objectKey)).toBe(true);
 
   const [event] = await db.select().from(drawingEvents).where(eq(drawingEvents.drawingId, drawing.id));
   expect(event).toMatchObject({ kind: "file", revisionId: rev.id, body: `Uploaded layout final.pdf (${PDF.length} B)` });
   const [log] = await db.select().from(auditLog).where(eq(auditLog.kind, "drawing.file.uploaded"));
-  expect(log.summary).toBe("ELV-101 rev1 PDF uploaded");
+  expect(log.summary).toBe("ELV-101 P01 PDF uploaded");
 });
 
 test("a revision the client hasn't approved takes no PDF under the default rule", async () => {
@@ -174,11 +174,11 @@ test("downloads go through a short-lived bucket link named after the drawing", a
   await mockSession("viewer");
   const opened = await get(file.id);
   expect(opened.status).toBe(302);
-  expect(opened.headers.get("location")).toBe(`https://bucket.example/${file.objectKey}?as=inline&name=ELV-101_rev1.pdf`);
+  expect(opened.headers.get("location")).toBe(`https://bucket.example/${file.objectKey}?as=inline&name=ELV-101_P01.pdf`);
   expect((await get(file.id, "?download=1")).headers.get("location")).toContain("as=attachment");
 
   const logs = await db.select().from(auditLog).where(eq(auditLog.kind, "drawing.file.downloaded"));
-  expect(logs.map(l => l.summary)).toEqual(["ELV-101 rev1 PDF opened", "ELV-101 rev1 PDF downloaded"]);
+  expect(logs.map(l => l.summary)).toEqual(["ELV-101 P01 PDF opened", "ELV-101 P01 PDF downloaded"]);
 
   // Signed out (e.g. a link from an email): sign in, then land on the drawing.
   vi.mocked(requireSession).mockRejectedValueOnce(new Error("UNAUTHENTICATED"));

@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/icons";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { formatDrawingRevision } from "@/lib/drawing-status";
 import { TRANSMITTAL_PURPOSE_LABEL } from "@/lib/drawing-meta";
 import { drawingFileHref } from "@/lib/drawing-files";
 import type { listBomSends, listIssuedTransmittals } from "@/server/queries/status-overview";
@@ -115,7 +114,7 @@ export function IssuedDrawingsTable({ rows, userId }: { rows: Issued[]; userId: 
                 <tr key={r.id}>
                   <td className="mono l-title" style={{ whiteSpace: "nowrap" }}>
                     <Link href={`/drawings/${r.drawingId}`} style={{ color: "inherit", fontWeight: 600 }}>{r.code}</Link>{" "}
-                    <span className="muted">{formatDrawingRevision(r.revisionNumber)}</span>
+                    <span className="muted">{r.revisionLabel}</span>
                     <div className="muted max-[701px]:hidden" style={{ fontSize: 11 }}>{r.projectCode}</div>
                   </td>
                   <td className="l-line">
@@ -139,7 +138,7 @@ export function IssuedDrawingsTable({ rows, userId }: { rows: Issued[]; userId: 
                           target="_blank"
                           rel="noopener"
                           className="btn btn-icon btn-ghost"
-                          aria-label={`Open the PDF of ${r.code} ${formatDrawingRevision(r.revisionNumber)}`}
+                          aria-label={`Open the PDF of ${r.code} ${r.revisionLabel}`}
                           title="Open PDF"
                         >
                           <Icon.Doc className="ico" />

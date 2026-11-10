@@ -2,7 +2,7 @@
 // route and client components, so this module must stay free of server-only
 // and DB imports.
 
-import { DRAWING_STATUS_LABEL, formatDrawingRevision, type DrawingStatus } from "./drawing-status";
+import { DRAWING_STATUS_LABEL, type DrawingStatus } from "./drawing-status";
 
 /**
  * The status from which a revision's PDF can be uploaded, sent and seen by
@@ -110,19 +110,20 @@ function keySegment(s: string): string {
   return s.normalize("NFKD").replace(/[^A-Za-z0-9._-]+/g, "-").replace(/-{2,}/g, "-").replace(/^[-.]+|[-.]+$/g, "") || "_";
 }
 
-/** The name people download, whatever the engineer called the file: `ELV-101_rev3.pdf`. */
-export function drawingFileName(code: string, revisionNumber: number): string {
-  return `${fileNameSafe(code)}_${formatDrawingRevision(revisionNumber)}.pdf`;
+/** The name people download, whatever the engineer called the file: `ELV-101_P03.pdf`. */
+export function drawingFileName(code: string, revisionLabel: string): string {
+  return `${fileNameSafe(code)}_${revisionLabel}.pdf`;
 }
 
 /**
- * Where the PDF lives in the bucket — `drawings/<project>/<drawing>/rev3/<drawing>_rev3_<id>.pdf`.
+ * Where the PDF lives in the bucket — `drawings/<project>/<drawing>/C01/<drawing>_C01_<id>.pdf`
+ * (files uploaded before the P/C labels sit under `rev3/`).
  * The id keeps every upload under its own key: Railway buckets have no
  * versioning, so nothing may ever be overwritten. Renaming a project or
  * drawing doesn't move files already stored; the database row is the record.
  */
-export function drawingFileKey(i: { projectCode: string; drawingCode: string; revisionNumber: number; fileId: string }): string {
-  const rev = formatDrawingRevision(i.revisionNumber);
+export function drawingFileKey(i: { projectCode: string; drawingCode: string; revisionLabel: string; fileId: string }): string {
+  const rev = keySegment(i.revisionLabel);
   const drawing = keySegment(i.drawingCode);
   return `drawings/${keySegment(i.projectCode)}/${drawing}/${rev}/${drawing}_${rev}_${keySegment(i.fileId)}.pdf`;
 }

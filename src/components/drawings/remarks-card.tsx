@@ -8,7 +8,6 @@ import { Badge, type Tone } from "@/components/ui/badge";
 import { Icon } from "@/components/icons";
 import { formatDateTime } from "@/lib/format";
 import { REMARK_SOURCES, REMARK_SOURCE_LABEL, type RemarkSource } from "@/lib/drawing-meta";
-import { formatDrawingRevision } from "@/lib/drawing-status";
 import { addDrawingRemark, reopenDrawingRemark, resolveDrawingRemark } from "@/server/actions/drawing-remarks";
 import type { RemarkRow } from "@/server/queries/drawing-control";
 import { SELECT_CLASS, TEXTAREA_CLASS } from "./drawing-form-fields";
@@ -43,7 +42,7 @@ function AddRemarkForm({ revisions, onDone }: { revisions: RevisionOption[]; onD
           {REMARK_SOURCES.map(s => <option key={s} value={s}>{REMARK_SOURCE_LABEL[s]}</option>)}
         </select>
         <select className={SELECT_CLASS} value={revisionId} onChange={e => setRevisionId(e.target.value)} aria-label="Revision">
-          {revisions.map(r => <option key={r.id} value={r.id}>On {formatDrawingRevision(r.number)}</option>)}
+          {revisions.map(r => <option key={r.id} value={r.id}>On {r.label}</option>)}
         </select>
       </div>
       <textarea
@@ -84,7 +83,7 @@ function OpenRemark({ r, readOnly }: { r: RemarkRow; readOnly: boolean }) {
     <div className="grid gap-1.5 px-4 py-3" style={{ borderBottom: "1px solid var(--line-soft)" }}>
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone={SOURCE_TONE[r.source]}>{REMARK_SOURCE_LABEL[r.source]}</Badge>
-        <span className="mono muted text-[11.5px]">{formatDrawingRevision(r.revisionNumber)}</span>
+        <span className="mono muted text-[11.5px]">{r.revisionLabel}</span>
         <span className="muted text-[11.5px]">{r.raisedByName ?? "—"} · {formatDateTime(r.createdAt)}</span>
         <span className="spacer" />
         {!resolving && !readOnly && (
@@ -122,8 +121,8 @@ function ResolvedRemark({ r, readOnly }: { r: RemarkRow; readOnly: boolean }) {
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone="success">Resolved</Badge>
         <span className="muted text-[11.5px]">
-          {REMARK_SOURCE_LABEL[r.source]} · raised on {formatDrawingRevision(r.revisionNumber)}
-          {r.resolvedInRevisionNumber ? `, resolved in ${formatDrawingRevision(r.resolvedInRevisionNumber)}` : ""}
+          {REMARK_SOURCE_LABEL[r.source]} · raised on {r.revisionLabel}
+          {r.resolvedInRevisionNumber ? `, resolved in ${r.resolvedInRevisionLabel}` : ""}
           {" "}by {r.resolvedByName ?? "—"}
         </span>
         <span className="spacer" />

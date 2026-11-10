@@ -1,0 +1,2 @@
+ALTER TYPE "public"."audit_kind" ADD VALUE 'project.code.changed';--> statement-breakpoint
+CREATE UNIQUE INDEX "project_code_std_uq" ON "project" USING btree ("code") WHERE "project"."code" ~ '^[0-9]{2}[A-Z]{3}$';

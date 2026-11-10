@@ -98,17 +98,17 @@ test("looksLikePdf finds the PDF header, allowing a little junk before it", () =
 
 describe("names", () => {
   test("downloads are named after the drawing code and revision", () => {
-    expect(drawingFileName("ELV-101", 3)).toBe("ELV-101_rev3.pdf");
-    expect(drawingFileName("A/B:1", 2)).toBe("A-B-1_rev2.pdf");
+    expect(drawingFileName("ELV-101", "P03")).toBe("ELV-101_P03.pdf");
+    expect(drawingFileName("A/B:1", "C02")).toBe("A-B-1_C02.pdf");
   });
 
   test("keys group files by project, drawing and revision, and never repeat", () => {
-    expect(drawingFileKey({ projectCode: "HLT-2026", drawingCode: "ELV-101", revisionNumber: 3, fileId: "abc" }))
-      .toBe("drawings/HLT-2026/ELV-101/rev3/ELV-101_rev3_abc.pdf");
+    expect(drawingFileKey({ projectCode: "HLT-2026", drawingCode: "ELV-101", revisionLabel: "C01", fileId: "abc" }))
+      .toBe("drawings/HLT-2026/ELV-101/C01/ELV-101_C01_abc.pdf");
     // Codes with spaces, slashes or non-Latin letters still give one tidy folder each.
-    expect(drawingFileKey({ projectCode: "BMW / Tbilisi", drawingCode: "CCTV 01 ნახაზი", revisionNumber: 1, fileId: "x" }))
-      .toBe("drawings/BMW-Tbilisi/CCTV-01/rev1/CCTV-01_rev1_x.pdf");
-    expect(drawingFileKey({ projectCode: "ბმვ", drawingCode: "..", revisionNumber: 1, fileId: "x" }))
-      .toBe("drawings/_/_/rev1/__rev1_x.pdf");
+    expect(drawingFileKey({ projectCode: "BMW / Tbilisi", drawingCode: "CCTV 01 ნახაზი", revisionLabel: "P01", fileId: "x" }))
+      .toBe("drawings/BMW-Tbilisi/CCTV-01/P01/CCTV-01_P01_x.pdf");
+    expect(drawingFileKey({ projectCode: "ბმვ", drawingCode: "..", revisionLabel: "P01", fileId: "x" }))
+      .toBe("drawings/_/_/P01/__P01_x.pdf");
   });
 });

@@ -54,6 +54,7 @@ async function loadReminderDrawings(): Promise<ReminderDrawing[]> {
       drawingId: drawingRevisions.drawingId,
       revisionId: drawingRevisions.id,
       number: drawingRevisions.number,
+      label: drawingRevisions.label,
       status: drawingRevisions.status,
       reviewerId: drawingRevisions.reviewerId,
     })
@@ -89,6 +90,7 @@ async function loadReminderDrawings(): Promise<ReminderDrawing[]> {
       projectId: projects.id,
       projectCode: projects.code,
       revisionNumber: latest.number,
+      revisionLabel: latest.label,
       status: latest.status,
       dueDate: drawings.dueDate,
       ownerId: drawings.ownerId,
@@ -133,6 +135,7 @@ async function loadOpenTransmittals(): Promise<ReminderTransmittal[]> {
       projectId: projects.id,
       projectCode: projects.code,
       revisionNumber: drawingRevisions.number,
+      revisionLabel: sql<string>`coalesce(${drawingTransmittals.revisionLabel}, ${drawingRevisions.label})`,
       purpose: drawingTransmittals.purpose,
       recipientUserId: drawingTransmittals.recipientUserId,
       recipientName: recipient.name,

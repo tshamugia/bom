@@ -44,6 +44,7 @@ export function PassportCard({
             projectId={project.id}
             users={users}
             canDelete={canDelete}
+            canChangeCode={canDelete}
             initial={{
               code: project.code,
               name: project.name,

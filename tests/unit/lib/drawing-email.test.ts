@@ -38,7 +38,7 @@ const base: DrawingStatusEmailInput = {
   code: "ELV-101",
   name: "Ground floor CCTV",
   discipline: "CCTV",
-  revisionNumber: 2,
+  revisionNumber: 2, revisionLabel: "P02",
   from: "in-progress",
   to: "need-approval",
   kind: "request",
@@ -52,7 +52,7 @@ const base: DrawingStatusEmailInput = {
 
 describe("buildDrawingStatusEmail", () => {
   test("subject names project, drawing, revision and new status", () => {
-    expect(buildDrawingStatusEmail(base).subject).toBe("[HLT] ELV-101 rev2 — Need to be approved");
+    expect(buildDrawingStatusEmail(base).subject).toBe("[HLT] ELV-101 P02 — Need to be approved");
   });
 
   test("body carries the revision note, comment and link", () => {
@@ -92,7 +92,7 @@ describe("buildDrawingStatusDigestEmail", () => {
     projectCode,
     code,
     name: `Drawing ${code}`,
-    revisionNumber: 1,
+    revisionNumber: 1, revisionLabel: "P01",
     from: "in-progress" as const,
     kind: "plain" as const,
   });
@@ -109,7 +109,7 @@ describe("buildDrawingStatusDigestEmail", () => {
     const { subject, text } = buildDrawingStatusDigestEmail(digest);
     expect(subject).toBe("[HLT] 2 drawings — Approved A");
     expect(text).toContain("Nino changed the status of 2 drawings to Approved A.");
-    expect(text).toContain("HLT · ELV-101 rev1 — Drawing ELV-101");
+    expect(text).toContain("HLT · ELV-101 P01 — Drawing ELV-101");
     expect(text).toContain("In Progress → Approved A");
     expect(text).toContain("https://bom.example.com/drawings/elv-102");
     expect(text).not.toContain("Comment:");
@@ -137,7 +137,7 @@ describe("buildTransmittalEmail", () => {
     projectName: "Hilton",
     code: "ELV-101",
     name: "CCTV layout",
-    revisionNumber: 3,
+    revisionNumber: 3, revisionLabel: "P03",
     status: "approved-a" as const,
     purpose: "construction" as const,
     senderName: "Tengo",
@@ -147,9 +147,9 @@ describe("buildTransmittalEmail", () => {
 
   test("names the revision, purpose and link", () => {
     const { subject, text } = buildTransmittalEmail(base);
-    expect(subject).toBe("[HLT] ELV-101 rev3 issued to you — For construction");
-    expect(text).toContain("Tengo issued ELV-101 rev3 to you — for construction.");
-    expect(text).toContain("Revision: rev3 (Approved A)");
+    expect(subject).toBe("[HLT] ELV-101 P03 issued to you — For construction");
+    expect(text).toContain("Tengo issued ELV-101 P03 to you — for construction.");
+    expect(text).toContain("Revision: P03 (Approved A)");
     expect(text).toContain("https://bom.example/drawings/d1");
     expect(text).not.toContain("Note:");
   });

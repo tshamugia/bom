@@ -15,6 +15,7 @@ export type DashboardDrawing = {
   ownerId: string | null;
   ownerName: string | null;
   revisionNumber: number;
+  revisionLabel: string;
   status: DrawingStatus;
   reviewerName: string | null;
   dueDate: string | null;

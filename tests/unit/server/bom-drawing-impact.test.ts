@@ -46,7 +46,7 @@ const check = (bomRevisionId: string, l: { linkId: string; latestRevisionId: str
 test("a drawing revision marked as no BOM change keeps the BOM current", async () => {
   const s = await setup();
   expect(await createDrawingRevision({ drawingId: s.drawingId, commitMessage: "Moved title block", bomImpact: false }))
-    .toEqual({ ok: true, number: 2 });
+    .toEqual({ ok: true, number: 2, label: "P02" });
 
   expect(await linkOf(s.revisionId)).toMatchObject({
     linkedRevisionNumber: 1, latestRevisionNumber: 2, outdated: false, newerRevisions: [],

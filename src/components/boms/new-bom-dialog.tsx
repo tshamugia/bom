@@ -110,7 +110,7 @@ export function NewBomDialog({
         <DialogHeader>
           <DialogTitle>New BOM</DialogTitle>
           <DialogDescription>
-            A draft Rev1 is created automatically inside the BOM.
+            A draft P01 is created automatically inside the BOM.
           </DialogDescription>
         </DialogHeader>
 

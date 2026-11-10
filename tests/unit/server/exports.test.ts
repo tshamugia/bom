@@ -74,7 +74,7 @@ test("generateExport returns the workbook and records a row without storing the 
     options: defaultOptions(),
   });
   if (!ex.ok) throw new Error(ex.error);
-  expect(ex.fileName).toMatch(/^BOM_TST_Rev1\.xlsx$/);
+  expect(ex.fileName).toMatch(/^BOM_TST_P01\.xlsx$/);
   const ws = await readSheet(Buffer.from(ex.data, "base64"));
   expect(ws.getRow(6).getCell(2).value).toBe("X-1");
 
@@ -123,7 +123,7 @@ test("generateExport on draft revision records revisionStatusAtExport=draft", as
   const ex = await generateExport({ revisionId, options: defaultOptions() });
   if (!ex.ok) throw new Error(ex.error);
   expect((await exportRow(ex.id)).revisionStatusAtExport).toBe("draft");
-  expect(ex.fileName).toMatch(/^BOM_TST_Rev1_DRAFT_\d{4}-\d{2}-\d{2}\.xlsx$/);
+  expect(ex.fileName).toMatch(/^BOM_TST_P01_DRAFT_\d{4}-\d{2}-\d{2}\.xlsx$/);
 });
 
 test("generateExport on committed revision records revisionStatusAtExport=committed", async () => {

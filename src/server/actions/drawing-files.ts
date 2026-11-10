@@ -16,7 +16,6 @@ import {
   formatFileSize,
   looksLikePdf,
 } from "@/lib/drawing-files";
-import { formatDrawingRevision } from "@/lib/drawing-status";
 import { ADMIN_ONLY_ERROR, READ_ONLY_ERROR, canEdit, isAdmin } from "@/lib/roles";
 import { deleteObject, headObject, presignUpload, readObjectStart } from "@/lib/s3";
 import { requireSession } from "../auth-context";
@@ -39,6 +38,7 @@ async function findRevision(revisionId: string) {
     .select({
       id: drawingRevisions.id,
       number: drawingRevisions.number,
+      label: drawingRevisions.label,
       status: drawingRevisions.status,
       drawingId: drawings.id,
       code: drawings.code,
@@ -115,7 +115,7 @@ export async function requestDrawingFileUpload(
   const objectKey = drawingFileKey({
     projectCode: rev.projectCode,
     drawingCode: rev.code,
-    revisionNumber: rev.number,
+    revisionLabel: rev.label,
     fileId,
   });
   await db.insert(drawingFiles).values({
@@ -123,6 +123,7 @@ export async function requestDrawingFileUpload(
     drawingId: rev.drawingId,
     revisionId: rev.id,
     objectKey,
+    revisionLabel: rev.label,
     originalName: data.fileName,
     contentType: DRAWING_FILE_TYPE,
     sizeBytes: data.size,
@@ -216,7 +217,7 @@ export async function confirmDrawingFileUpload(input: { fileId: string }): Promi
     kind: "drawing.file.uploaded",
     refType: "drawing",
     refId: rev.drawingId,
-    summary: `${rev.code} ${formatDrawingRevision(rev.number)} PDF ${replaced ? "replaced" : "uploaded"}`,
+    summary: `${rev.code} ${rev.label} PDF ${replaced ? "replaced" : "uploaded"}`,
     payload: {
       projectId: rev.projectId,
       revisionId: rev.id,
@@ -263,6 +264,7 @@ export async function removeDrawingFile(input: z.infer<typeof RemoveInput>): Pro
       revisionId: drawingFiles.revisionId,
       originalName: drawingFiles.originalName,
       number: drawingRevisions.number,
+      label: drawingRevisions.label,
       drawingId: drawings.id,
       code: drawings.code,
       projectId: drawings.projectId,
@@ -301,7 +303,7 @@ export async function removeDrawingFile(input: z.infer<typeof RemoveInput>): Pro
     kind: "drawing.file.removed",
     refType: "drawing",
     refId: file.drawingId,
-    summary: `${file.code} ${formatDrawingRevision(file.number)} PDF removed — ${reason}`,
+    summary: `${file.code} ${file.label} PDF removed — ${reason}`,
     payload: { projectId: file.projectId, revisionId: file.revisionId, fileId: file.id, reason },
   });
   return { ok: true };

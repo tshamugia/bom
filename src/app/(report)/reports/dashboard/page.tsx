@@ -3,7 +3,7 @@ import { requireSession } from "@/server/auth-context";
 import { getDashboardData } from "@/server/queries/dashboard-report";
 import { AutoPrint } from "@/components/drawings/auto-print";
 import { DUE_SOON_DAYS, isOverdueOn, type GroupSummary } from "@/lib/drawing-dashboard";
-import { DRAWING_STATUSES, DRAWING_STATUS_LABEL, formatDrawingRevision } from "@/lib/drawing-status";
+import { DRAWING_STATUSES, DRAWING_STATUS_LABEL } from "@/lib/drawing-status";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { roundHours } from "@/lib/drawing-meta";
 import { formatBomRevision } from "@/lib/bom-revision";
@@ -185,7 +185,7 @@ export default async function DashboardReportPage({ searchParams }: { searchPara
                 <tbody>
                   {s.reviewQueue.map(d => (
                     <tr key={d.id}>
-                      <td><span className="mono">{d.projectCode} {d.code} {formatDrawingRevision(d.revisionNumber)}</span> <span className="muted">{d.name}</span></td>
+                      <td><span className="mono">{d.projectCode} {d.code} {d.revisionLabel}</span> <span className="muted">{d.name}</span></td>
                       <td>{d.reviewerName ?? "—"}</td>
                       <td className={`num ${d.daysWaiting >= 3 ? "late" : ""}`}>{d.daysWaiting}</td>
                     </tr>
@@ -255,8 +255,8 @@ export default async function DashboardReportPage({ searchParams }: { searchPara
                     <td className="mono">{b.projectCode}</td>
                     <td>{b.bomName} <span className="muted">{formatBomRevision(b.bomRevisionLetter)}</span></td>
                     <td className="mono">{b.code}</td>
-                    <td className="mono late">{formatDrawingRevision(b.linkedNumber)}</td>
-                    <td className="mono">{formatDrawingRevision(b.latestNumber)}</td>
+                    <td className="mono late">{b.linkedLabel}</td>
+                    <td className="mono">{b.latestLabel}</td>
                   </tr>
                 ))}
               </tbody>
@@ -279,7 +279,7 @@ export default async function DashboardReportPage({ searchParams }: { searchPara
                 <td className="mono">{d.code}</td>
                 <td>{d.name}</td>
                 <td>{d.disciplineName ?? "—"}</td>
-                <td className="mono">{formatDrawingRevision(d.revisionNumber)}</td>
+                <td className="mono">{d.revisionLabel}</td>
                 <td>{DRAWING_STATUS_LABEL[d.status]}</td>
                 <td>{d.ownerName ?? "—"}</td>
                 <td className={isOverdueOn(d, today) ? "late" : undefined}>{d.dueDate ? formatDate(d.dueDate) : "—"}</td>
