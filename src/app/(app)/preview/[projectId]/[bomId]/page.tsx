@@ -6,7 +6,6 @@ import { getProject, getActiveRevision, getLines, getSections, getLatestProcurem
 import { getBom } from "@/server/queries/boms";
 import { getForProject } from "@/server/queries/approvals";
 import { listDrawingLinksForBomRevision } from "@/server/queries/drawing-control";
-import { formatDrawingRevision } from "@/lib/drawing-status";
 import { canSendToProcurement } from "@/lib/bom-status";
 import { canEdit } from "@/lib/roles";
 import { requireSession } from "@/server/auth-context";
@@ -59,7 +58,7 @@ export default async function PreviewPage({ params }: { params: Promise<{ projec
       sections={sections}
       steps={workflow ? workflow.steps.map(s => ({ position: s.position, role: s.role, status: s.status, assigneeName: s.assigneeName })) : null}
       readOnly={readOnly}
-      referenceDrawings={drawingLinks.map(l => `${l.code} ${formatDrawingRevision(l.linkedRevisionNumber)}`)}
+      referenceDrawings={drawingLinks.map(l => `${l.code} ${l.linkedRevisionLabel}`)}
     />
   );
 }

@@ -76,6 +76,7 @@ const KIND_META: Record<AuditKind, { label: string; tone: Tone; group: string }>
   "bom.drawing.updated":         { label: "Drawing refs updated",  tone: "info",    group: "BOM" },
   "bom.drawing.checked":         { label: "No BOM change",         tone: "success", group: "BOM" },
   "project.updated":             { label: "Project updated",       tone: "gray",    group: "Project / BOM" },
+  "project.code.changed":        { label: "Project code changed",  tone: "warning", group: "Project / BOM" },
   "project.contact.changed":     { label: "Project contact",       tone: "gray",    group: "Project / BOM" },
   "project.milestone.changed":   { label: "Project milestone",     tone: "info",    group: "Project / BOM" },
   "project.disciplines.changed": { label: "Project disciplines",   tone: "gray",    group: "Project / BOM" },

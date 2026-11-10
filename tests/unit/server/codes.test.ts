@@ -3,8 +3,10 @@ import { eq } from "drizzle-orm";
 import { resetDb } from "@/../tests/test-helpers/db";
 import { mockSession } from "@/../tests/test-helpers/auth";
 import { db } from "@/db/client";
-import { drawingDisciplines, drawingEvents, drawings, projects } from "@/db/schema";
-import { createProject, softDeleteProject, suggestProjectCode, updateProject } from "@/server/actions/projects";
+import { auditLog, drawingDisciplines, drawingEvents, drawings, projects } from "@/db/schema";
+import { projectCodeYear } from "@/lib/codes";
+import { ADMIN_ONLY_ERROR } from "@/lib/roles";
+import { checkProjectCode, createProject, softDeleteProject, updateProject } from "@/server/actions/projects";
 import { saveProjectPassport } from "@/server/actions/project-passport";
 import { createDrawing, deleteDrawing, suggestDrawingCode, updateDrawing } from "@/server/actions/drawings";
 
@@ -19,29 +21,38 @@ const codeOf = async (id: string) =>
 
 // ── Projects ─────────────────────────────────────────
 
-test("a new project gets its code from the name and the next free number", async () => {
-  await mockSession("member");
-  await db.insert(projects).values({ code: "BS-004", name: "Old, typed by hand" });
-
-  expect(await suggestProjectCode({ name: "BMW showroom" })).toBe("BS-005");
-  const p = await createProject({ name: "BMW showroom" });
-  expect(p.code).toBe("BS-005");
-  expect((await createProject({ name: "Hilton" })).code).toBe("HIL-001");
-  expect((await createProject({ name: "აღობილი" })).code).toBe("AGH-001");
-  expect(await suggestProjectCode({ name: "  " })).toBe("");
+const YY = projectCodeYear();
+const passport = (id: string, ownerId: string, code?: string) => ({
+  id, code, name: "BMW showroom", ownerId,
+  clientName: null, contractNo: null, siteAddress: null, description: null, startDate: null, targetDate: null,
 });
 
-test("archived projects keep their number", async () => {
+test("a new project gets this year and three letters from its name", async () => {
+  await mockSession("member");
+  expect(await checkProjectCode({ name: "Tegeta Motors" })).toEqual({ code: `${YY}TGT`, taken: false, alternative: null });
+  expect((await createProject({ name: "თეგეტა მოტორს" })).code).toBe(`${YY}TGT`);
+  expect((await createProject({ name: "BMW showroom", codeYear: "25" })).code).toBe("25BMW");
+  expect((await createProject({ name: "Hilton", codeLetters: "hlx" })).code).toBe(`${YY}HLX`);
+  expect(await checkProjectCode({ name: "  " })).toBeNull();
+});
+
+test("a taken code is refused when typed and skipped when suggested — archived projects count", async () => {
   await mockSession("admin");
-  const first = await createProject({ name: "Hilton" });
+  const first = await createProject({ name: "Hilton", codeYear: "26" });
+  expect(first.code).toBe("26HLT");
   await softDeleteProject({ id: first.id });
-  expect((await createProject({ name: "Hilton" })).code).toBe("HIL-002");
+
+  expect(await checkProjectCode({ name: "Hilton", year: "26" })).toEqual({ code: "26HLT", taken: true, alternative: "26HLN" });
+  await expect(createProject({ name: "Hilton", codeYear: "26", codeLetters: "HLT" })).rejects.toThrow(/26HLT is already used/);
+  expect((await createProject({ name: "Hilton", codeYear: "26" })).code).toBe("26HLN");
 });
 
 test("two projects created at once don't share a code", async () => {
   await mockSession("member");
-  const made = await Promise.all([1, 2, 3, 4].map(() => createProject({ name: "Hilton" })));
-  expect(made.map(p => p.code).sort()).toEqual(["HIL-001", "HIL-002", "HIL-003", "HIL-004"]);
+  const made = await Promise.all([1, 2, 3, 4].map(() => createProject({ name: "Hilton", codeYear: "26" })));
+  const codes = made.map(p => p.code);
+  expect(new Set(codes).size).toBe(4);
+  expect(codes).toContain("26HLT");
 });
 
 test("renaming a project keeps its code", async () => {
@@ -49,16 +60,32 @@ test("renaming a project keeps its code", async () => {
   const p = await createProject({ name: "Hilton" });
 
   await updateProject({ id: p.id, name: "Radisson" });
-  expect(await saveProjectPassport({
-    id: p.id, name: "Radisson Blu", ownerId: user.id,
-    clientName: null, contractNo: null, siteAddress: null, description: null, startDate: null, targetDate: null,
-  })).toEqual({ ok: true });
-  expect(await codeOf(p.id)).toBe("HIL-001");
+  expect(await saveProjectPassport({ ...passport(p.id, user.id), name: "Radisson Blu" })).toEqual({ ok: true });
+  expect(await codeOf(p.id)).toBe(`${YY}HLT`);
 });
 
-test("a viewer can't ask for a project code", async () => {
+test("only an admin changes a project code, and only to a free standard one", async () => {
+  const { user } = await mockSession("member");
+  const [legacy] = await db.insert(projects).values({ code: "BS-005", name: "BMW showroom", ownerId: user.id }).returning();
+  await db.insert(projects).values({ code: "25BMW", name: "Another BMW" });
+
+  expect(await saveProjectPassport(passport(legacy.id, user.id, "25BMX"))).toEqual({ ok: false, error: ADMIN_ONLY_ERROR });
+  // Keeping the old code is not a change, so members still save the passport.
+  expect(await saveProjectPassport(passport(legacy.id, user.id, "BS-005"))).toEqual({ ok: true });
+
+  await mockSession("admin");
+  expect((await saveProjectPassport(passport(legacy.id, user.id, "BMW25"))).ok).toBe(false);
+  expect(await saveProjectPassport(passport(legacy.id, user.id, "25BMW"))).toMatchObject({ ok: false, error: expect.stringMatching(/already used/) });
+  expect(await saveProjectPassport(passport(legacy.id, user.id, "25bmx"))).toEqual({ ok: true });
+  expect(await codeOf(legacy.id)).toBe("25BMX");
+
+  const [row] = await db.select().from(auditLog).where(eq(auditLog.kind, "project.code.changed"));
+  expect(row.payload).toMatchObject({ projectId: legacy.id, from: "BS-005", to: "25BMX" });
+});
+
+test("a viewer can't check a project code", async () => {
   await mockSession("viewer");
-  await expect(suggestProjectCode({ name: "Hilton" })).rejects.toThrow(/FORBIDDEN/);
+  await expect(checkProjectCode({ name: "Hilton" })).rejects.toThrow(/FORBIDDEN/);
 });
 
 // ── Drawings ─────────────────────────────────────────

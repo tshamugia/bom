@@ -17,9 +17,11 @@ import {
   ProjectMilestoneInput,
   ProjectPassportInput,
 } from "@/lib/schemas/project";
-import { READ_ONLY_ERROR, canEdit } from "@/lib/roles";
+import { ADMIN_ONLY_ERROR, READ_ONLY_ERROR, canEdit, isAdmin } from "@/lib/roles";
+import { isProjectCode } from "@/lib/codes";
 import { requireSession } from "../auth-context";
 import { audit } from "../audit";
+import { isProjectCodeTaken, lockProjectCodes } from "../lib/codes";
 import type { DrawingActionResult as ActionResult } from "./drawings";
 
 const fail = (error: string) => ({ ok: false as const, error });
@@ -44,9 +46,17 @@ const blank = (s: string | null) => (s && s.trim() ? s.trim() : null);
 
 export async function saveProjectPassport(input: ProjectPassportInput): Promise<ActionResult> {
   const data = ProjectPassportInput.parse(input);
-  if (!canEdit((await requireSession()).user)) return fail(READ_ONLY_ERROR);
+  const session = await requireSession();
+  if (!canEdit(session.user)) return fail(READ_ONLY_ERROR);
   const current = await findProject(data.id);
   if (!current) return fail("Project not found.");
+  // The code is in every drawing file name (NAMING §4.2): only an admin changes it,
+  // mostly to move an old BS-005 or 26017 to the year + letters form.
+  const newCode = data.code && data.code !== current.code ? data.code : null;
+  if (newCode) {
+    if (!isAdmin(session.user)) return fail(ADMIN_ONLY_ERROR);
+    if (!isProjectCode(newCode)) return fail("The code is two digits for the year and three letters, e.g. 26TGT.");
+  }
   if (data.startDate && data.targetDate && data.startDate > data.targetDate) {
     return fail("The start date is after the completion date.");
   }
@@ -80,19 +90,42 @@ export async function saveProjectPassport(input: ProjectPassportInput): Promise<
     targetDate: "completion date",
   };
   const changed = (Object.keys(next) as Array<keyof typeof next>).filter(k => (current[k] ?? null) !== next[k]);
-  if (changed.length === 0) return { ok: true };
+  if (changed.length === 0 && !newCode) return { ok: true };
 
-  await db.update(projects).set({ ...next, updatedAt: new Date() }).where(eq(projects.id, data.id));
+  const saved = await db.transaction(async tx => {
+    if (newCode) {
+      await lockProjectCodes(tx);
+      if (await isProjectCodeTaken(tx, newCode, data.id)) return false;
+    }
+    await tx.update(projects)
+      .set({ ...next, ...(newCode ? { code: newCode } : {}), updatedAt: new Date() })
+      .where(eq(projects.id, data.id));
+    return true;
+  });
+  if (!saved) return fail(`${newCode} is already used by another project (archived ones count too).`);
 
   revalidateProject(data.id);
   revalidatePath("/builder");
-  await audit({
-    kind: "project.updated",
-    refType: "project",
-    refId: data.id,
-    summary: `${current.code} passport updated — ${changed.map(k => labels[k]).join(", ")}`,
-    payload: { projectId: data.id, changed },
-  });
+  if (newCode) {
+    // Project codes show on nearly every list, so refresh them all.
+    revalidatePath("/", "layout");
+    await audit({
+      kind: "project.code.changed",
+      refType: "project",
+      refId: data.id,
+      summary: `${current.code} → ${newCode} — ${data.name}`,
+      payload: { projectId: data.id, from: current.code, to: newCode },
+    });
+  }
+  if (changed.length > 0) {
+    await audit({
+      kind: "project.updated",
+      refType: "project",
+      refId: data.id,
+      summary: `${newCode ?? current.code} passport updated — ${changed.map(k => labels[k]).join(", ")}`,
+      payload: { projectId: data.id, changed },
+    });
+  }
   return { ok: true };
 }
 

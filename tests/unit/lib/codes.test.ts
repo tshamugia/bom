@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { codePrefix, nextCode, transliterate } from "@/lib/codes";
+import {
+  codePrefix, isProjectCode, nextCode, projectCodeLetterOptions, projectCodeLetters, projectCodeYear, transliterate,
+} from "@/lib/codes";
 
 describe("transliterate", () => {
   test("turns Georgian into Latin capitals", () => {
@@ -63,5 +65,43 @@ describe("nextCode", () => {
 
   test("keeps counting past 999", () => {
     expect(nextCode("A", ["A-999"])).toBe("A-1000");
+  });
+});
+
+describe("project codes", () => {
+  test("letters are the first letter of the first word and the consonants after it", () => {
+    expect(projectCodeLetters("Tegeta Motors")).toBe("TGT");
+    expect(projectCodeLetters("თეგეტა მოტორს")).toBe("TGT");
+    expect(projectCodeLetters("BMW showroom")).toBe("BMW");
+    expect(projectCodeLetters("Hilton")).toBe("HLT");
+    expect(projectCodeLetters("Insta")).toBe("INS");
+  });
+
+  test("company forms and filler words don't take a letter", () => {
+    expect(projectCodeLetters("შპს თეგეტა მოტორს")).toBe("TGT");
+    expect(projectCodeLetters("The Hilton LLC")).toBe("HLT");
+  });
+
+  test("short names borrow from the next words, then pad with X", () => {
+    expect(projectCodeLetters("Ai Park")).toBe("APR");
+    expect(projectCodeLetters("Oa")).toBe("OAX");
+    expect(projectCodeLetters("Москва")).toBe("PRJ");
+  });
+
+  test("other options keep the first letter and step through the name", () => {
+    const options = projectCodeLetterOptions("Hilton");
+    expect(options[0]).toBe("HLT");
+    expect(options[1]).toBe("HLN");
+    expect(new Set(options).size).toBe(options.length);
+    expect(options.every(o => /^H[A-Z]{2}$/.test(o))).toBe(true);
+  });
+
+  test("a project code is two digits and three capitals", () => {
+    expect(isProjectCode("25TGT")).toBe(true);
+    expect(isProjectCode("26017")).toBe(false);
+    expect(isProjectCode("BS-005")).toBe(false);
+    expect(isProjectCode("25tgt")).toBe(false);
+    expect(projectCodeYear(new Date(2025, 5, 1))).toBe("25");
+    expect(projectCodeYear(new Date(2105, 0, 1))).toBe("05");
   });
 });

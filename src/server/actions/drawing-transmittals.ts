@@ -6,7 +6,6 @@ import { after } from "next/server";
 import { db } from "@/db/client";
 import { drawingTransmittals, drawings, user } from "@/db/schema";
 import { TRANSMITTAL_PURPOSES, TRANSMITTAL_PURPOSE_LABEL } from "@/lib/drawing-meta";
-import { formatDrawingRevision } from "@/lib/drawing-status";
 import { READ_ONLY_ERROR, canEdit } from "@/lib/roles";
 import { requireSession } from "../auth-context";
 import { audit } from "../audit";
@@ -56,6 +55,8 @@ export async function issueDrawingTransmittal(
     ...r,
     drawingId: rev.drawingId,
     revisionId: rev.id,
+    // Kept as issued: a P02 sent for review stays P02 when the revision is later approved as C01.
+    revisionLabel: rev.label,
     purpose: data.purpose,
     note,
     sentById: session.user.id,
@@ -68,7 +69,7 @@ export async function issueDrawingTransmittal(
     kind: "drawing.transmittal.sent",
     refType: "drawing",
     refId: rev.drawingId,
-    summary: `${rev.code} ${formatDrawingRevision(rev.number)} issued ${TRANSMITTAL_PURPOSE_LABEL[data.purpose].toLowerCase()} to ${names.join(", ")}`,
+    summary: `${rev.code} ${rev.label} issued ${TRANSMITTAL_PURPOSE_LABEL[data.purpose].toLowerCase()} to ${names.join(", ")}`,
     payload: { projectId: rev.projectId, revisionId: rev.id, purpose: data.purpose, userIds, externalName: data.externalName ?? null },
   });
 

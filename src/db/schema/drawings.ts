@@ -66,7 +66,17 @@ export const drawingRevisions = pgTable(
   {
     id: text("id").primaryKey().$defaultFn(() => createId()),
     drawingId: text("drawing_id").notNull().references(() => drawings.id, { onDelete: "cascade" }),
+    /** Running number (1, 2…): what "latest", "newer" and "outdated" compare. Never shown on its own. */
     number: integer("number").notNull(),
+    /**
+     * C-series number (NAMING §6): given to the revision that first reaches Approved A/B
+     * or As Built, and to every revision after it. Once set it stays — C never goes back to P.
+     */
+    cNumber: integer("c_number"),
+    /** What people call the revision: P01, P02… until the drawing is approved, C01, C02… from then on. */
+    label: text("label").notNull().generatedAlwaysAs(
+      sql`CASE WHEN "c_number" IS NOT NULL THEN 'C' || lpad("c_number"::text, greatest(2, length("c_number"::text)), '0') ELSE 'P' || lpad("number"::text, greatest(2, length("number"::text)), '0') END`,
+    ),
     status: drawingStatusEnum("status").notNull().default("in-progress"),
     commitMessage: text("commit_message").notNull(),
     /** False when the revision doesn't touch the BOM (layout, annotations…) — BOMs built from earlier revisions stay current. */
@@ -81,6 +91,7 @@ export const drawingRevisions = pgTable(
   },
   t => ({
     drawingNumberUq: uniqueIndex("drawing_rev_drawing_number_uq").on(t.drawingId, t.number),
+    drawingCNumberUq: uniqueIndex("drawing_rev_drawing_c_number_uq").on(t.drawingId, t.cNumber).where(sql`"c_number" IS NOT NULL`),
     reviewerIdx: index("drawing_rev_reviewer_idx").on(t.reviewerId),
   }),
 );
@@ -118,7 +129,9 @@ export const drawingFiles = pgTable(
     drawingId: text("drawing_id").notNull().references(() => drawings.id, { onDelete: "cascade" }),
     revisionId: text("revision_id").notNull().references(() => drawingRevisions.id, { onDelete: "cascade" }),
     objectKey: text("object_key").notNull(),
-    /** What the engineer called the file; downloads are named `<code>_rev<n>.pdf`. */
+    /** The revision label when the PDF was uploaded (P02 stays P02 after the revision is approved); downloads are named `<code>_<label>.pdf`. */
+    revisionLabel: text("revision_label"),
+    /** What the engineer called the file. */
     originalName: text("original_name").notNull(),
     contentType: text("content_type").notNull(),
     sizeBytes: integer("size_bytes").notNull(),
@@ -211,6 +224,8 @@ export const drawingTransmittals = pgTable(
     drawingId: text("drawing_id").notNull().references(() => drawings.id, { onDelete: "cascade" }),
     revisionId: text("revision_id").notNull().references(() => drawingRevisions.id, { onDelete: "cascade" }),
     purpose: drawingTransmittalPurposeEnum("purpose").notNull(),
+    /** The revision label at the time of issue: P02 sent for review stays P02 when the revision is later approved as C01. */
+    revisionLabel: text("revision_label"),
     recipientUserId: text("recipient_user_id").references(() => user.id, { onDelete: "set null" }),
     /** Set instead of `recipientUserId` for someone without an account. */
     externalName: text("external_name"),

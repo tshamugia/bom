@@ -7,7 +7,6 @@ import { db } from "@/db/client";
 import {
   bomExports, bomLines, bomRevisionDrawings, bomRevisions, bomSections, boms, drawingRevisions, drawings, projects, user,
 } from "@/db/schema";
-import { formatDrawingRevision } from "@/lib/drawing-status";
 import { EDITOR_ROLES } from "@/lib/roles";
 import { requireRole, requireSession } from "../auth-context";
 import { audit } from "../audit";
@@ -109,7 +108,7 @@ async function buildRevisionWorkbook(
 
   const checked = alias(drawingRevisions, "checked_rev");
   const drawingRefs = await db
-    .select({ code: drawings.code, number: drawingRevisions.number, checkedNumber: checked.number })
+    .select({ code: drawings.code, label: drawingRevisions.label, checkedLabel: checked.label })
     .from(bomRevisionDrawings)
     .innerJoin(drawings, eq(drawings.id, bomRevisionDrawings.drawingId))
     .innerJoin(drawingRevisions, eq(drawingRevisions.id, bomRevisionDrawings.drawingRevisionId))
@@ -129,7 +128,7 @@ async function buildRevisionWorkbook(
     options,
     isDraft,
     referenceDrawings: drawingRefs.map(d =>
-      `${d.code} ${formatDrawingRevision(d.number)}${d.checkedNumber ? ` (checked ${formatDrawingRevision(d.checkedNumber)})` : ""}`,
+      `${d.code} ${d.label}${d.checkedLabel ? ` (checked ${d.checkedLabel})` : ""}`,
     ),
   });
 }

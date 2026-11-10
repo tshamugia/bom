@@ -138,12 +138,12 @@ test("BOMs I own: outdated drawings make a task; an approval or a handover by so
     expect.objectContaining({
       bomName: "Main BOM",
       revisionLetter: "2",
-      drawings: [{ drawingId: d.id, code: "E-01", linkedNumber: 1, latestNumber: 2 }],
+      drawings: [{ drawingId: d.id, code: "E-01", linkedNumber: 1, latestNumber: 2, linkedLabel: "P01", latestLabel: "P02" }],
     }),
   ]);
   expect(work.updates.map(u => [u.kind, u.verb, u.subjectRev, u.body])).toEqual([
-    ["bom-status", "set Approved on", "Rev2", "“Client signed”"],
-    ["bom-owner", "handed you", "Rev2", "You own the new revision now."],
+    ["bom-status", "set Approved on", "P02", "“Client signed”"],
+    ["bom-owner", "handed you", "P02", "You own the new revision now."],
   ]);
   expect(work.counts.todo).toBe(1);
 });

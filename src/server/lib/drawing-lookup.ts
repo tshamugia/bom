@@ -10,6 +10,7 @@ export async function findDrawingRevision(revisionId: string) {
     .select({
       id: drawingRevisions.id,
       number: drawingRevisions.number,
+      label: drawingRevisions.label,
       status: drawingRevisions.status,
       drawingId: drawings.id,
       code: drawings.code,
@@ -28,7 +29,7 @@ export async function findDrawingRevision(revisionId: string) {
 
 export async function findLatestRevision(drawingId: string) {
   const [rev] = await db
-    .select({ id: drawingRevisions.id, number: drawingRevisions.number, status: drawingRevisions.status })
+    .select({ id: drawingRevisions.id, number: drawingRevisions.number, label: drawingRevisions.label, status: drawingRevisions.status })
     .from(drawingRevisions)
     .where(eq(drawingRevisions.drawingId, drawingId))
     .orderBy(desc(drawingRevisions.number))

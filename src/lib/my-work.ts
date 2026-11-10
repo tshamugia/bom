@@ -26,6 +26,7 @@ export type MyDrawing = {
   name: string;
   projectCode: string;
   revisionNumber: number;
+  revisionLabel: string;
   status: DrawingStatus;
   dueDate: string | null;
   reviewerName: string | null;
@@ -40,6 +41,7 @@ export type ApprovalTask = {
   name: string;
   projectCode: string;
   revisionNumber: number;
+  revisionLabel: string;
   ownerName: string | null;
   /** Tbilisi day the approval was requested. */
   since: string | null;
@@ -67,7 +69,9 @@ export type OutdatedRef = {
   drawingId: string;
   code: string;
   linkedNumber: number;
+  linkedLabel: string;
   latestNumber: number;
+  latestLabel: string;
 };
 
 /** A BOM the user owns whose current revision is built from older drawings. */
@@ -77,7 +81,7 @@ export type BomTask = {
   projectId: string;
   projectCode: string;
   revisionLetter: string;
-  drawings: Array<{ drawingId: string; code: string; linkedNumber: number; latestNumber: number }>;
+  drawings: Array<{ drawingId: string; code: string; linkedNumber: number; latestNumber: number; linkedLabel: string; latestLabel: string }>;
 };
 
 /** Completion date or open milestone of a project the user manages. */
@@ -109,7 +113,10 @@ export function groupBomTasks(refs: OutdatedRef[]): BomTask[] {
       drawings: [],
     };
     if (!t.drawings.some(d => d.drawingId === r.drawingId)) {
-      t.drawings.push({ drawingId: r.drawingId, code: r.code, linkedNumber: r.linkedNumber, latestNumber: r.latestNumber });
+      t.drawings.push({
+        drawingId: r.drawingId, code: r.code,
+        linkedNumber: r.linkedNumber, latestNumber: r.latestNumber, linkedLabel: r.linkedLabel, latestLabel: r.latestLabel,
+      });
     }
     map.set(r.bomId, t);
   }
@@ -224,6 +231,7 @@ export type RawUpdate = { id: string; at: Date; actorName: string | null; projec
       code: string;
       name: string;
       revisionNumber: number;
+      revisionLabel: string;
       fromStatus: DrawingStatus | null;
       toStatus: DrawingStatus | null;
       body: string | null;
@@ -237,6 +245,7 @@ export type RawUpdate = { id: string; at: Date; actorName: string | null; projec
       code: string;
       name: string;
       revisionNumber: number;
+      revisionLabel: string;
       remarkSource: RemarkSource;
       body: string;
       resolution: string | null;
@@ -247,6 +256,7 @@ export type RawUpdate = { id: string; at: Date; actorName: string | null; projec
       code: string;
       name: string;
       revisionNumber: number;
+      revisionLabel: string;
       purpose: TransmittalPurpose;
       note: string | null;
     }
@@ -283,7 +293,6 @@ export type MyWorkUpdate = {
   href: string;
 };
 
-const rev = (n: number) => `rev${n}`;
 
 export function describeUpdate(u: RawUpdate): MyWorkUpdate {
   const base = { id: u.id, at: u.at, actorName: u.actorName ?? "Someone" };
@@ -292,7 +301,7 @@ export function describeUpdate(u: RawUpdate): MyWorkUpdate {
     const common = {
       ...base,
       subject: u.code,
-      subjectRev: rev(u.revisionNumber),
+      subjectRev: u.revisionLabel,
       context: `${u.projectCode} · ${u.name}`,
       href: `/drawings/${u.drawingId}#revisions`,
     };
@@ -320,7 +329,7 @@ export function describeUpdate(u: RawUpdate): MyWorkUpdate {
     const common = {
       ...base,
       subject: u.code,
-      subjectRev: rev(u.revisionNumber),
+      subjectRev: u.revisionLabel,
       context: `${u.projectCode} · ${u.name}`,
       href: `/drawings/${u.drawingId}#remarks`,
     };
@@ -335,7 +344,7 @@ export function describeUpdate(u: RawUpdate): MyWorkUpdate {
       ...base,
       kind: "transmittal",
       subject: u.code,
-      subjectRev: rev(u.revisionNumber),
+      subjectRev: u.revisionLabel,
       verb: "issued you",
       body: [TRANSMITTAL_PURPOSE_LABEL[u.purpose], u.note ? `“${u.note}”` : null].filter(Boolean).join(" · "),
       context: `${u.projectCode} · ${u.name}`,

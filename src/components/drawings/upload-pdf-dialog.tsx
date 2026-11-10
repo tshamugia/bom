@@ -13,7 +13,6 @@ import { Icon } from "@/components/icons";
 import {
   FILE_TYPE_ERROR_MESSAGE, MAX_DRAWING_FILE_MB, checkFileType, drawingFileName, formatFileSize,
 } from "@/lib/drawing-files";
-import { formatDrawingRevision } from "@/lib/drawing-status";
 import {
   cancelDrawingFileUpload, confirmDrawingFileUpload, requestDrawingFileUpload,
 } from "@/server/actions/drawing-files";
@@ -43,13 +42,13 @@ function postToBucket(
 
 export function UploadPdfDialog({
   revisionId,
-  revisionNumber,
+  revisionLabel,
   drawingCode,
   statusLabel,
   replacing = false,
 }: {
   revisionId: string;
-  revisionNumber: number;
+  revisionLabel: string;
   drawingCode: string;
   statusLabel: string;
   /** The revision already has a PDF — the new one takes its place. */
@@ -61,7 +60,7 @@ export function UploadPdfDialog({
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const busy = progress !== null;
-  const rev = formatDrawingRevision(revisionNumber);
+  const rev = revisionLabel;
   const check = file ? checkFileType(file) : null;
 
   const reset = () => {
@@ -95,7 +94,7 @@ export function UploadPdfDialog({
         toast.error(done.error);
         return;
       }
-      toast.success(`${drawingFileName(drawingCode, revisionNumber)} uploaded`);
+      toast.success(`${drawingFileName(drawingCode, revisionLabel)} uploaded`);
       setOpen(false);
       reset();
       router.refresh();
@@ -126,7 +125,7 @@ export function UploadPdfDialog({
         <DialogHeader>
           <DialogTitle>{replacing ? "Replace" : "Upload"} the PDF of {drawingCode} {rev}</DialogTitle>
           <DialogDescription>
-            {rev} is {statusLabel}. The file is saved as <span className="mono whitespace-nowrap">{drawingFileName(drawingCode, revisionNumber)}</span>
+            {rev} is {statusLabel}. The file is saved as <span className="mono whitespace-nowrap">{drawingFileName(drawingCode, revisionLabel)}</span>
             {replacing ? " and takes the place of the current PDF, which is kept in the archive." : "."}
           </DialogDescription>
         </DialogHeader>

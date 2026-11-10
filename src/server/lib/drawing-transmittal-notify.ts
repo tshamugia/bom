@@ -1,5 +1,5 @@
 import "server-only";
-import { aliasedTable, and, eq, inArray, isNull } from "drizzle-orm";
+import { aliasedTable, and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { drawingFiles, drawingRevisions, drawingTransmittals, drawings, projects, user } from "@/db/schema";
 import { isFileStatus } from "@/lib/drawing-files";
@@ -26,6 +26,7 @@ export async function notifyTransmittals(ids: string[], senderName: string): Pro
         projectCode: projects.code,
         projectName: projects.name,
         revisionNumber: drawingRevisions.number,
+        revisionLabel: sql<string>`coalesce(${drawingTransmittals.revisionLabel}, ${drawingRevisions.label})`,
         status: drawingRevisions.status,
         purpose: drawingTransmittals.purpose,
         note: drawingTransmittals.note,
@@ -55,6 +56,7 @@ export async function notifyTransmittals(ids: string[], senderName: string): Pro
         code: r.code,
         name: r.name,
         revisionNumber: r.revisionNumber,
+        revisionLabel: r.revisionLabel,
         status: r.status,
         purpose: r.purpose,
         senderName,

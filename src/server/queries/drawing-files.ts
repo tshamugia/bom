@@ -12,6 +12,8 @@ export async function listDrawingFiles(drawingId: string) {
     .select({
       id: drawingFiles.id,
       revisionId: drawingFiles.revisionId,
+      /** The label it was uploaded under (older uploads have none — use the revision's). */
+      revisionLabel: drawingFiles.revisionLabel,
       originalName: drawingFiles.originalName,
       sizeBytes: drawingFiles.sizeBytes,
       uploadedAt: drawingFiles.uploadedAt,

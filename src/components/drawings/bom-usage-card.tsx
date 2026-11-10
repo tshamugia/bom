@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Badge, RevisionStatusBadge } from "@/components/ui/badge";
-import { formatDrawingRevision } from "@/lib/drawing-status";
 import { HelpTip } from "@/components/help/help-tip";
 import type { BomLinkForDrawingRow } from "@/server/queries/drawing-control";
 import { formatBomRevision } from "@/lib/bom-revision";
@@ -11,11 +10,11 @@ import { formatBomRevision } from "@/lib/bom-revision";
  */
 export function BomUsageCard({
   links,
-  latestRevisionNumber,
+  latestRevisionLabel,
   readOnly = false,
 }: {
   links: BomLinkForDrawingRow[];
-  latestRevisionNumber: number;
+  latestRevisionLabel: string;
   /** Viewers can't open the builder, so BOMs link to the read-only preview instead. */
   readOnly?: boolean;
 }) {
@@ -65,15 +64,15 @@ export function BomUsageCard({
                     </td>
                     <td className="l-aside" style={{ whiteSpace: "nowrap" }}>
                       <span className="min-[701px]:hidden">Built from </span>
-                      <span className="mono">{formatDrawingRevision(l.drawingRevisionNumber)}</span>
+                      <span className="mono">{l.drawingRevisionLabel}</span>
                       {l.checkedRevisionNumber && (
                         <div className="muted" style={{ fontSize: 11 }}>
-                          checked {formatDrawingRevision(l.checkedRevisionNumber)} — no BOM change
+                          checked {l.checkedRevisionLabel} — no BOM change
                         </div>
                       )}
                       {stale && (
                         <div style={{ marginTop: 2 }}>
-                          <Badge tone="danger">{formatDrawingRevision(latestRevisionNumber)} is newer</Badge>
+                          <Badge tone="danger">{latestRevisionLabel} is newer</Badge>
                         </div>
                       )}
                     </td>

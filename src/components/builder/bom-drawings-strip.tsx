@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/icons";
 import { DrawingStatusBadge } from "@/components/drawings/drawing-status-badge";
 import { HelpTip } from "@/components/help/help-tip";
-import { formatDrawingRevision } from "@/lib/drawing-status";
 import {
   confirmNoBomChange, linkDrawingsToBom, unlinkDrawingFromBom, updateBomDrawingLinks,
 } from "@/server/actions/bom-drawing-links";
@@ -42,11 +41,11 @@ function useRunAction() {
 const isBehindButCurrent = (l: DrawingLinkRow) => !l.outdated && l.latestRevisionNumber > l.linkedRevisionNumber;
 
 function pillTitle(l: DrawingLinkRow): string {
-  const latest = formatDrawingRevision(l.latestRevisionNumber);
+  const latest = l.latestRevisionLabel;
   if (l.outdated) return `${l.name} — ${latest} changes the BOM`;
   if (isBehindButCurrent(l)) {
     const checked = l.checkedRevisionNumber
-      ? ` Checked against ${formatDrawingRevision(l.checkedRevisionNumber)}${l.checkedByName ? ` by ${l.checkedByName}` : ""}.`
+      ? ` Checked against ${l.checkedRevisionLabel}${l.checkedByName ? ` by ${l.checkedByName}` : ""}.`
       : "";
     return `${l.name} — no BOM change through ${latest}.${checked}`;
   }
@@ -101,14 +100,14 @@ function ReviewDialog({
                 </Link>
                 <span className="min-w-0 flex-1 truncate">{l.name}</span>
                 <span className="mono" style={{ color: "var(--red)" }}>
-                  {formatDrawingRevision(l.linkedRevisionNumber)} → {formatDrawingRevision(l.latestRevisionNumber)}
+                  {l.linkedRevisionLabel} → {l.latestRevisionLabel}
                 </span>
               </div>
               {l.newerRevisions.length > 0 && (
                 <ul className="grid gap-0.5">
                   {l.newerRevisions.map(r => (
                     <li key={r.number} className="flex gap-2">
-                      <span className="mono shrink-0">{formatDrawingRevision(r.number)}</span>
+                      <span className="mono shrink-0">{r.label}</span>
                       <span className="min-w-0 flex-1 italic text-[var(--color-text-2)] [overflow-wrap:anywhere]">
                         {r.commitMessage}
                       </span>
@@ -131,7 +130,7 @@ function ReviewDialog({
                       )
                     }
                   >
-                    Update to {formatDrawingRevision(l.latestRevisionNumber)}
+                    Update to {l.latestRevisionLabel}
                   </button>
                 )}
                 <button type="button" className="btn btn-sm" disabled={pending} onClick={() => confirm([l])}>
@@ -202,7 +201,7 @@ function ManageDialog({
               <div key={l.linkId} className="flex items-center gap-2 rounded-md border border-[var(--color-line)] px-2.5 py-1.5 text-[12.5px] max-[480px]:flex-wrap">
                 <span className="mono font-semibold">{l.code}</span>
                 <span className="min-w-0 flex-1 truncate max-[480px]:order-last max-[480px]:basis-full">{l.name}</span>
-                <span className="mono max-[480px]:ml-auto">{formatDrawingRevision(l.linkedRevisionNumber)}</span>
+                <span className="mono max-[480px]:ml-auto">{l.linkedRevisionLabel}</span>
                 {l.latestRevisionNumber > l.linkedRevisionNumber && (
                   <button
                     type="button"
@@ -212,7 +211,7 @@ function ManageDialog({
                       run(() => updateBomDrawingLinks({ bomRevisionId, linkIds: [l.linkId] }), `${l.code} updated`)
                     }
                   >
-                    Update to {formatDrawingRevision(l.latestRevisionNumber)}
+                    Update to {l.latestRevisionLabel}
                   </button>
                 )}
                 <button
@@ -247,7 +246,7 @@ function ManageDialog({
                     />
                     <span className="mono font-semibold">{d.code}</span>
                     <span className="min-w-0 flex-1 truncate max-[480px]:order-last max-[480px]:basis-full max-[480px]:pl-6">{d.name}</span>
-                    <span className="mono muted">{formatDrawingRevision(d.revisionNumber)}</span>
+                    <span className="mono muted">{d.revisionLabel}</span>
                     <DrawingStatusBadge status={d.status} />
                   </label>
                 ))}
@@ -316,10 +315,10 @@ export function BomDrawingsStrip({
           style={l.outdated ? { borderColor: "var(--red)", color: "var(--red)" } : { color: "inherit" }}
           title={pillTitle(l)}
         >
-          <span className="mono">{l.code}</span> {formatDrawingRevision(l.linkedRevisionNumber)}
-          {l.outdated && <> → {formatDrawingRevision(l.latestRevisionNumber)}</>}
+          <span className="mono">{l.code}</span> {l.linkedRevisionLabel}
+          {l.outdated && <> → {l.latestRevisionLabel}</>}
           {isBehindButCurrent(l) && (
-            <span className="muted"> ✓ {formatDrawingRevision(l.latestRevisionNumber)}</span>
+            <span className="muted"> ✓ {l.latestRevisionLabel}</span>
           )}
           {l.deleted && <span className="muted"> (archived)</span>}
         </Link>

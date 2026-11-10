@@ -1,7 +1,5 @@
 import {
-  DRAWING_STATUS_LABEL,
-  formatDrawingRevision,
-  type DrawingStatus,
+  DRAWING_STATUS_LABEL, type DrawingStatus,
   type TransitionKind,
 } from "@/lib/drawing-status";
 import { TRANSMITTAL_PURPOSE_LABEL, type TransmittalPurpose } from "@/lib/drawing-meta";
@@ -35,6 +33,7 @@ export type DrawingStatusEmailInput = {
   name: string;
   discipline: string | null;
   revisionNumber: number;
+  revisionLabel: string;
   from: DrawingStatus;
   to: DrawingStatus;
   kind: TransitionKind;
@@ -60,7 +59,7 @@ function headline(i: DrawingStatusEmailInput): string {
 }
 
 export function buildDrawingStatusEmail(i: DrawingStatusEmailInput): { subject: string; text: string } {
-  const rev = formatDrawingRevision(i.revisionNumber);
+  const rev = i.revisionLabel;
   const from = DRAWING_STATUS_LABEL[i.from];
   const to = DRAWING_STATUS_LABEL[i.to];
   const url = `${i.appUrl.replace(/\/$/, "")}/drawings/${i.drawingId}`;
@@ -99,6 +98,7 @@ export type DrawingStatusDigestItem = {
   code: string;
   name: string;
   revisionNumber: number;
+  revisionLabel: string;
   from: DrawingStatus;
   kind: TransitionKind;
 };
@@ -142,7 +142,7 @@ export function buildDrawingStatusDigestEmail(i: DrawingStatusDigestInput): { su
   for (const item of i.items) {
     lines.push(
       "",
-      `${item.projectCode} · ${item.code} ${formatDrawingRevision(item.revisionNumber)} — ${item.name}`,
+      `${item.projectCode} · ${item.code} ${item.revisionLabel} — ${item.name}`,
       `  ${DRAWING_STATUS_LABEL[item.from]} → ${to}`,
       `  ${base}/drawings/${item.drawingId}`,
     );
@@ -159,6 +159,7 @@ export type TransmittalEmailInput = {
   code: string;
   name: string;
   revisionNumber: number;
+  revisionLabel: string;
   status: DrawingStatus;
   purpose: TransmittalPurpose;
   senderName: string;
@@ -169,7 +170,7 @@ export type TransmittalEmailInput = {
 };
 
 export function buildTransmittalEmail(i: TransmittalEmailInput): { subject: string; text: string } {
-  const rev = formatDrawingRevision(i.revisionNumber);
+  const rev = i.revisionLabel;
   const purpose = TRANSMITTAL_PURPOSE_LABEL[i.purpose];
   const base = i.appUrl.replace(/\/$/, "");
   const url = `${base}/drawings/${i.drawingId}`;

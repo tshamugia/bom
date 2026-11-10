@@ -6,7 +6,6 @@ import { alias } from "drizzle-orm/pg-core";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { bomRevisionDrawings, bomRevisions, boms, drawingRevisions, drawings } from "@/db/schema";
-import { formatDrawingRevision } from "@/lib/drawing-status";
 import { READ_ONLY_ERROR, canEdit } from "@/lib/roles";
 import { requireSession } from "../auth-context";
 import { audit } from "../audit";
@@ -35,17 +34,18 @@ async function loadBomRevision(bomRevisionId: string) {
 
 /** Latest revision id per drawing. */
 async function latestRevisionIds(drawingIds: string[]) {
-  if (drawingIds.length === 0) return new Map<string, { id: string; number: number }>();
+  if (drawingIds.length === 0) return new Map<string, { id: string; number: number; label: string }>();
   const rows = await db
     .selectDistinctOn([drawingRevisions.drawingId], {
       drawingId: drawingRevisions.drawingId,
       id: drawingRevisions.id,
       number: drawingRevisions.number,
+      label: drawingRevisions.label,
     })
     .from(drawingRevisions)
     .where(inArray(drawingRevisions.drawingId, drawingIds))
     .orderBy(drawingRevisions.drawingId, desc(drawingRevisions.number));
-  return new Map(rows.map(r => [r.drawingId, { id: r.id, number: r.number }]));
+  return new Map(rows.map(r => [r.drawingId, { id: r.id, number: r.number, label: r.label }]));
 }
 
 function revalidateLinks(rev: { projectId: string; bomId: string }, drawingIds: string[]) {
@@ -186,7 +186,7 @@ export async function updateBomDrawingLinks(input: z.infer<typeof UpdateInput>):
     refType: "bom",
     refId: rev.bomId,
     summary: `${formatBomRevision(rev.letter)} of "${rev.bomName}" updated to ${stale
-      .map(l => `${l.code} ${formatDrawingRevision(latest.get(l.drawingId)!.number)}`)
+      .map(l => `${l.code} ${latest.get(l.drawingId)!.label}`)
       .join(", ")}`,
     payload: { projectId: rev.projectId, bomRevisionId: rev.id, linkIds: stale.map(l => l.id) },
   });
@@ -235,7 +235,9 @@ export async function confirmNoBomChange(
       drawingId: bomRevisionDrawings.drawingId,
       code: drawings.code,
       linkedNumber: linked.number,
+      linkedLabel: linked.label,
       checkedNumber: checked.number,
+      checkedLabel: checked.label,
     })
     .from(bomRevisionDrawings)
     .innerJoin(drawings, eq(drawings.id, bomRevisionDrawings.drawingId))
@@ -243,7 +245,7 @@ export async function confirmNoBomChange(
     .leftJoin(checked, eq(checked.id, bomRevisionDrawings.checkedRevisionId))
     .where(and(eq(bomRevisionDrawings.bomRevisionId, rev.id), inArray(bomRevisionDrawings.id, linkIds)));
   const targets = await db
-    .select({ id: drawingRevisions.id, drawingId: drawingRevisions.drawingId, number: drawingRevisions.number })
+    .select({ id: drawingRevisions.id, drawingId: drawingRevisions.drawingId, number: drawingRevisions.number, label: drawingRevisions.label })
     .from(drawingRevisions)
     .where(inArray(drawingRevisions.id, data.checks.map(c => c.drawingRevisionId)));
 
@@ -276,7 +278,7 @@ export async function confirmNoBomChange(
     refType: "bom",
     refId: rev.bomId,
     summary: `${formatBomRevision(rev.letter)} of "${rev.bomName}" checked against ${updates
-      .map(u => `${u.link.code} ${formatDrawingRevision(u.target.number)}`)
+      .map(u => `${u.link.code} ${u.target.label}`)
       .join(", ")} — no BOM change`,
     payload: {
       projectId: rev.projectId,

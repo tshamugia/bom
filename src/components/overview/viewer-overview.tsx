@@ -6,7 +6,6 @@ import { AcknowledgeButton } from "@/components/drawings/acknowledge-button";
 import { drawingFileHref } from "@/lib/drawing-files";
 import { DashboardProjectFilter, type ProjectFilterOption } from "@/components/dashboard/project-filter";
 import { formatDate, formatRelative } from "@/lib/format";
-import { formatDrawingRevision } from "@/lib/drawing-status";
 import { TRANSMITTAL_PURPOSE_LABEL } from "@/lib/drawing-meta";
 import { addDays, daysBetween } from "@/lib/drawing-reminders";
 import { DUE_SOON_DAYS, type DashboardDrawing, type DrawingSummary } from "@/lib/drawing-dashboard";
@@ -73,7 +72,7 @@ function PendingReceipts({ rows }: { rows: StatusFeed["mine"] }) {
         <div key={t.id} className="ack-row">
           <Link href={`/drawings/${t.drawingId}`} style={{ color: "inherit", minWidth: 0 }}>
             <div className="irow-title">
-              <span className="mono">{t.code}</span> <span className="mono muted">{formatDrawingRevision(t.revisionNumber)}</span>
+              <span className="mono">{t.code}</span> <span className="mono muted">{t.revisionLabel}</span>
             </div>
             <div className="irow-text">{t.name}</div>
             <div className="irow-meta">
@@ -150,7 +149,7 @@ function WaitingCard({ rows, projectQs }: { rows: Waiting[]; projectQs: string }
                 <span className={`irow-ico ${internal ? "tone-amber" : "tone-pink"}`}><Icon.Hourglass className="ico" /></span>
                 <div className="irow-body">
                   <div className="irow-title">
-                    <span className="mono">{d.code}</span> <span className="mono muted">{formatDrawingRevision(d.revisionNumber)}</span>
+                    <span className="mono">{d.code}</span> <span className="mono muted">{d.revisionLabel}</span>
                   </div>
                   <div className="irow-text">{d.name}</div>
                   <div className="irow-meta">
@@ -184,7 +183,7 @@ function TransmittalRow({ t, userId }: { t: FeedTransmittal; userId: string }) {
       <span className="irow-ico tone-accent"><Icon.Send className="ico" /></span>
       <Link href={`/drawings/${t.drawingId}`} className="irow-body" style={{ color: "inherit" }}>
         <div className="irow-title">
-          <span className="mono">{t.code}</span> <span className="mono muted">{formatDrawingRevision(t.revisionNumber)}</span>
+          <span className="mono">{t.code}</span> <span className="mono muted">{t.revisionLabel}</span>
         </div>
         <div className="irow-text">{t.name}</div>
         <div className="irow-meta">
@@ -207,7 +206,7 @@ function TransmittalRow({ t, userId }: { t: FeedTransmittal; userId: string }) {
             target="_blank"
             rel="noopener"
             className="btn btn-sm"
-            aria-label={`Open the PDF of ${t.code} ${formatDrawingRevision(t.revisionNumber)}`}
+            aria-label={`Open the PDF of ${t.code} ${t.revisionLabel}`}
           >
             <Icon.Doc className="ico" /> PDF
           </a>
@@ -397,7 +396,7 @@ export function ViewerOverview({
       key: `d:${d.id}`,
       href: `/drawings/${d.id}`,
       date: d.dueDate!,
-      title: <><span className="mono">{d.code}</span> <span className="mono muted">{formatDrawingRevision(d.revisionNumber)}</span></>,
+      title: <><span className="mono">{d.code}</span> <span className="mono muted">{d.revisionLabel}</span></>,
       text: d.name,
       meta: `${d.projectCode} · drawing due`,
       kind: "drawing" as const,

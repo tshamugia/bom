@@ -14,6 +14,7 @@ import { Icon } from "@/components/icons";
 import { SELECT_CLASS, TEXTAREA_CLASS, type UserOption } from "@/components/drawings/drawing-form-fields";
 import { BlockedNote } from "@/components/help/blocked-note";
 import { CodeField } from "@/components/master/code-field";
+import { isProjectCode } from "@/lib/codes";
 import { saveProjectPassport } from "@/server/actions/project-passport";
 import { softDeleteProject } from "@/server/actions/projects";
 
@@ -34,12 +35,15 @@ export function PassportEditDialog({
   initial,
   users,
   canDelete,
+  canChangeCode = false,
 }: {
   projectId: string;
   initial: PassportValue;
   users: UserOption[];
   /** Archiving a project is admin-only. */
   canDelete: boolean;
+  /** Changing the code is admin-only: it is in every drawing file name. */
+  canChangeCode?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [v, setV] = useState(initial);
@@ -49,12 +53,15 @@ export function PassportEditDialog({
 
   const set = <K extends keyof PassportValue>(k: K, value: PassportValue[K]) => setV(prev => ({ ...prev, [k]: value }));
   const datesWrong = !!v.startDate && !!v.targetDate && v.startDate > v.targetDate;
-  const blocked = !v.name.trim() || datesWrong;
+  const codeChanged = v.code !== initial.code;
+  const codeWrong = codeChanged && !isProjectCode(v.code);
+  const blocked = !v.name.trim() || datesWrong || codeWrong;
 
   const save = () =>
     start(async () => {
       const res = await saveProjectPassport({
         id: projectId,
+        code: canChangeCode && codeChanged ? v.code : undefined,
         name: v.name,
         ownerId: v.ownerId || null,
         clientName: v.clientName,
@@ -113,9 +120,42 @@ export function PassportEditDialog({
               <Label htmlFor="pp-name">Project name</Label>
               <Input id="pp-name" value={v.name} maxLength={200} onChange={e => set("name", e.target.value)} />
             </div>
-            <CodeField id="pp-code" value={v.code} />
+            {canChangeCode ? (
+              <div className="grid gap-1.5">
+                <Label htmlFor="pp-code">Code</Label>
+                <Input
+                  id="pp-code"
+                  value={v.code}
+                  maxLength={5}
+                  autoCapitalize="characters"
+                  className="font-mono"
+                  aria-invalid={codeWrong}
+                  onChange={e => set("code", e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5))}
+                />
+              </div>
+            ) : (
+              <CodeField id="pp-code" value={v.code} />
+            )}
           </div>
-          <BlockedNote icon="lock">The code is fixed — renaming the project keeps it.</BlockedNote>
+          {!canChangeCode ? (
+            <BlockedNote icon="lock">
+              The code is in every drawing file name, so only an admin changes it. Renaming the project keeps it.
+            </BlockedNote>
+          ) : codeWrong ? (
+            <p className="m-0 text-[12px]" style={{ color: "var(--red)" }}>
+              The code is two digits for the year and three letters, e.g. 26TGT.
+            </p>
+          ) : codeChanged ? (
+            <BlockedNote>
+              Saving renames the project to {v.code} everywhere in Revline. PDFs already uploaded and BOM exports already
+              made keep {initial.code}; rename the folder and files on the file server too.
+            </BlockedNote>
+          ) : !isProjectCode(initial.code) ? (
+            <BlockedNote>
+              {initial.code} is an old-style code. Change it to the year and three letters (e.g. 26TGT) used in drawing
+              file names.
+            </BlockedNote>
+          ) : null}
           <div className="grid grid-cols-2 gap-3 max-[480px]:grid-cols-1">
             <div className="grid gap-1.5">
               <Label htmlFor="pp-client">Client</Label>

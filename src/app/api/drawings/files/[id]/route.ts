@@ -1,9 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { drawingFiles, drawingRevisions, drawings, projects } from "@/db/schema";
 import { DRAWING_FILE_TYPE, drawingFileName, isFileStatus } from "@/lib/drawing-files";
-import { formatDrawingRevision } from "@/lib/drawing-status";
 import { canEdit } from "@/lib/roles";
 import { presignDownload } from "@/lib/s3";
 import { requireSession } from "@/server/auth-context";
@@ -22,7 +21,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       objectKey: drawingFiles.objectKey,
       archivedAt: drawingFiles.archivedAt,
       revisionId: drawingRevisions.id,
-      revisionNumber: drawingRevisions.number,
+      // The label the PDF was uploaded under: a P02 PDF keeps its name after the revision is approved.
+      revisionLabel: sql<string>`coalesce(${drawingFiles.revisionLabel}, ${drawingRevisions.label})`,
       status: drawingRevisions.status,
       drawingId: drawings.id,
       code: drawings.code,
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
   const disposition = req.nextUrl.searchParams.get("download") === "1" ? "attachment" : "inline";
   const url = await presignDownload(file.objectKey, 60 * 5, {
-    fileName: drawingFileName(file.code, file.revisionNumber),
+    fileName: drawingFileName(file.code, file.revisionLabel),
     contentType: DRAWING_FILE_TYPE,
     disposition,
   });
@@ -66,7 +66,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     kind: "drawing.file.downloaded",
     refType: "drawing",
     refId: file.drawingId,
-    summary: `${file.code} ${formatDrawingRevision(file.revisionNumber)} PDF ${disposition === "inline" ? "opened" : "downloaded"}`,
+    summary: `${file.code} ${file.revisionLabel} PDF ${disposition === "inline" ? "opened" : "downloaded"}`,
     payload: { projectId: file.projectId, revisionId: file.revisionId, fileId: id },
   });
   return NextResponse.redirect(url, { status: 302, headers: { "Cache-Control": "no-store" } });

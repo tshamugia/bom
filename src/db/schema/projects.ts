@@ -1,4 +1,5 @@
-import { pgTable, text, timestamp, date, index } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { pgTable, text, timestamp, date, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createId } from "@paralleldrive/cuid2";
 import { user } from "./auth";
 
@@ -22,6 +23,9 @@ export const projects = pgTable(
   },
   t => ({
     codeIdx: index("project_code_idx").on(t.code),
+    // Standard codes (26TGT, NAMING §4.2) are unique across all projects, archived ones
+    // included. Old-style codes (BS-005) are left out so they can't block the migration.
+    codeStdUq: uniqueIndex("project_code_std_uq").on(t.code).where(sql`${t.code} ~ '^[0-9]{2}[A-Z]{3}$'`),
     deletedAtIdx: index("project_deleted_at_idx").on(t.deletedAt),
   }),
 );

@@ -53,7 +53,7 @@ export function HelpDiagram() {
           <Down />
           <Node
             title="Drawing revisions"
-            chain={["rev1", "rev2", "rev3"]}
+            chain={["P01", "P02", "C01"]}
             sub="Status, internal check, “changes the BOM?”"
           />
           <Down />
@@ -86,7 +86,7 @@ export function HelpDiagram() {
           <Down />
           <Node
             title="BOM revisions"
-            chain={["Rev1", "Rev2"]}
+            chain={["P01", "P02"]}
             sub="Lines from the item catalog (items → vendors)"
           />
           <Down />

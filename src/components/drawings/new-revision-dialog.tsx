@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Icon } from "@/components/icons";
 import { HelpTip } from "@/components/help/help-tip";
-import { formatDrawingRevision } from "@/lib/drawing-status";
 import { createDrawingRevision } from "@/server/actions/drawings";
 import { TEXTAREA_CLASS } from "./drawing-form-fields";
 
@@ -42,18 +41,21 @@ function BomImpactOption({
 
 export function NewRevisionDialog({
   drawingId,
-  currentNumber,
+  currentLabel,
+  nextLabel,
 }: {
   drawingId: string;
-  currentNumber: number;
+  currentLabel: string;
+  /** P04 after P03, C02 after C01 — worked out by the page from the current revision. */
+  nextLabel: string;
 }) {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [bomImpact, setBomImpact] = useState(true);
   const [pending, start] = useTransition();
   const router = useRouter();
-  const current = formatDrawingRevision(currentNumber);
-  const next = formatDrawingRevision(currentNumber + 1);
+  const current = currentLabel;
+  const next = nextLabel;
 
   const submit = () => {
     start(async () => {
@@ -62,7 +64,7 @@ export function NewRevisionDialog({
         toast.error(res.error);
         return;
       }
-      toast.success(`${formatDrawingRevision(res.number)} created`);
+      toast.success(`${res.label} created`);
       setOpen(false);
       setMessage("");
       setBomImpact(true);

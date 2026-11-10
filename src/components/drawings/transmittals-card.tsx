@@ -15,7 +15,6 @@ import { Icon } from "@/components/icons";
 import { HelpTip } from "@/components/help/help-tip";
 import { formatDateTime } from "@/lib/format";
 import { TRANSMITTAL_PURPOSES, TRANSMITTAL_PURPOSE_LABEL, type TransmittalPurpose } from "@/lib/drawing-meta";
-import { formatDrawingRevision } from "@/lib/drawing-status";
 import { issueDrawingTransmittal } from "@/server/actions/drawing-transmittals";
 import type { TransmittalRow } from "@/server/queries/drawing-control";
 import { SELECT_CLASS, TEXTAREA_CLASS, type UserOption } from "./drawing-form-fields";
@@ -23,12 +22,12 @@ import { AcknowledgeButton } from "./acknowledge-button";
 
 function IssueDialog({
   revisionId,
-  revisionNumber,
+  revisionLabel,
   users,
   currentUserId,
 }: {
   revisionId: string;
-  revisionNumber: number;
+  revisionLabel: string;
   users: UserOption[];
   currentUserId: string;
 }) {
@@ -39,7 +38,7 @@ function IssueDialog({
   const [note, setNote] = useState("");
   const [pending, start] = useTransition();
   const router = useRouter();
-  const rev = formatDrawingRevision(revisionNumber);
+  const rev = revisionLabel;
 
   const selected = users.filter(u => ids.includes(u.id));
   const available = users.filter(u => !ids.includes(u.id) && u.id !== currentUserId);
@@ -171,6 +170,7 @@ export function TransmittalsCard({
   transmittals,
   latestRevisionId,
   latestRevisionNumber,
+  latestRevisionLabel,
   users,
   currentUserId,
   readOnly = false,
@@ -178,6 +178,7 @@ export function TransmittalsCard({
   transmittals: TransmittalRow[];
   latestRevisionId: string;
   latestRevisionNumber: number;
+  latestRevisionLabel: string;
   users: UserOption[];
   currentUserId: string;
   /** Viewers can't issue, but still acknowledge transmittals sent to them. */
@@ -198,7 +199,7 @@ export function TransmittalsCard({
         {!readOnly && (
           <IssueDialog
             revisionId={latestRevisionId}
-            revisionNumber={latestRevisionNumber}
+            revisionLabel={latestRevisionLabel}
             users={users}
             currentUserId={currentUserId}
           />
@@ -208,7 +209,7 @@ export function TransmittalsCard({
         <div className="flex flex-wrap items-center gap-2 px-4 py-3" style={{ background: "var(--accent-soft)", borderBottom: "1px solid var(--line-soft)" }}>
           <Icon.Bell size={14} />
           <span className="text-[12.5px]">
-            {mine.map(t => formatDrawingRevision(t.revisionNumber)).join(", ")} was issued to you — confirm you received it.
+            {mine.map(t => t.revisionLabel).join(", ")} was issued to you — confirm you received it.
           </span>
         </div>
       )}
@@ -231,10 +232,10 @@ export function TransmittalsCard({
                 return (
                   <tr key={t.id}>
                     <td className="l-meta" style={{ whiteSpace: "nowrap" }}>
-                      <span className="mono">{formatDrawingRevision(t.revisionNumber)}</span>
+                      <span className="mono">{t.revisionLabel}</span>
                       {superseded && (
                         <div className="max-[701px]:ml-1.5 max-[701px]:inline" style={{ marginTop: 2 }}>
-                          <Badge tone="danger">Superseded by {formatDrawingRevision(latestRevisionNumber)}</Badge>
+                          <Badge tone="danger">Superseded by {latestRevisionLabel}</Badge>
                         </div>
                       )}
                     </td>

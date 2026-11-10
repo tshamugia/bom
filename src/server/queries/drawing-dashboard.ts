@@ -24,6 +24,7 @@ function latestDrawingRevisions() {
       drawingId: drawingRevisions.drawingId,
       revisionId: drawingRevisions.id,
       number: drawingRevisions.number,
+      label: drawingRevisions.label,
     })
     .from(drawingRevisions)
     .orderBy(drawingRevisions.drawingId, desc(drawingRevisions.number))
@@ -63,7 +64,9 @@ export async function listOutdatedBomReferences(opts: { projectId?: string; owne
       drawingId: drawings.id,
       code: drawings.code,
       linkedNumber: linked.number,
+      linkedLabel: linked.label,
       latestNumber: latest.number,
+      latestLabel: latest.label,
     })
     .from(bomRevisionDrawings)
     .innerJoin(current, eq(current.revisionId, bomRevisionDrawings.bomRevisionId))
@@ -132,6 +135,7 @@ export async function getDrawingDashboard(opts: { projectId?: string } = {}) {
     ownerId: r.ownerId,
     ownerName: r.ownerName,
     revisionNumber: r.revisionNumber,
+    revisionLabel: r.revisionLabel,
     status: r.status,
     reviewerName: r.reviewerName,
     dueDate: r.dueDate,

@@ -57,7 +57,7 @@ test("branchRevision creates next-letter draft and copies sections + lines", asy
 
   const newId = await branchRevision({ parentRevisionId: revisionId });
   const [child] = await db.select().from(bomRevisions).where(eq(bomRevisions.id, newId));
-  expect(child.letter).toBe("2");
+  expect(child.letter).toBe("P02");
   expect(child.status).toBe("draft");
   expect(child.parentRevisionId).toBe(revisionId);
   expect(child.ownerId).toBe(userId);

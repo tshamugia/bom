@@ -5,7 +5,6 @@ import { DrawingStatusBadge } from "@/components/drawings/drawing-status-badge";
 import { drawingFileHref } from "@/lib/drawing-files";
 import { formatDate, formatRelative } from "@/lib/format";
 import { formatBomRevision } from "@/lib/bom-revision";
-import { formatDrawingRevision } from "@/lib/drawing-status";
 import { TRANSMITTAL_PURPOSE_LABEL } from "@/lib/drawing-meta";
 import { daysBetween } from "@/lib/drawing-reminders";
 import { MY_WORK_DATE_DAYS, MY_WORK_DUE_DAYS, dueLabel, type DeadlineItem, type WaitingItem } from "@/lib/my-work";
@@ -81,7 +80,7 @@ function TodoCard({ work }: { work: MyWork }) {
                     <Link href={`/drawings/${a.drawingId}`} className="irow">
                       <span className="irow-ico tone-amber"><Icon.Shield className="ico" /></span>
                       <div className="irow-body">
-                        <div className="irow-title"><Rev code={a.code} rev={formatDrawingRevision(a.revisionNumber)} /></div>
+                        <div className="irow-title"><Rev code={a.code} rev={a.revisionLabel} /></div>
                         <div className="irow-text">{a.name}</div>
                         <div className="irow-meta">
                           <span>{[a.projectCode, a.ownerName ? `from ${a.ownerName}` : null, "approve or send back"].filter(Boolean).join(" · ")}</span>
@@ -106,7 +105,7 @@ function TodoCard({ work }: { work: MyWork }) {
                 <Link href={`/drawings/${t.drawingId}`} className="mw-ack-link">
                   <span className="irow-ico tone-accent"><Icon.Inbox className="ico" /></span>
                   <div style={{ minWidth: 0 }}>
-                    <div className="irow-title"><Rev code={t.code} rev={formatDrawingRevision(t.revisionNumber)} /></div>
+                    <div className="irow-title"><Rev code={t.code} rev={t.revisionLabel} /></div>
                     <div className="irow-text">{t.name}</div>
                     <div className="irow-meta">
                       {[TRANSMITTAL_PURPOSE_LABEL[t.purpose], t.projectCode, `from ${t.sentByName ?? "—"}`, formatRelative(t.createdAt)].join(" · ")}
@@ -167,7 +166,7 @@ function TodoCard({ work }: { work: MyWork }) {
                         {b.drawings.map((d, i) => (
                           <span key={d.drawingId}>
                             {i > 0 && ", "}
-                            <span className="mono">{d.code}</span> {formatDrawingRevision(d.linkedNumber)} → {formatDrawingRevision(d.latestNumber)}
+                            <span className="mono">{d.code}</span> {d.linkedLabel} → {d.latestLabel}
                           </span>
                         ))}
                       </div>
@@ -193,7 +192,7 @@ function DeadlineRow({ item, today }: { item: DeadlineItem; today: string }) {
       <Link href={`/drawings/${d.id}`} className="irow">
         <span className={`irow-ico ${late ? "tone-red" : "tone-accent"}`}><Icon.Drawing className="ico" /></span>
         <div className="irow-body">
-          <div className="irow-title"><Rev code={d.code} rev={formatDrawingRevision(d.revisionNumber)} /></div>
+          <div className="irow-title"><Rev code={d.code} rev={d.revisionLabel} /></div>
           <div className="irow-text">{d.name}</div>
           <div className="irow-meta">
             <DrawingStatusBadge status={d.status} />
@@ -255,7 +254,7 @@ function WaitingCard({ rows }: { rows: WaitingItem[] }) {
             <Link href={`/drawings/${d.id}`} className="irow">
               <span className={`irow-ico ${internal ? "tone-amber" : "tone-pink"}`}><Icon.Hourglass className="ico" /></span>
               <div className="irow-body">
-                <div className="irow-title"><Rev code={d.code} rev={formatDrawingRevision(d.revisionNumber)} /></div>
+                <div className="irow-title"><Rev code={d.code} rev={d.revisionLabel} /></div>
                 <div className="irow-text">{d.name}</div>
                 <div className="irow-meta">
                   <DrawingStatusBadge status={d.status} />

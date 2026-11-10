@@ -27,7 +27,7 @@ import { FileLocation } from "@/components/drawings/file-location";
 import { DrawingPdfCard, type PdfRevision } from "@/components/drawings/drawing-pdf-card";
 import { HelpTip } from "@/components/help/help-tip";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { formatDrawingRevision, isDrawingOverdue } from "@/lib/drawing-status";
+import { isDrawingOverdue, nextRevisionLabel } from "@/lib/drawing-status";
 import { checkFileUpload, fileUploadErrorMessage, isFileStatus } from "@/lib/drawing-files";
 
 export default async function DrawingPage({ params }: { params: Promise<{ id: string }> }) {
@@ -53,16 +53,16 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
   const readOnly = !canEdit(session.user);
   // Viewers can't own or approve drawings, so they aren't offered in those pickers.
   const engineers = users.filter(u => u.role !== "viewer");
-  const revisionOptions = revisions.map(r => ({ id: r.id, number: r.number }));
+  const revisionOptions = revisions.map(r => ({ id: r.id, number: r.number, label: r.label }));
 
   const current = revisions[0];
-  const revLabel = formatDrawingRevision(current.number);
+  const revLabel = current.label;
   const overdue = isDrawingOverdue(drawing.dueDate, current.status);
   const canReview = !readOnly && current.reviewerId === session.user.id && drawing.ownerId !== session.user.id;
 
   const fileOf = new Map(files.map(f => [f.revisionId, f]));
   const asPdf = (r: (typeof revisions)[number]): PdfRevision => ({
-    id: r.id, number: r.number, status: r.status, file: fileOf.get(r.id) ?? null,
+    id: r.id, number: r.number, label: r.label, status: r.status, file: fileOf.get(r.id) ?? null,
   });
   // Viewers only see a revision that passed the upload rule — by default, approved by the client.
   const issued = revisions.find(r => isFileStatus(r.status, fileGate));
@@ -84,7 +84,7 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
         ? `${revLabel} is still being worked on — this is the latest ${issuedWord} revision.`
         : null}
       emptyText={issued
-        ? `The PDF of ${formatDrawingRevision(issued.number)} hasn't been uploaded yet.`
+        ? `The PDF of ${issued.label} hasn't been uploaded yet.`
         : `No revision is ${issuedWord} yet — the PDF shows up here once one is.`}
       canUpload={false}
       blockedReason={null}
@@ -107,6 +107,7 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
       transmittals={transmittals}
       latestRevisionId={current.id}
       latestRevisionNumber={current.number}
+      latestRevisionLabel={current.label}
       users={users}
       currentUserId={session.user.id}
       readOnly={readOnly}
@@ -140,10 +141,10 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
                   disciplines={disciplines}
                   users={engineers}
                 />
-                <NewRevisionDialog drawingId={drawing.id} currentNumber={current.number} />
+                <NewRevisionDialog drawingId={drawing.id} currentLabel={current.label} nextLabel={nextRevisionLabel(current)} />
                 <ChangeStatusDialog
                   revisionId={current.id}
-                  revisionNumber={current.number}
+                  revisionLabel={current.label}
                   status={current.status}
                   ownerId={drawing.ownerId}
                   reviewerId={current.reviewerId}
@@ -229,7 +230,7 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
               canManageAll={admin}
               readOnly={readOnly}
             />
-            <BomUsageCard links={bomLinks} latestRevisionNumber={current.number} readOnly={readOnly} />
+            <BomUsageCard links={bomLinks} latestRevisionLabel={current.label} readOnly={readOnly} />
           </>
         )}
       </div>

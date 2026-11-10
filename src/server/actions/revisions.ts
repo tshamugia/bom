@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { and, count, desc, eq, isNull, ne } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { boms, bomRevisions, bomLines, user } from "@/db/schema";
@@ -14,7 +14,7 @@ import { audit } from "../audit";
 import { isRevisionImmutable, revisionSentSql } from "../lib/revision-status";
 import { copyDrawingLinks, copyRevisionContentRefreshed } from "../lib/copy-revision";
 import { touchBom } from "../lib/touch-bom";
-import { formatBomRevision, nextBomRevision } from "@/lib/bom-revision";
+import { formatBomRevision, isCBomRevision, nextBomRevision, nextCBomRevision } from "@/lib/bom-revision";
 
 async function loadRevision(revisionId: string) {
   await requireRole(...EDITOR_ROLES);
@@ -261,11 +261,33 @@ export async function changeRevisionStatus(input: z.input<typeof StatusInput>): 
       // Guard against a concurrent change: only move from the status we checked.
       .where(and(eq(bomRevisions.id, rev.id), eq(bomRevisions.status, rev.status)))
       .returning({ id: bomRevisions.id });
-    if (!row) return false;
+    if (!row) return null;
+    let label = rev.letter;
+    if (data.to === "approved" && !isCBomRevision(rev.letter)) {
+      // NAMING §6: the client's approval makes it C01 (or the next C). A draft opened
+      // on top of it is renamed too — after a C revision there is no P.
+      const all = await tx
+        .select({ id: bomRevisions.id, letter: bomRevisions.letter, status: bomRevisions.status, createdAt: bomRevisions.createdAt })
+        .from(bomRevisions)
+        .where(eq(bomRevisions.bomId, rev.bomId))
+        .orderBy(asc(bomRevisions.createdAt));
+      const letters = all.map(a => a.letter);
+      const approvedAt = all.find(a => a.id === rev.id)!.createdAt;
+      const renames = [rev.id, ...all
+        .filter(a => a.status === "draft" && a.createdAt > approvedAt && !isCBomRevision(a.letter))
+        .map(a => a.id)];
+      for (const id of renames) {
+        const next = nextCBomRevision(letters);
+        letters.push(next);
+        await tx.update(bomRevisions).set({ letter: next }).where(eq(bomRevisions.id, id));
+        if (id === rev.id) label = next;
+      }
+    }
     await touchBom(tx, rev.bomId, session.user.id);
-    return true;
+    return label;
   });
-  if (!updated) return { ok: false, error: "The status was just changed by someone else — refresh the page." };
+  if (updated === null) return { ok: false, error: "The status was just changed by someone else — refresh the page." };
+  const relabelled = updated !== rev.letter ? ` (now ${formatBomRevision(updated)})` : "";
 
   revalidatePath("/builder");
   revalidatePath(`/builder/${rev.projectId}/${rev.bomId}`);
@@ -277,11 +299,12 @@ export async function changeRevisionStatus(input: z.input<typeof StatusInput>): 
     kind: "bom.status.changed",
     refType: "bom",
     refId: rev.bomId,
-    summary: `${rev.bomName} ${formatBomRevision(rev.letter)}: ${BOM_STATUS_LABEL[rev.status]} → ${BOM_STATUS_LABEL[data.to]} — ${data.comment}`,
+    summary: `${rev.bomName} ${formatBomRevision(rev.letter)}${relabelled}: ${BOM_STATUS_LABEL[rev.status]} → ${BOM_STATUS_LABEL[data.to]} — ${data.comment}`,
     payload: {
       projectId: rev.projectId,
       revisionId: rev.id,
       letter: rev.letter,
+      ...(relabelled ? { label: updated } : {}),
       from: rev.status,
       to: data.to,
       comment: data.comment,

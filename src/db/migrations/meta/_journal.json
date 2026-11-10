@@ -225,6 +225,27 @@
       "when": 1792486047214,
       "tag": "0031_my_work_seen",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794308694620,
+      "tag": "0032_project_codes",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1794309656824,
+      "tag": "0033_drawing_pc_revisions",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794309789049,
+      "tag": "0034_bom_pc_revisions",
+      "breakpoints": true
     }
   ]
 }

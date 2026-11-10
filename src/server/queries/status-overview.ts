@@ -27,6 +27,7 @@ function latestRevisions() {
       drawingId: drawingRevisions.drawingId,
       revisionId: drawingRevisions.id,
       number: drawingRevisions.number,
+      label: drawingRevisions.label,
     })
     .from(drawingRevisions)
     .orderBy(drawingRevisions.drawingId, desc(drawingRevisions.number))
@@ -65,6 +66,7 @@ function transmittalColumns() {
       name: drawings.name,
       projectCode: projects.code,
       revisionNumber: drawingRevisions.number,
+      revisionLabel: sql<string>`coalesce(${drawingTransmittals.revisionLabel}, ${drawingRevisions.label})`,
       revisionStatus: drawingRevisions.status,
       fileId: sql<string | null>`(
         select ${drawingFiles.id} from ${drawingFiles}

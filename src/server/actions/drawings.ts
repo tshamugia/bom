@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { and, desc, eq, inArray, isNull, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { db } from "@/db/client";
@@ -12,8 +12,9 @@ import {
   OWNER_IS_REVIEWER_MESSAGE,
   TRANSITION_ERROR_MESSAGE,
   checkDrawingTransition,
-  formatDrawingRevision,
+  isCStatus,
   isOwnerChangeBlocked,
+  revisionLabel,
   type DrawingStatus,
   type TransitionKind,
 } from "@/lib/drawing-status";
@@ -80,6 +81,8 @@ async function latestRevision(drawingId: string) {
     .select({
       id: drawingRevisions.id,
       number: drawingRevisions.number,
+      cNumber: drawingRevisions.cNumber,
+      label: drawingRevisions.label,
       status: drawingRevisions.status,
       reviewerId: drawingRevisions.reviewerId,
       reviewedById: drawingRevisions.reviewedById,
@@ -318,7 +321,7 @@ const NewRevisionInput = z.object({
 
 export async function createDrawingRevision(
   input: z.input<typeof NewRevisionInput>,
-): Promise<DrawingActionResult<{ number: number }>> {
+): Promise<DrawingActionResult<{ number: number; label: string }>> {
   const { drawingId, commitMessage, bomImpact } = NewRevisionInput.parse(input);
   const session = await requireSession();
   if (!canEdit(session.user)) return fail(READ_ONLY_ERROR);
@@ -331,6 +334,9 @@ export async function createDrawingRevision(
   if (!d) return fail("Drawing not found.");
   const prev = await latestRevision(drawingId);
   const number = (prev?.number ?? 0) + 1;
+  // After the first C revision every new one is C too (NAMING §6: no going back to P).
+  const cNumber = prev?.cNumber != null ? prev.cNumber + 1 : null;
+  const label = revisionLabel(number, cNumber);
 
   try {
     await db.transaction(async tx => {
@@ -342,6 +348,7 @@ export async function createDrawingRevision(
       const [rev] = await tx.insert(drawingRevisions).values({
         drawingId,
         number,
+        cNumber,
         commitMessage,
         bomImpact,
         createdById: session.user.id,
@@ -367,10 +374,10 @@ export async function createDrawingRevision(
     kind: "drawing.revision.created",
     refType: "drawing",
     refId: drawingId,
-    summary: `${d.code} ${formatDrawingRevision(number)} created${bomImpact ? "" : " — no BOM change"}`,
-    payload: { projectId: d.projectId, number, commitMessage, bomImpact },
+    summary: `${d.code} ${label} created${bomImpact ? "" : " — no BOM change"}`,
+    payload: { projectId: d.projectId, number, label, commitMessage, bomImpact },
   });
-  return { ok: true, number };
+  return { ok: true, number, label };
 }
 
 const BomImpactInput = z.object({ revisionId: Id, bomImpact: z.boolean() });
@@ -385,6 +392,7 @@ export async function setDrawingRevisionBomImpact(input: z.infer<typeof BomImpac
     .select({
       drawingId: drawingRevisions.drawingId,
       number: drawingRevisions.number,
+      label: drawingRevisions.label,
       bomImpact: drawingRevisions.bomImpact,
       code: drawings.code,
       projectId: drawings.projectId,
@@ -421,7 +429,7 @@ export async function setDrawingRevisionBomImpact(input: z.infer<typeof BomImpac
     kind: "drawing.revision.bom_impact",
     refType: "drawing",
     refId: rev.drawingId,
-    summary: `${rev.code} ${formatDrawingRevision(rev.number)} marked as ${bomImpact ? "changing the BOM" : "no BOM change"}`,
+    summary: `${rev.code} ${rev.label} marked as ${bomImpact ? "changing the BOM" : "no BOM change"}`,
     payload: { projectId: rev.projectId, revisionId, bomImpact },
   });
   return { ok: true };
@@ -441,6 +449,7 @@ const STATUS_RACE_ERROR = "The status was just changed by someone else — refre
 type StatusTarget = {
   revisionId: string;
   number: number;
+  label: string;
   status: DrawingStatus;
   drawingId: string;
   code: string;
@@ -458,10 +467,11 @@ type StatusWrite = {
 
 /**
  * Saves a status change `checkDrawingTransition` allowed. The update only moves
- * the revision from the status that was checked, so `false` means someone else
- * changed it in between and nothing was written.
+ * the revision from the status that was checked, so `null` means someone else
+ * changed it in between and nothing was written. Returns the revision's label
+ * afterwards: the first approval turns P03 into C01 (NAMING §6).
  */
-async function writeStatusChange(t: StatusTarget, w: StatusWrite, now: Date): Promise<boolean> {
+async function writeStatusChange(t: StatusTarget, w: StatusWrite, now: Date): Promise<string | null> {
   return db.transaction(async tx => {
     const [row] = await tx.update(drawingRevisions)
       .set({
@@ -473,7 +483,18 @@ async function writeStatusChange(t: StatusTarget, w: StatusWrite, now: Date): Pr
       })
       .where(and(eq(drawingRevisions.id, t.revisionId), eq(drawingRevisions.status, t.status)))
       .returning({ id: drawingRevisions.id });
-    if (!row) return false;
+    if (!row) return null;
+    let label = t.label;
+    if (isCStatus(w.to)) {
+      // Only the latest revision moves, so the next C number is one above the drawing's highest.
+      const [c] = await tx.update(drawingRevisions)
+        .set({
+          cNumber: sql`(SELECT coalesce(max(r.c_number), 0) + 1 FROM drawing_revision r WHERE r.drawing_id = ${t.drawingId})`,
+        })
+        .where(and(eq(drawingRevisions.id, t.revisionId), isNull(drawingRevisions.cNumber)))
+        .returning({ label: drawingRevisions.label });
+      if (c) label = c.label;
+    }
     await tx.insert(drawingEvents).values({
       drawingId: t.drawingId,
       revisionId: t.revisionId,
@@ -486,17 +507,21 @@ async function writeStatusChange(t: StatusTarget, w: StatusWrite, now: Date): Pr
     await tx.update(drawings)
       .set({ lastModifiedById: w.actorId, updatedAt: now })
       .where(eq(drawings.id, t.drawingId));
-    return true;
+    return label;
   });
 }
 
-async function auditStatusChange(t: StatusTarget, to: DrawingStatus, comment: string | null, bulk = false) {
+async function auditStatusChange(t: StatusTarget, to: DrawingStatus, comment: string | null, newLabel: string, bulk = false) {
+  const relabelled = newLabel !== t.label ? ` (now ${newLabel})` : "";
   await audit({
     kind: "drawing.status.changed",
     refType: "drawing",
     refId: t.drawingId,
-    summary: `${t.code} ${formatDrawingRevision(t.number)}: ${DRAWING_STATUS_LABEL[t.status]} → ${DRAWING_STATUS_LABEL[to]}`,
-    payload: { projectId: t.projectId, revisionId: t.revisionId, from: t.status, to, comment, ...(bulk ? { bulk } : {}) },
+    summary: `${t.code} ${t.label}${relabelled}: ${DRAWING_STATUS_LABEL[t.status]} → ${DRAWING_STATUS_LABEL[to]}`,
+    payload: {
+      projectId: t.projectId, revisionId: t.revisionId, from: t.status, to, comment,
+      ...(relabelled ? { label: newLabel } : {}), ...(bulk ? { bulk } : {}),
+    },
   });
 }
 
@@ -510,6 +535,7 @@ export async function changeDrawingStatus(input: z.infer<typeof StatusInput>): P
     .select({
       revisionId: drawingRevisions.id,
       number: drawingRevisions.number,
+      label: drawingRevisions.label,
       status: drawingRevisions.status,
       reviewerId: drawingRevisions.reviewerId,
       reviewedAt: drawingRevisions.reviewedAt,
@@ -542,10 +568,11 @@ export async function changeDrawingStatus(input: z.infer<typeof StatusInput>): P
   if (!check.ok) return fail(TRANSITION_ERROR_MESSAGE[check.error]);
 
   const write = { to: data.to, kind: check.kind, resetsReview: check.resetsReview, nextReviewerId, comment, actorId: session.user.id };
-  if (!(await writeStatusChange(rev, write, new Date()))) return fail(STATUS_RACE_ERROR);
+  const newLabel = await writeStatusChange(rev, write, new Date());
+  if (newLabel === null) return fail(STATUS_RACE_ERROR);
 
   revalidateDrawing(rev.drawingId, rev.projectId);
-  await auditStatusChange(rev, data.to, comment);
+  await auditStatusChange(rev, data.to, comment, newLabel);
 
   const notice = {
     revisionId: rev.revisionId,
@@ -579,6 +606,7 @@ async function loadBulkDrawings(ids: string[]) {
       drawingId: drawingRevisions.drawingId,
       revisionId: drawingRevisions.id,
       number: drawingRevisions.number,
+      label: drawingRevisions.label,
       status: drawingRevisions.status,
       reviewerId: drawingRevisions.reviewerId,
       reviewedById: drawingRevisions.reviewedById,
@@ -598,6 +626,7 @@ async function loadBulkDrawings(ids: string[]) {
       dueDate: drawings.dueDate,
       revisionId: latest.revisionId,
       number: latest.number,
+      label: latest.label,
       status: latest.status,
       reviewerId: latest.reviewerId,
       reviewedById: latest.reviewedById,
@@ -654,11 +683,12 @@ export async function bulkChangeDrawingStatus(input: z.input<typeof BulkStatusIn
   const now = new Date();
 
   for (const { row, kind, resetsReview } of plan.ready) {
-    if (!(await writeStatusChange(row, { to: data.to, kind, resetsReview, nextReviewerId, comment, actorId }, now))) {
+    const newLabel = await writeStatusChange(row, { to: data.to, kind, resetsReview, nextReviewerId, comment, actorId }, now);
+    if (newLabel === null) {
       skipped.push({ id: row.id, code: row.code, reason: STATUS_RACE_ERROR });
       continue;
     }
-    await auditStatusChange(row, data.to, comment, true);
+    await auditStatusChange(row, data.to, comment, newLabel, true);
     done.push(row);
     notices.push({
       revisionId: row.revisionId,
@@ -782,7 +812,7 @@ export async function addDrawingComment(input: z.infer<typeof CommentInput>): Pr
   if (!canEdit(session.user)) return fail(READ_ONLY_ERROR);
 
   const [rev] = await db
-    .select({ number: drawingRevisions.number, drawingId: drawings.id, code: drawings.code, projectId: drawings.projectId })
+    .select({ number: drawingRevisions.number, label: drawingRevisions.label, drawingId: drawings.id, code: drawings.code, projectId: drawings.projectId })
     .from(drawingRevisions)
     .innerJoin(drawings, eq(drawings.id, drawingRevisions.drawingId))
     .where(and(eq(drawingRevisions.id, revisionId), isNull(drawings.deletedAt)))
@@ -802,7 +832,7 @@ export async function addDrawingComment(input: z.infer<typeof CommentInput>): Pr
     kind: "drawing.comment.added",
     refType: "drawing",
     refId: rev.drawingId,
-    summary: `Comment on ${rev.code} ${formatDrawingRevision(rev.number)}`,
+    summary: `Comment on ${rev.code} ${rev.label}`,
     payload: { projectId: rev.projectId, revisionId },
   });
   return { ok: true };

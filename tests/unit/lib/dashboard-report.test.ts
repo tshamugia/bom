@@ -17,7 +17,7 @@ describe("buildDashboardWorkbook", () => {
   test("has project, deadline and drawing sheets with the right rows", async () => {
     const drawing: DashboardDrawing = {
       id: "d1", code: "ELV-101", name: "CCTV", projectId: "p1", projectCode: "HLT", projectName: "Hilton",
-      disciplineName: "CCTV", ownerId: "u1", ownerName: "Nino", revisionNumber: 2, status: "approved-a",
+      disciplineName: "CCTV", ownerId: "u1", ownerName: "Nino", revisionNumber: 2, revisionLabel: "P02", status: "approved-a",
       reviewerName: null, dueDate: "2026-09-20", estimatedHours: 10, loggedHours: 12, openRemarks: 0, needApprovalSince: null,
     };
     const buf = await buildDashboardWorkbook({
@@ -42,7 +42,7 @@ describe("buildDashboardWorkbook", () => {
     ]);
     const projects = wb.getWorksheet("Projects")!;
     expect(projects.getRow(2).values).toEqual([
-      undefined, "HLT", "Hilton", "Hilton Tbilisi", "Nino", "2026-01-10", "2026-12-01", 2, 40, "Rev2", 1, 1, 0,
+      undefined, "HLT", "Hilton", "Hilton Tbilisi", "Nino", "2026-01-10", "2026-12-01", 2, 40, "P02", 1, 1, 0,
     ]);
     expect(wb.getWorksheet("Deadlines")!.getCell("E2").value).toBe("Overdue");
     const summary = wb.getWorksheet("Summary")!;

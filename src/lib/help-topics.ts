@@ -49,7 +49,7 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
   "bom-revisions": {
     title: "BOM revisions",
     summary:
-      "A BOM is built in revisions — Rev1, Rev2… Only a Draft can be edited. Committing locks its lines. To change them later, create a new revision: it starts as a copy of the last one. The BOM's owner changes only with a new revision — pick them in the New revision dialog.",
+      "A BOM is built in revisions — P01, P02… and C01, C02… once the client approves it. Only a Draft can be edited. Committing locks its lines. To change them later, create a new revision: it starts as a copy of the last one. The BOM's owner changes only with a new revision — pick them in the New revision dialog.",
   },
   "bom-statuses": {
     title: "BOM statuses",
@@ -74,7 +74,7 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
   "drawing-revisions": {
     title: "Drawing revisions",
     summary:
-      "Drawings go rev1, rev2… Only the latest revision can change status; older ones keep the status they had. A new revision starts as In Progress.",
+      "Drawings go P01, P02… until the client approves one: that revision becomes C01 and later ones C02, C03… Only the latest revision can change status; older ones keep the status they had. A new revision starts as In Progress.",
   },
   "drawing-statuses": {
     title: "Drawing statuses",

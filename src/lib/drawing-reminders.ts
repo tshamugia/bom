@@ -3,9 +3,7 @@
 
 import { z } from "zod";
 import {
-  DRAWING_STATUS_LABEL,
-  formatDrawingRevision,
-  isClosedStatus,
+  DRAWING_STATUS_LABEL, isClosedStatus,
   todayIso,
   type DrawingStatus,
 } from "./drawing-status";
@@ -58,6 +56,7 @@ export type ReminderDrawing = {
   projectId: string;
   projectCode: string;
   revisionNumber: number;
+  revisionLabel: string;
   status: DrawingStatus;
   dueDate: string | null;
   ownerId: string | null;
@@ -77,6 +76,7 @@ export type ReminderTransmittal = {
   projectId: string;
   projectCode: string;
   revisionNumber: number;
+  revisionLabel: string;
   purpose: TransmittalPurpose;
   recipientUserId: string;
   recipientName: string;
@@ -91,6 +91,7 @@ export type ReminderItem = {
   code: string;
   name: string;
   revisionNumber: number;
+  revisionLabel: string;
   detail: string;
 };
 
@@ -156,6 +157,7 @@ export function collectReminders(input: {
       code: d.code,
       name: d.name,
       revisionNumber: d.revisionNumber,
+      revisionLabel: d.revisionLabel,
     };
     const closed = isClosedStatus(d.status);
     const managers = managersOf(d.projectId);
@@ -215,18 +217,19 @@ export function collectReminders(input: {
         code: t.code,
         name: t.name,
         revisionNumber: t.revisionNumber,
+        revisionLabel: t.revisionLabel,
       };
       const purpose = TRANSMITTAL_PURPOSE_LABEL[t.purpose].toLowerCase();
       if (config.transmittals.recipient) {
         add([t.recipientUserId], `transmittal:${t.id}`, {
           ...base,
-          detail: `${formatDrawingRevision(t.revisionNumber)} issued to you ${purpose} ${plural(age, "day")} ago — please acknowledge`,
+          detail: `${t.revisionLabel} issued to you ${purpose} ${plural(age, "day")} ago — please acknowledge`,
         });
       }
       if (config.transmittals.sender && t.sentById !== t.recipientUserId) {
         add([t.sentById], `transmittal:${t.id}`, {
           ...base,
-          detail: `${formatDrawingRevision(t.revisionNumber)} issued to ${t.recipientName} ${plural(age, "day")} ago — not acknowledged`,
+          detail: `${t.revisionLabel} issued to ${t.recipientName} ${plural(age, "day")} ago — not acknowledged`,
         });
       }
     }
@@ -261,7 +264,7 @@ export function buildReminderDigestEmail(input: {
     if (items.length === 0) continue;
     lines.push("", `${REMINDER_KIND_LABEL[kind]} (${items.length})`);
     for (const i of items) {
-      lines.push(`- [${i.projectCode}] ${i.code} ${formatDrawingRevision(i.revisionNumber)} — ${i.name}: ${i.detail}`);
+      lines.push(`- [${i.projectCode}] ${i.code} ${i.revisionLabel} — ${i.name}: ${i.detail}`);
       lines.push(`  ${base}/drawings/${i.drawingId}`);
     }
   }

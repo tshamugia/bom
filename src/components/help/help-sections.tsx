@@ -192,9 +192,10 @@ export const HELP_SECTIONS: HelpSection[] = [
         <HelpDiagram />
         <ul>
           <li>Everything lives in a <strong>project</strong>: its drawings and its BOMs.</li>
-          <li>Projects and drawings get their <strong>code</strong> from their name when they are created — the initials (Georgian is spelt in Latin letters) and the next free number, e.g. <span className="mono">BS-001</span> for &ldquo;BMW showroom&rdquo;. Nobody types a code, and renaming keeps it, because files and transmittals carry it.</li>
-          <li><strong>Drawings</strong> are the engineering drawing register. Each drawing has revisions (rev1, rev2…), a status, an owner and a due date.</li>
-          <li><strong>BOMs</strong> (bills of materials) list what to buy. Each BOM has revisions too (Rev1, Rev2…), numbered like drawing revisions. Lines come from the item catalog, which knows each item&apos;s vendor.</li>
+          <li>A <strong>project code</strong> is the year and three letters from the name, as in the drawing standard (NAMING §4.2): <span className="mono">26TGT</span> for &ldquo;Tegeta Motors&rdquo; (Georgian is spelt in Latin letters). The New project dialog suggests both and you may change them there; a code that is taken — archived projects count — can&apos;t be used again. After that only an admin changes it, from the project passport, because drawing file names carry it (<span className="mono">INS-26TGT-ZZ-00-FA-102</span>).</li>
+          <li><strong>Drawing codes</strong> come from the drawing&apos;s name — its initials and the next free number in the project, e.g. <span className="mono">GFCL-001</span>. Nobody types them, and renaming keeps them.</li>
+          <li><strong>Drawings</strong> are the engineering drawing register. Each drawing has revisions, a status, an owner and a due date. Revisions follow the drawing standard: <span className="mono">P01</span>, <span className="mono">P02</span>… until the client approves the drawing, <span className="mono">C01</span>, <span className="mono">C02</span>… from then on — see <a href="#drawing-revisions">Drawing revisions</a>.</li>
+          <li><strong>BOMs</strong> (bills of materials) list what to buy. Each BOM has revisions too, labelled like drawing revisions: P01, P02… until the client approves the BOM, then C01, C02… Lines come from the item catalog, which knows each item&apos;s vendor.</li>
           <li>The two meet where a <strong>BOM revision is built from drawing revisions</strong>. When a drawing gets a revision that changes the BOM, the BOMs built from the older one show it as outdated.</li>
           <li>
             What leaves the app: BOMs sent to procurement and drawing revisions issued to people — both listed under <Link href="/approvals">Sent</Link>.
@@ -286,13 +287,13 @@ export const HELP_SECTIONS: HelpSection[] = [
     roles: EDITORS,
     body: () => (
       <ol className="help-steps">
-        <li>Open the project and click <Ui>New BOM</Ui>. It starts as a Draft Rev1. (Or <Ui>Duplicate</Ui> an existing BOM from the builder, or pick <Ui>From file</Ui> to build it from the BOM template — see below.)</li>
+        <li>Open the project and click <Ui>New BOM</Ui>. It starts as a Draft P01. (Or <Ui>Duplicate</Ui> an existing BOM from the builder, or pick <Ui>From file</Ui> to build it from the BOM template — see below.)</li>
         <li>In the <Link href="/builder">BOM Builder</Link>, add lines by searching the catalog, or with <Ui>Import</Ui> from the BOM template. Group lines into sections such as “Fire alarm” or “IT network”.</li>
         <li>Link the drawings the BOM is built from with <Ui>Manage</Ui> on the drawings strip — they are linked at their current revision.</li>
         <li>Click <Ui>Commit revision</Ui>. The lines lock.</li>
         <li>Click <Ui>Preview</Ui> to check the document, then <Ui>Generate Excel</Ui> to download it, or <Ui>Send to procurement</Ui> to email it.</li>
         <li>When the client confirms the BOM, click <Ui>Change status</Ui> → <Ui>Approved</Ui> and say who confirmed it.</li>
-        <li>Something changed later? Click <Ui>New revision</Ui>: Rev2 starts as a draft copy of Rev1.</li>
+        <li>Something changed later? Click <Ui>New revision</Ui>: P02 starts as a draft copy of P01.</li>
       </ol>
     ),
   },
@@ -322,7 +323,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     roles: EDITORS,
     body: () => (
       <>
-        <p>A BOM keeps every version as a revision: Rev1, Rev2, Rev3… Only a <strong>Draft</strong> can be edited, and a BOM has at most one draft at a time. Committing locks the lines; after that the revision only changes status — see <a href="#bom-statuses">BOM statuses</a>.</p>
+        <p>A BOM keeps every version as a revision: P01, P02, P03… When the client approves a revision it becomes <span className="mono">C01</span> (a draft opened on top of it becomes C02), and every later revision continues C02, C03… — once a BOM has a C revision it doesn&apos;t go back to P, even if the approval is taken back. Only a <strong>Draft</strong> can be edited, and a BOM has at most one draft at a time. Committing locks the lines; after that the revision only changes status — see <a href="#bom-statuses">BOM statuses</a>.</p>
         <p>To change a committed BOM, click <Ui>New revision</Ui> in the builder. The new draft copies the sections, lines and drawing links of the one before. <Ui>Discard draft</Ui> throws a draft away. Compare revisions from the project&apos;s <Ui>History</Ui>.</p>
         <p>A BOM&apos;s owner changes only together with a new revision. Pick the new owner in the <Ui>New revision</Ui> dialog (or <Ui>Clone</Ui> in History): the new draft and the BOM pass to them, earlier revisions keep their owner, and History shows who owned each one. Viewers can&apos;t own a BOM.</p>
       </>
@@ -363,11 +364,11 @@ export const HELP_SECTIONS: HelpSection[] = [
     roles: EDITORS,
     body: () => (
       <>
-        <p>The drawings strip at the top of the builder shows which drawing revisions the current BOM revision was built from, e.g. <span className="pill"><span className="mono">ELV-101</span> rev2</span>.</p>
+        <p>The drawings strip at the top of the builder shows which drawing revisions the current BOM revision was built from, e.g. <span className="pill"><span className="mono">ELV-101</span> P02</span>.</p>
         <ul>
           <li>Link and unlink drawings with <Ui>Manage</Ui> — only on a Draft. A drawing is linked at its latest revision.</li>
-          <li><strong>Red</strong> — outdated: the drawing has a newer revision that changes the BOM, e.g. <span className="pill help-pill-red"><span className="mono">ELV-101</span> rev2 → rev3</span>.</li>
-          <li><strong>✓ rev3</strong> — the drawing has newer revisions, but none of them changes the BOM, or someone checked them.</li>
+          <li><strong>Red</strong> — outdated: the drawing has a newer revision that changes the BOM, e.g. <span className="pill help-pill-red"><span className="mono">ELV-101</span> P02 → P03</span>.</li>
+          <li><strong>✓ P03</strong> — the drawing has newer revisions, but none of them changes the BOM, or someone checked them.</li>
           <li>On a drawing page, <Ui>Used in BOMs</Ui> shows the same link from the drawing&apos;s side.</li>
         </ul>
       </>
@@ -382,7 +383,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         <p>When a BOM shows outdated drawings, click <Ui>Review</Ui> on its drawings strip. For each drawing you see the newer revisions and what changed. Then:</p>
         <ul>
           <li><Ui>No BOM change</Ui> — the change doesn&apos;t affect this BOM. The BOM keeps its lines and its revision, and stops showing the drawing as outdated. This works on committed revisions too.</li>
-          <li><Ui>Update to rev3</Ui> — on a Draft, moves the link to the newer drawing revision. Adjust the lines if needed, then commit.</li>
+          <li><Ui>Update to P03</Ui> — on a Draft, moves the link to the newer drawing revision. Adjust the lines if needed, then commit.</li>
           <li>On a committed BOM that does need changes, click <Ui>New revision</Ui>, update the lines and the links in the draft, and commit it.</li>
         </ul>
       </>
@@ -435,7 +436,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     roles: EDITORS,
     body: () => (
       <ol className="help-steps">
-        <li>On <Link href="/drawings">Drawings</Link>, click <Ui>New drawing</Ui>: project, name, owner and due date. The code is made from the name — its initials and the next free number in the project, e.g. <span className="mono">GFCL-001</span> for &ldquo;Ground floor CCTV layout&rdquo;. Add the <Ui>File location</Ui> — the folder on the file server, e.g. <span className="mono">2026/BMW/CCTV</span> — so others can find the files. It starts at rev1, In Progress.</li>
+        <li>On <Link href="/drawings">Drawings</Link>, click <Ui>New drawing</Ui>: project, name, owner and due date. The code is made from the name — its initials and the next free number in the project, e.g. <span className="mono">GFCL-001</span> for &ldquo;Ground floor CCTV layout&rdquo;. Add the <Ui>File location</Ui> — the folder on the file server, e.g. <span className="mono">2026/BMW/CCTV</span> — so others can find the files. It starts at P01, In Progress.</li>
         <li>Work on it. Log hours in <Ui>Time</Ui> and track client or site comments in <Ui>Remarks</Ui>.</li>
         <li>When it is ready, <Ui>Change status</Ui> → <Ui>Need to be approved</Ui> and pick the approving engineer.</li>
         <li>That engineer approves it (→ Awaiting approval) or sends it back with a comment (→ In Progress).</li>
@@ -451,7 +452,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     group: "Drawings",
     body: () => (
       <>
-        <p>A drawing keeps every issue as a revision: rev1, rev2, rev3… The page shows the latest one; older ones are listed under <Ui>Revisions</Ui> with their history.</p>
+        <p>A drawing keeps every issue as a revision, labelled as in the drawing standard (NAMING §6): <span className="mono">P01</span>, <span className="mono">P02</span>… while it is preliminary. The revision the client approves (Approved A, Approved B or As Built) becomes <span className="mono">C01</span>, and every later revision is <span className="mono">C02</span>, <span className="mono">C03</span>… — a drawing never goes back to P, even if the approval is taken back. Transmittals and PDFs keep the label they went out under: a P02 sent for review stays P02 in the history. The page shows the latest revision; older ones are listed under <Ui>Revisions</Ui> with their history.</p>
         <ul>
           <li>Only the latest revision can change status. Older revisions keep the status they had when the next one was created.</li>
           <li>A new revision starts as In Progress, with a note on what changed.</li>
@@ -532,7 +533,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         <ul>
           <li>The <strong>drawing owner</strong> or an <strong>admin</strong> uploads it, on the <Ui>Drawing PDF</Ui> card, to the latest revision only.</li>
           <li>Uploads open once the client approved the revision: <strong>Approved A, Approved B or As Built</strong>. An admin can open them earlier, from <strong>Need to be approved</strong>, in Settings → Drawings. Viewers see the PDF from the same point.</li>
-          <li>PDF only, up to {MAX_DRAWING_FILE_MB} MB. Whatever the file was called, it is saved and downloaded as <span className="mono">CODE_rev3.pdf</span>; the original name is shown next to it.</li>
+          <li>PDF only, up to {MAX_DRAWING_FILE_MB} MB. Whatever the file was called, it is saved and downloaded as <span className="mono">CODE_C01.pdf</span> (the revision it was uploaded under); the original name is shown next to it.</li>
           <li>A new upload replaces the current PDF. The old one is kept in the archive and the revision history says who replaced it. An admin can remove a wrong PDF, with a reason.</li>
           {role !== "viewer" && <li>Earlier revisions keep their PDFs — open them under <Ui>Revisions</Ui>.</li>}
         </ul>

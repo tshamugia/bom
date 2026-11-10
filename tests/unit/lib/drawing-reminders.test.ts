@@ -19,7 +19,7 @@ function drawing(overrides: Partial<ReminderDrawing> = {}): ReminderDrawing {
     name: "CCTV layout",
     projectId: "p1",
     projectCode: "HLT",
-    revisionNumber: 2,
+    revisionNumber: 2, revisionLabel: "P02",
     status: "in-progress",
     dueDate: null,
     ownerId: "owner",
@@ -40,7 +40,7 @@ function transmittal(overrides: Partial<ReminderTransmittal> = {}): ReminderTran
     name: "CCTV layout",
     projectId: "p1",
     projectCode: "HLT",
-    revisionNumber: 2,
+    revisionNumber: 2, revisionLabel: "P02",
     purpose: "construction",
     recipientUserId: "foreman",
     recipientName: "Site Foreman",
@@ -173,7 +173,7 @@ describe("buildReminderDigestEmail", () => {
     const { subject, text } = buildReminderDigestEmail({ appUrl: "https://bom.example/", userName: "Tengo", today: TODAY, items });
     expect(subject).toBe("Drawing reminders — 1 item (2026-09-29)");
     expect(text).toContain("Overdue drawings (1)");
-    expect(text).toContain("- [HLT] ELV-101 rev2 — CCTV layout: due 2026-09-27, 2 days late · In Progress");
+    expect(text).toContain("- [HLT] ELV-101 P02 — CCTV layout: due 2026-09-27, 2 days late · In Progress");
     expect(text).toContain("https://bom.example/drawings/d1");
     expect(text).not.toContain("Due soon");
   });
