@@ -65,7 +65,7 @@ export function VendorDialog({ existing, trigger }: { existing?: Vendor; trigger
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="vendor-status">Status</Label>
-            <Select value={form.watch("status")} onValueChange={v => form.setValue("status", v as any)}>
+            <Select value={form.watch("status")} onValueChange={v => form.setValue("status", v as Vendor["status"])}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="preferred">Preferred</SelectItem>

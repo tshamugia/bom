@@ -24,6 +24,9 @@ const Schema = z.object({
   ROOT_USER_EMAIL: z.string().email().default("t.shamugia@insta.ge"),
   ROOT_USER_PASSWORD: z.string().min(8).default("Password123"),
   ROOT_USER_NAME: z.string().default("Tengo Shamugia"),
+  // Baked into the image by the Docker build (.github/workflows/images.yml); /api/health reports them.
+  APP_VERSION: z.string().optional(),
+  APP_REVISION: z.string().optional(),
 });
 
 const parsed = Schema.safeParse(process.env);

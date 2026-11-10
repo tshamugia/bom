@@ -1,0 +1,88 @@
+# Push an annotated tag vX.Y.Z on main to release:
+#   1. the tag must match package.json's version
+#   2. CI runs again on the tagged commit
+#   3. both images are pushed to GHCR as X.Y.Z, X.Y and latest
+#   4. deploy.yml points the Railway services at X.Y.Z and waits for them
+#   5. the GitHub release is created from the tag message
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: Check version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: check
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$pkg" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json ($pkg). Bump the version first: npm version $tag --no-git-tag-version"
+            exit 1
+          fi
+          echo "version=$tag" >> "$GITHUB_OUTPUT"
+
+  ci:
+    name: CI
+    needs: version
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+      packages: write
+
+  images:
+    name: Images
+    needs: [version, ci]
+    uses: ./.github/workflows/images.yml
+    with:
+      push: true
+    permissions:
+      contents: read
+      packages: write
+
+  deploy:
+    name: Deploy
+    needs: [version, images]
+    uses: ./.github/workflows/deploy.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+    secrets: inherit
+
+  github-release:
+    name: GitHub release
+    needs: [version, deploy]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          # checkout keeps only the commit; fetch the annotated tag for its message.
+          git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
+          title="$(git tag -l --format='%(contents:subject)' "$TAG")"
+          git tag -l --format='%(contents:body)' "$TAG" > notes.md
+          {
+            echo
+            echo "**Images**"
+            echo
+            echo "- \`ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/bom:${TAG#v}\`"
+            echo "- \`ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/bom-dxf-checker:${TAG#v}\`"
+          } >> notes.md
+          gh release create "$TAG" --verify-tag --title "${title:-$TAG}" --notes-file notes.md --generate-notes

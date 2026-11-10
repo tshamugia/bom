@@ -9,26 +9,19 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 
-ARG DATABASE_URL
-ARG BETTER_AUTH_SECRET
-ARG BETTER_AUTH_URL
-ARG NEXT_PUBLIC_BETTER_AUTH_URL
-ARG AWS_REGION
-ARG AWS_ACCESS_KEY_ID
-ARG AWS_SECRET_ACCESS_KEY
-ARG S3_BUCKET
-ARG EMAIL_FROM
-ENV DATABASE_URL=$DATABASE_URL \
-    BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET \
-    BETTER_AUTH_URL=$BETTER_AUTH_URL \
-    NEXT_PUBLIC_BETTER_AUTH_URL=$NEXT_PUBLIC_BETTER_AUTH_URL \
-    AWS_REGION=$AWS_REGION \
-    AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-    AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-    S3_BUCKET=$S3_BUCKET \
-    EMAIL_FROM=$EMAIL_FROM
-
-RUN npm run build
+# `next build` imports src/lib/env.ts, which validates these. They are build-only
+# placeholders: the image is built once in GitHub Actions and published to GHCR,
+# and the real values come from the Railway service variables at runtime. The
+# app reads them through `env` at runtime, so nothing here ends up in the bundle.
+# Never pass secrets as build args.
+RUN DATABASE_URL=postgres://build:build@localhost:5432/build \
+    BETTER_AUTH_SECRET=build-time-placeholder-not-a-secret-0000 \
+    BETTER_AUTH_URL=http://localhost:3000 \
+    NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3000 \
+    AWS_REGION=us-east-1 \
+    S3_BUCKET=build \
+    EMAIL_FROM=build@example.com \
+    npm run build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
@@ -52,5 +45,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/postgres ./node_modu
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/drizzle-orm ./node_modules/drizzle-orm
 
 USER nextjs
+
+# Set by .github/workflows/images.yml; /api/health reports them.
+ARG APP_VERSION=dev
+ARG APP_REVISION=
+ENV APP_VERSION=$APP_VERSION \
+    APP_REVISION=$APP_REVISION
+
 EXPOSE 3000
 CMD ["sh", "-c", "node scripts/migrate.mjs && node server.js"]

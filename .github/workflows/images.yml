@@ -1,0 +1,89 @@
+# Builds the two images and, when `push` is true, publishes them to GHCR:
+#   ghcr.io/<owner>/bom              ← Dockerfile (the Next.js app)
+#   ghcr.io/<owner>/bom-dxf-checker  ← services/dxf-checker/Dockerfile
+# Tags follow the calling event: a release tag v1.2.3 gives 1.2.3, 1.2 and
+# latest; main gives main; a pull request gives pr-<n>. Every build also gets
+# sha-<short>. Images carry no secrets: runtime config is the Railway service
+# variables.
+name: Images
+
+on:
+  workflow_call:
+    inputs:
+      push:
+        description: Publish to GHCR (false = build only)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: bom
+            context: .
+          - image: bom-dxf-checker
+            context: services/dxf-checker
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Image name
+        id: name
+        # GHCR needs a lower-case owner.
+        run: echo "ref=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${{ matrix.image }}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        if: ${{ inputs.push }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.name.outputs.ref }}
+          flavor: latest=false
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha
+          labels: |
+            org.opencontainers.image.title=${{ matrix.image }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          platforms: linux/amd64
+          push: ${{ inputs.push }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # /api/health reports these, so a deploy can check what is live.
+          build-args: |
+            APP_VERSION=${{ steps.meta.outputs.version }}
+            APP_REVISION=${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+      - name: Summary
+        if: ${{ inputs.push }}
+        run: |
+          {
+            echo "### ${{ matrix.image }}"
+            echo '```'
+            echo "${{ steps.meta.outputs.tags }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
