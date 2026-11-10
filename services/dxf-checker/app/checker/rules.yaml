@@ -1,0 +1,179 @@
+# ---------------------------------------------------------------------------
+# სტანდარტების მანქანურად წასაკითხი ნაწილი.
+# სკრიპტები მხოლოდ ამ ფაილს კითხულობს. როცა naming-standard.md ან
+# drafting-standard.md იცვლება და ცვლილება კოდს, ცხრილს ან ზღვარს ეხება,
+# იგივე ცვლილება აქაც შედის, იმავე კომიტში / იმავე განახლებაში.
+# სინქრონს ამოწმებს: python scripts/validate_standards.py
+# ---------------------------------------------------------------------------
+
+versions:
+  naming: "0.0.3"      # = naming-standard.md frontmatter version
+  drafting: "0.0.5"    # = drafting-standard.md frontmatter version
+
+# ===================== NAMING (naming-standard.md) =========================
+
+naming:
+  # §4.1 — სხვა მონაწილეების კოდები პროექტის დაწყებისას ემატება
+  # (რეესტრის ზედა ნაწილიდან ან --originators არგუმენტით).
+  originators:
+    INS: Insta LLC
+
+  # §4.2 — წლის ბოლო ორი ციფრი + სამი ასო დასახელებიდან (25TGT)
+  project_pattern: '^\d{2}[A-Z]{3}$'
+
+  # §4.3
+  zones:
+    codes: [ZZ, ST, XX]
+    patterns: ['^K[1-9]$']
+
+  # §4.4 — level_order ქვემოდან ზემოთ: ნუმერაციის რიგის შესამოწმებლად (§5 წესი 1)
+  floors:
+    codes: [RF, ZZ, XX, M1]
+    patterns: ['^B[1-9]$', '^\d{2}$']
+    non_level: [ZZ, XX]          # „რამდენიმე სართული" / „სართულს არ ეხება"
+
+  # §4.5
+  systems:
+    GN: ზოგადი (ყდა, ნუსხა, შენიშვნები)
+    LV: რამდენიმე სისტემა ერთ ფურცელზე
+    FA: ხანძრის სიგნალიზაცია
+    VA: ევაკუაციის გახმოვანება, PA/VA
+    EM: ავარიული განათება და Exit ნიშნები
+    CC: ვიდეოთვალთვალი (CCTV)
+    AC: დაშვების კონტროლი
+    IN: შეღწევის (დაცვის) სიგნალიზაცია
+    IC: ინტერკომი, ვიდეოდომოფონი
+    SC: სტრუქტურირებული კაბელი, LAN, Wi-Fi
+    BM: BMS, დისპეჩერიზაცია
+    GR: GRMS
+    AV: აუდიო-ვიზუალური სისტემები
+    EL: ელექტრომომარაგება
+
+  # §5 — სერია = ნომრის პირველი ციფრი
+  series:
+    "0": პირობითი აღნიშვნები, ზოგადი შენიშვნები, ნუსხა
+    "1": სართულის გეგმები
+    "2": გადიდებული გეგმები
+    "3": სტრუქტურული და ბლოკ-სქემები, რაიზერები
+    "4": რეკები, კარადები, პანელების ხედები
+    "5": მონტაჟის დეტალები და კვანძები
+    "6": ცხრილები და დოკუმენტები
+    "7": შეერთების და კლემების სქემები
+    "8": სარეზერვო
+    "9": 3D ხედები, ფოტოფიქსაცია, კოორდინაცია
+  reserved_series: ["8"]
+  plan_series: "1"
+
+  # გაფართოება → მოსალოდნელი სერია (§7.1, §8 BOM, §10.3 მოდელი)
+  extension_series:
+    xlsx: ["6"]
+    xls: ["6"]
+    csv: ["6"]
+    docx: ["6", "0"]
+    rvt: ["9"]
+
+  drawing_extensions: [dwg, dxf, pdf]
+  checked_extensions: [dwg, dxf, pdf, xlsx, xls, csv, docx, rvt]
+
+  # §8 — აკრძალული სიტყვები (რეგისტრის გარეშე, ცალკე სიტყვად ან სუფიქსად)
+  forbidden_tokens:
+    - '(?i)(^|[\s_\-.])final($|[\s_\-.])'
+    - '(?i)(^|[\s_\-.])new($|[\s_\-.])'
+    - '(?i)(^|[\s_\-.])old($|[\s_\-.])'
+    - '(?i)(^|[\s_\-.])copy($|[\s_\-.])'
+    - '(?i)(^|[\s_\-.])v\d+($|[\s_\-.])'
+    - '(?i)ასლი|ახალი|ძველი|საბოლოო'
+    - '\(\d+\)'
+  date_patterns:
+    - '\d{4}-\d{2}-\d{2}'
+    - '(?<!\d)20\d{6}(?!\d)'
+    - '\d{2}[.\-]\d{2}[.\-]\d{4}'
+
+  # §8 — საქაღალდეები
+  folders:
+    wip: 01_WIP
+    issued: 02_ISSUED
+    current: 03_CURRENT
+    received: 04_RECEIVED
+    bom: 05_BOM
+    other: 06_OTHER
+  issue_folder_pattern: '^\d{4}-\d{2}-\d{2}_[PC]\d{2}$'
+  project_folder_pattern: '^(\d{2}[A-Z]{3})_'
+  register_name_pattern: '^(\d{2}[A-Z]{3})_DRAWING_REGISTER\.xlsx$'
+  current_allowed_extensions: [pdf]
+  junk_extensions: [bak, dwl, dwl2, 'sv$', tmp, log, err]
+  ignore_names: ['^~\$', '^Thumbs\.db$', '^desktop\.ini$', '^\.']
+
+  # §9
+  transmittal_pattern: '^TR-(\d{2}[A-Z]{3})-\d{3}$'
+  cancelled_marker: გაუქმებულია
+
+# ===================== TITLE BLOCK (naming §10.1) ==========================
+
+titleblock:
+  # ბლოკის სახელი, რომელიც შტამპად ჩაითვლება ატრიბუტების რაოდენობის მიუხედავად
+  block_name_patterns: ['(?i)title', '(?i)stamp', '(?i)shtamp', '(?i)^tb[_\-]?', '(?i)ramka', '(?i)frame', 'შტამპ']
+  min_matched_fields: 2
+  # ველი → ატრიბუტის tag-ის შესაძლო სახელები (რეგისტრის გარეშე).
+  # როცა რეალური შტამპის tag-ები ცნობილი გახდება, აქ დაემატება.
+  fields:
+    sheet_no:  [SHEET_NO, SHEETNO, SHEET_NUMBER, SHEET_NUM, SHEET, DWG_NO, DRAWING_NO, DRW_NO, NOMERI, FURCELI]
+    title:     [TITLE, DWG_TITLE, DRAWING_TITLE, SHEET_TITLE, SHEET_NAME, NAME, DASAXELEBA, TITLE1]
+    file_name: [FILE_NAME, FILENAME, FILE, DOC_NO, DOCUMENT_NO, DOC_NUMBER, DOCNO]
+    revision:  [REV, REVISION, REV_NO, REVNO, CUR_REV, REVIZIA]
+    project:   [PROJECT, PROJECT_NO, PROJECT_NUMBER, PROJ_NO, PROJ, OBJECT, PROJECT_NAME, OBIEKTI]
+    drawn:     [DRAWN, DRAWN_BY, DRAWNBY, DESIGNED, DESIGNED_BY, AUTHOR, SHEASRULA]
+    checked:   [CHECKED, CHECKED_BY, CHECKEDBY, SHEAMOWMA]
+    approved:  [APPROVED, APPROVED_BY, APPROVEDBY, DAAMTKICA]
+    scale:     [SCALE, MASSHTABI]
+    format:    [FORMAT, SIZE, SHEET_SIZE, PAPER, PAPER_SIZE]
+    typical:   [TYPICAL, TYPICAL_N, TYPICAL_X, TYP, TIPIURI]
+  required: [sheet_no, title, file_name, revision, project, drawn, checked, approved, scale, format]
+  signature_fields: [drawn, checked, approved]
+  # რევიზიების ცხრილის ატრიბუტები (მაგ. REV1, REV_1, REV1_DATE, REV1_DESC)
+  revision_table_tag_pattern: '(?i)^REV[_\-]?\d+([_\-].*)?$'
+  scale_pattern: '^(1:\d+|NTS|N\.T\.S\.|—|-)$'
+  format_pattern: '^A[0-4](x\d+)?$'
+
+# ===================== DRAFTING (drafting-standard.md) =====================
+
+drafting:
+  insunits_required: 4            # წესი 15 — მილიმეტრი
+  min_model_extent_mm: 1000       # წესი 15 — უფრო პატარა მოდელი ალბათ მეტრებშია
+  legend_layer: LEGEND            # წესი 12
+  cable_layer_prefix: CBL-        # წესი 13
+  # ღია საკითხი — ჯერ მხოლოდ WARNING. {systems} = ნებისმიერი სისტემის კოდი §4.5-დან
+  cable_layer_pattern: '^CBL-[A-Z0-9]+-[A-Z0-9.\-]+$'
+  cable_allowed_types: [LINE, LWPOLYLINE, POLYLINE]     # წესი 14
+  cable_like_layer_hints: ['(?i)cable', '(?i)kabel', '(?i)wire', '(?i)trassa', 'კაბელ']
+  duplicate_tolerance_mm: 1.0     # წესი 6
+  max_paper_layouts: 1            # წესი 16 / NAMING §8
+  # წესი 2 — ჩაკოპირებული / ძველი ასლების ნიშნები ბლოკის სახელში
+  copy_block_patterns: ['(?i)[_\-](old|new|copy|bak|orig)\d*$', '(?i)copy', '\(\d+\)$', '[_\-]\d+$', '\$0\$', '^A\$C[0-9A-F]+$']
+  # წესი 3 — დამტკიცებული ბიბლიოთეკა. ცარიელი = ჯერ არ არის განსაზღვრული (ღია საკითხი)
+  approved_blocks: []
+  # ბლოკები, რომლებიც მოწყობილობა არ არის (ლოგო, ჩრდილოეთის ისარი და ა.შ.)
+  non_device_block_patterns: ['(?i)north', '(?i)logo', '(?i)arrow', '(?i)scale.?bar', '(?i)revcloud', '(?i)section', '(?i)grid', '(?i)tag$']
+  # წესი 7 — SKU / მოდელის კოდი
+  sku_strong_patterns:
+    - '\bDS-\d[A-Z0-9\-]{4,}'          # Hikvision
+    - '\bDH-[A-Z]{2,}[A-Z0-9\-]{3,}'   # Dahua
+    - '\bIPC-[A-Z0-9]{3,}[A-Z0-9\-]*'  # Dahua/Uniview
+    - '\bNFX?[A-Z]?-[A-Z0-9]{3,}'      # Notifier
+    - '\b\d{6}\.\d{2,3}\b'             # ESSER/Honeywell (802371.10)
+    - '\b55000-\d{3}\b'                # Apollo
+    - '\bFAP-\d{3,}'                   # Bosch
+  sku_generic_pattern: '\b(?=[A-Z0-9\-./]*[A-Z])(?=(?:[A-Z\-./]*\d){2})[A-Z0-9][A-Z0-9\-./]{4,}\b'
+  sku_whitelist: [FP200, FP400, FP200GOLD, CAT5E, CAT6, CAT6A, CAT7, OM3, OM4, OS2, LIYCY, JYSTY, NYM, NYY, POE, IP65, IP66, IP67, IK10, RS485, RS232, 24VDC, 230VAC, 12VDC]
+  sku_exclude_patterns:
+    - '^[A-Z]{2}-\d{3}$'                                   # ფურცლის ნომერი
+    - '^[A-Z]{3}-\d{2}[A-Z]{3}-[A-Z0-9]{2}-[A-Z0-9]{2}-[A-Z]{2}-\d{3}' # ფაილის სახელი
+    - '^[PC]\d{2}(\.\d{2})?$'                              # რევიზია
+    - '^TR-\d{2}[A-Z]{3}-\d{3}$'                           # გაცემის ნომერი
+    - '^\d+[X×]\d+'                                        # კვეთი 2X1.5
+    - '^\d{2}[A-Z]{3}$'                                     # პროექტის კოდი
+  typical_keywords: ['ტიპიური', '(?i)typical']
+
+# ===================== სიმძიმის გადაფარვა =================================
+# წესის ID → ERROR | WARNING | INFO. ნაგულისხმევი სიმძიმეები scripts/common.py-შია.
+severity_overrides: {}
