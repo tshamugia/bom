@@ -9,8 +9,8 @@ from pathlib import Path
 
 import ezdxf
 
-GOOD_NAME = "INS-26017-ZZ-00-FA-102.dxf"
-BAD_NAME = "INS-26017-ZZ-00-FA-103.dxf"
+GOOD_NAME = "INS-26TBL-ZZ-00-FA-102.dxf"
+BAD_NAME = "INS-26TBL-ZZ-00-FA-103.dxf"
 
 BAD_PLANTED = [
     "INSUNITS=6 (მეტრი)", "მეორე layout", "შტამპში ფურცელი FA-104 (ფაილი FA-103)",
@@ -82,7 +82,7 @@ def make_good(path: Path) -> Path:
     tb = lo.add_blockref("TITLE_BLOCK_A1", (600, 10))
     tb.add_auto_attribs({
         "SHEET_NO": "FA-102", "TITLE": "ხანძრის სიგნალიზაცია. გეგმა, სართული 1 (±0.000)",
-        "FILE_NAME": "INS-26017-ZZ-00-FA-102", "REV": "P01.02", "PROJECT": "2026-017, სატესტო ობიექტი, თბილისი",
+        "FILE_NAME": "INS-26TBL-ZZ-00-FA-102", "REV": "P01.02", "PROJECT": "26TBL, სატესტო ობიექტი, თბილისი",
         "DRAWN": "გ. ჯღარკავა", "CHECKED": "", "APPROVED": "", "SCALE": "1:100", "FORMAT": "A1",
         "REV1": "P01", "REV1_DATE": "", "REV1_DESC": "",
     })
@@ -120,7 +120,7 @@ def make_bad(path: Path) -> Path:
     tb = lo.add_blockref("TITLE_BLOCK_A1", (600, 10))
     tb.add_auto_attribs({
         "SHEET_NO": "FA-104", "TITLE": "ხანძრის სიგნალიზაცია. გეგმა, სართული 3",
-        "FILE_NAME": "INS-26017-ZZ-00-FA-103", "REV": "P01", "PROJECT": "სატესტო ობიექტი",
+        "FILE_NAME": "INS-26TBL-ZZ-00-FA-103", "REV": "P01", "PROJECT": "სატესტო ობიექტი",
         "DRAWN": "მ. ქასრელიშვილი", "CHECKED": "", "SCALE": "1:100", "REV1": "", "REV1_DATE": "", "REV1_DESC": "",
     })
     lo2 = doc.layouts.new("Layout2")

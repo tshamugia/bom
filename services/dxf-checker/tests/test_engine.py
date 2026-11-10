@@ -28,7 +28,7 @@ def test_good_drawing_has_no_errors(good_dxf):
     assert r["counts"]["ERROR"] == 0
     assert r["counts"]["WARNING"] == 0
     assert r["parsedName"]["sheetCode"] == "ZZ-00-FA-102"
-    assert r["parsedName"]["project"] == "26017"
+    assert r["parsedName"]["project"] == "26TBL"
     assert r["titleblock"]["values"]["sheet_no"] == "FA-102"
     assert r["stats"]["devices"] == {"SD-ADDR": 5, "HD-ADDR": 1, "MCP-ADDR": 1}
 
@@ -85,17 +85,19 @@ def test_bad_params_are_refused(params):
     ("FA plan 2 floor FINAL.dxf", "N-SPACE"),
     ("FA plan 2 floor FINAL.dxf", "N-FORBIDDEN"),
     ("ნახაზი.dxf", "N-LATIN"),
-    ("ins-26017-zz-00-fa-102.dxf", "N-LOWER"),
-    ("26017-INS-ZZ-00-FA-102.dxf", "N-ORDER"),
-    ("INS-2026-017-ZZ-00-FA-102.dxf", "N-PROJECT-DASH"),
-    ("INS-26017-ZZ-00-DR-FA-102.dxf", "N-EXTRA-FIELD"),
-    ("INS-26017-ZZ-00-FA-102_P01_2026-10-03.dxf", "N-DATE"),
-    ("INS-26017-ZZ-00-QQ-102.dxf", "N-SYSTEM"),
-    ("INS-26017-FA-102.dxf", "N-FORMAT"),
-    ("INS-26017-ZZ-1-FA-102.dxf", "N-FLOOR"),
-    ("ABC-26017-ZZ-00-FA-102.dxf", "N-ORIG-UNKNOWN"),
-    ("INS-26017-ZZ-00-FA-100.dxf", "N-SEQ00"),
-    ("INS-26017-ZZ-XX-FA-102.dxf", "N-PLAN-FLOOR"),
+    ("ins-26tbl-zz-00-fa-102.dxf", "N-LOWER"),
+    ("26TBL-INS-ZZ-00-FA-102.dxf", "N-ORDER"),
+    ("INS-26-TBL-ZZ-00-FA-102.dxf", "N-PROJECT-DASH"),
+    ("INS-26017-ZZ-00-FA-102.dxf", "N-PROJECT"),
+    ("INS-BS005-ZZ-00-FA-102.dxf", "N-PROJECT"),
+    ("INS-26TBL-ZZ-00-DR-FA-102.dxf", "N-EXTRA-FIELD"),
+    ("INS-26TBL-ZZ-00-FA-102_P01_2026-10-03.dxf", "N-DATE"),
+    ("INS-26TBL-ZZ-00-QQ-102.dxf", "N-SYSTEM"),
+    ("INS-26TBL-FA-102.dxf", "N-FORMAT"),
+    ("INS-26TBL-ZZ-1-FA-102.dxf", "N-FLOOR"),
+    ("ABC-26TBL-ZZ-00-FA-102.dxf", "N-ORIG-UNKNOWN"),
+    ("INS-26TBL-ZZ-00-FA-100.dxf", "N-SEQ00"),
+    ("INS-26TBL-ZZ-XX-FA-102.dxf", "N-PLAN-FLOOR"),
 ])
 def test_name_rules(good_dxf, name, rule):
     r = run_check(good_dxf, name, role="wip")
@@ -103,15 +105,15 @@ def test_name_rules(good_dxf, name, rule):
 
 
 def test_role_decides_revision_rules(good_dxf):
-    assert "N-REV-WIP" in rules_of(run_check(good_dxf, "INS-26017-ZZ-00-FA-102_P01.dxf", role="wip"))
+    assert "N-REV-WIP" in rules_of(run_check(good_dxf, "INS-26TBL-ZZ-00-FA-102_P01.dxf", role="wip"))
     assert "N-REV-MISSING" in rules_of(run_check(good_dxf, GOOD_NAME, role="issued"))
-    assert "N-SUBREV-ISSUED" in rules_of(run_check(good_dxf, "INS-26017-ZZ-00-FA-102_P01.02.dxf", role="issued"))
-    neutral = rules_of(run_check(good_dxf, "INS-26017-ZZ-00-FA-102_P01.dxf", role=None))
+    assert "N-SUBREV-ISSUED" in rules_of(run_check(good_dxf, "INS-26TBL-ZZ-00-FA-102_P01.02.dxf", role="issued"))
+    neutral = rules_of(run_check(good_dxf, "INS-26TBL-ZZ-00-FA-102_P01.dxf", role=None))
     assert not neutral & {"N-REV-WIP", "N-REV-MISSING", "N-SUBREV-ISSUED"}
 
 
 def test_known_extra_originator(good_dxf):
-    r = run_check(good_dxf, "ARC-26017-ZZ-00-FA-102.dxf", role="wip", originators=["arc"])
+    r = run_check(good_dxf, "ARC-26TBL-ZZ-00-FA-102.dxf", role="wip", originators=["arc"])
     assert "N-ORIG-UNKNOWN" not in rules_of(r)
 
 

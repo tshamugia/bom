@@ -7,8 +7,8 @@
 # ---------------------------------------------------------------------------
 
 versions:
-  naming: "0.0.2"      # = naming-standard.md frontmatter version
-  drafting: "0.0.4"    # = drafting-standard.md frontmatter version
+  naming: "0.0.3"      # = naming-standard.md frontmatter version
+  drafting: "0.0.5"    # = drafting-standard.md frontmatter version
 
 # ===================== NAMING (naming-standard.md) =========================
 
@@ -17,6 +17,9 @@ naming:
   # (რეესტრის ზედა ნაწილიდან ან --originators არგუმენტით).
   originators:
     INS: Insta LLC
+
+  # §4.2 — წლის ბოლო ორი ციფრი + სამი ასო დასახელებიდან (25TGT)
+  project_pattern: '^\d{2}[A-Z]{3}$'
 
   # §4.3
   zones:
@@ -95,14 +98,14 @@ naming:
     bom: 05_BOM
     other: 06_OTHER
   issue_folder_pattern: '^\d{4}-\d{2}-\d{2}_[PC]\d{2}$'
-  project_folder_pattern: '^(\d{4})-(\d{3})_'
-  register_name_pattern: '^(\d{5})_DRAWING_REGISTER\.xlsx$'
+  project_folder_pattern: '^(\d{2}[A-Z]{3})_'
+  register_name_pattern: '^(\d{2}[A-Z]{3})_DRAWING_REGISTER\.xlsx$'
   current_allowed_extensions: [pdf]
   junk_extensions: [bak, dwl, dwl2, 'sv$', tmp, log, err]
   ignore_names: ['^~\$', '^Thumbs\.db$', '^desktop\.ini$', '^\.']
 
   # §9
-  transmittal_pattern: '^TR-(\d{5})-\d{3}$'
+  transmittal_pattern: '^TR-(\d{2}[A-Z]{3})-\d{3}$'
   cancelled_marker: გაუქმებულია
 
 # ===================== TITLE BLOCK (naming §10.1) ==========================
@@ -164,11 +167,11 @@ drafting:
   sku_whitelist: [FP200, FP400, FP200GOLD, CAT5E, CAT6, CAT6A, CAT7, OM3, OM4, OS2, LIYCY, JYSTY, NYM, NYY, POE, IP65, IP66, IP67, IK10, RS485, RS232, 24VDC, 230VAC, 12VDC]
   sku_exclude_patterns:
     - '^[A-Z]{2}-\d{3}$'                                   # ფურცლის ნომერი
-    - '^[A-Z]{3}-\d{5}-[A-Z0-9]{2}-[A-Z0-9]{2}-[A-Z]{2}-\d{3}' # ფაილის სახელი
+    - '^[A-Z]{3}-\d{2}[A-Z]{3}-[A-Z0-9]{2}-[A-Z0-9]{2}-[A-Z]{2}-\d{3}' # ფაილის სახელი
     - '^[PC]\d{2}(\.\d{2})?$'                              # რევიზია
-    - '^TR-\d{5}-\d{3}$'                                   # გაცემის ნომერი
+    - '^TR-\d{2}[A-Z]{3}-\d{3}$'                           # გაცემის ნომერი
     - '^\d+[X×]\d+'                                        # კვეთი 2X1.5
-    - '^\d{4}-\d{3}$'                                      # პროექტის ნომერი
+    - '^\d{2}[A-Z]{3}$'                                     # პროექტის კოდი
   typical_keywords: ['ტიპიური', '(?i)typical']
 
 # ===================== სიმძიმის გადაფარვა =================================

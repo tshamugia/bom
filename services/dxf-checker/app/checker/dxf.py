@@ -270,9 +270,8 @@ def check_drawing(dxf_path: Path, display: str, parsed: Optional[ParsedName], ro
             col.add("T-REV", display, f"შტამპში რევიზია {rv}, ფაილის სახელში {parsed.rev}.", "რევიზია ერთნაირი უნდა იყოს სახელში, შტამპში, რეესტრში და Revline-ში.")
         pv = values.get("project", "")
         if pv:
-            long_code = f"20{parsed.proj[:2]}-{parsed.proj[2:]}"
-            if long_code not in pv and parsed.proj not in pv:
-                col.add("T-PROJECT", display, f"შტამპის პროექტის ველში ({pv}) {long_code} არ ჩანს.", f"ჩაწერე პროექტის ნომერი {long_code} და ობიექტის დასახელება.")
+            if parsed.proj not in pv.upper():
+                col.add("T-PROJECT", display, f"შტამპის პროექტის ველში ({pv}) პროექტის კოდი {parsed.proj} არ ჩანს.", f"ჩაწერე პროექტის კოდი {parsed.proj} და ობიექტის დასახელება.")
         non_level = rules["naming"]["floors"]["non_level"]
         if parsed.floor not in non_level and parsed.ext in ("dwg", "dxf"):
             exp = expected_floor_code(title)

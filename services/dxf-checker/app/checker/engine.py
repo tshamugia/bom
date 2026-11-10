@@ -26,6 +26,7 @@ ROLES = ("wip", "issued")
 # Parameters that hold regular expressions: (path, is_list). Checked before a run
 # so a bad pattern from Settings is refused instead of failing every check.
 REGEX_PARAMS: list[tuple[tuple[str, ...], bool]] = [
+    (("naming", "project_pattern"), False),
     (("naming", "zones", "patterns"), True),
     (("naming", "floors", "patterns"), True),
     (("naming", "forbidden_tokens"), True),

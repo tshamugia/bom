@@ -161,7 +161,7 @@ class Collector:
 # --------------------------------------------------------------------------
 
 NAME_RE = re.compile(
-    r"^(?P<orig>[A-Z]{3})-(?P<proj>\d{5})-(?P<zone>[A-Z0-9]{2})-(?P<floor>[A-Z0-9]{2})-"
+    r"^(?P<orig>[A-Z]{3})-(?P<proj>[A-Z0-9]{5})-(?P<zone>[A-Z0-9]{2})-(?P<floor>[A-Z0-9]{2})-"
     r"(?P<sys>[A-Z]{2})-(?P<num>\d{3})(?:_(?P<rev>[PC]\d{2}(?:\.\d{2})?))?$"
 )
 REV_RE = re.compile(r"^(?P<kind>[PC])(?P<major>\d{2})(?:\.(?P<minor>\d{2}))?$")

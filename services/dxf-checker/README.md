@@ -20,12 +20,12 @@ All calls except `/healthz` need `Authorization: Bearer $DXF_CHECKER_SECRET`.
 ```jsonc
 {
   "runId": "abc123",                       // [A-Za-z0-9_-]{1,100}; a repeat while running is a no-op
-  "file": { "url": "<presigned GET>", "name": "INS-26017-ZZ-00-FA-102.dxf", "sizeBytes": 1234 },
+  "file": { "url": "<presigned GET>", "name": "INS-26TBL-ZZ-00-FA-102.dxf", "sizeBytes": 1234 },
   "context": { "role": "wip", "originators": ["ARC"] },   // role: wip | issued | null
   "rules": {
     "enabled": ["N-FORMAT", "…"],          // omitted = all 60; unknown ids are ignored and listed back
     "severity": { "D07-SKU": "ERROR" },
-    "params": { "drafting": { "insunits_required": 4 } }   // merged over rules.yaml
+    "params": { "drafting": { "insunits_required": 4 } }   // merged over rules.yaml (e.g. naming.project_pattern)
   },
   "callbackUrl": "http://bom.railway.internal:<port>/api/internal/drawing-checks/abc123/result"
 }
@@ -59,7 +59,7 @@ Same bearer secret. Retried at 0/2/5/15/30 s on network errors, 5xx, 408 and
     "rule": "T-SHEET", "group": "title-block", "severity": "ERROR", "ref": "NAMING §10, §11.2",
     "title": "…", "message": "…", "recommendation": "…", "evidence": ""
   }],
-  "parsedName": { "project": "26017", "sheetCode": "ZZ-00-FA-102", "sheet": "FA-102", "revision": null, "…": "…" },
+  "parsedName": { "project": "26TBL", "sheetCode": "ZZ-00-FA-102", "sheet": "FA-102", "revision": null, "…": "…" },
   "titleblock": { "source": "block", "block": "…", "values": { "sheet_no": "FA-104", "revision": "P01", "…": "…" } },
   "stats": { "devices": { "SD-ADDR": 5 }, "cablesM": { "CBL-FIRE-FP200": 33.2 }, "insunits": 4, "layouts": ["Layout1"] },
   "ignoredRules": []
@@ -109,7 +109,7 @@ python -m venv .venv
 .venv/Scripts/python -m pytest
 ```
 
-`rules.yaml` and the checks are a copy of the skill's. When the standard
+`rules.yaml` and the checks are a copy of the skill's (NAMING 0.0.3: project code = two-digit year + three letters, `25TGT`; a legacy `26017` or `BS005` still parses and gets `N-PROJECT`). When the standard
 changes, update both (the skill's `validate_standards.py` keeps the yaml and the
 documents in sync); the Settings export should produce the same yaml.
 

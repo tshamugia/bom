@@ -27,8 +27,9 @@ def validate_fields(f: dict, rules: dict, col: Collector, file: str, originators
     elif f["orig"] not in originators:
         col.add("N-ORIG-UNKNOWN", file, f"შემსრულებლის კოდი „{f['orig']}“ ცნობილ სიაში არ არის.",
                 "თუ ეს სხვა მონაწილეა, მისი კოდი რეესტრის ზედა ნაწილში უნდა ეწეროს (§4.1); თუ ჩვენი ფაილია, INS.")
-    if not re.fullmatch(r"\d{5}", f["proj"]):
-        col.add("N-PROJECT", file, f"პროექტის კოდი „{f['proj']}“ 5 ციფრი არ არის.", "პროექტის კოდი = tracker-ის ნომერი ტირის გარეშე (2026-017 → 26017).")
+    if not re.fullmatch(n["project_pattern"], f["proj"]):
+        col.add("N-PROJECT", file, f"პროექტის კოდი „{f['proj']}“ ფორმატს არ მიჰყვება.",
+                "პროექტის კოდი = წლის ბოლო ორი ციფრი + სამი ასო, მაგ. 25TGT (§4.2). ძველი კოდი (26017, BS-005) Revline-ში ადმინისტრატორმა უნდა შეცვალოს.")
         ok = False
     if not code_ok(f["zone"], n["zones"]):
         col.add("N-ZONE", file, f"ზონის კოდი „{f['zone']}“ §4.3-ის სიაში არ არის.", "დასაშვებია ZZ, K1…K9, ST, XX.")
@@ -96,7 +97,7 @@ def diagnose_bad_name(stem: str, ext: str, rules: dict, col: Collector, file: st
         return
     if has_non_ascii(ascii_stem) or " " in ascii_stem:
         if not issues:
-            col.add("N-FORMAT", file, "სახელი 7-ველიან ფორმატს არ მიჰყვება.", "ფორმატი: შემსრულებელი-პროექტი-ზონა-სართული-სისტემა-ნომერი_რევიზია, მაგ. INS-26017-ZZ-00-FA-102_P01.")
+            col.add("N-FORMAT", file, "სახელი 7-ველიან ფორმატს არ მიჰყვება.", "ფორმატი: შემსრულებელი-პროექტი-ზონა-სართული-სისტემა-ნომერი_რევიზია, მაგ. INS-26TBL-ZZ-00-FA-102_P01.")
         return
 
     up = ascii_stem.upper()
@@ -107,12 +108,12 @@ def diagnose_bad_name(stem: str, ext: str, rules: dict, col: Collector, file: st
     parts = main.split("-")
     fixed: Optional[list[str]] = None
 
-    if len(parts) == 6 and re.fullmatch(r"\d{5}", parts[0]) and re.fullmatch(r"[A-Z]{3}", parts[1]):
+    if len(parts) == 6 and re.fullmatch(r"\d{2}[A-Z]{3}|\d{5}", parts[0]) and re.fullmatch(r"[A-Z]{3}", parts[1]):
         fixed = [parts[1], parts[0]] + parts[2:]
         col.add("N-ORDER", file, "ველების ძველი რიგი: პროექტი შემსრულებლის წინაა.", f"სწორი: {_suggest(fixed, rev, ext)}")
         issues += 1
-    elif len(parts) == 7 and re.fullmatch(r"\d{4}", parts[1]) and re.fullmatch(r"\d{3}", parts[2]):
-        fixed = [parts[0], parts[1][2:] + parts[2]] + parts[3:]
+    elif len(parts) == 7 and re.fullmatch(r"\d{2}", parts[1]) and re.fullmatch(r"[A-Z]{3}", parts[2]):
+        fixed = [parts[0], parts[1] + parts[2]] + parts[3:]
         col.add("N-PROJECT-DASH", file, f"პროექტის კოდში ტირეა ({parts[1]}-{parts[2]}), ამიტომ ველები აირია.", f"სწორი: {_suggest(fixed, rev, ext)}")
         issues += 1
     elif len(parts) == 7 and re.fullmatch(r"[A-Z]{2}", parts[4]) and re.fullmatch(r"[A-Z]{2}", parts[5]) and re.fullmatch(r"\d{3}", parts[6]):
@@ -143,7 +144,7 @@ def diagnose_bad_name(stem: str, ext: str, rules: dict, col: Collector, file: st
             issues += 1
     if not issues:
         col.add("N-FORMAT", file, "სახელი 7-ველიან ფორმატს არ მიჰყვება.",
-                "ფორმატი: შემსრულებელი-პროექტი-ზონა-სართული-სისტემა-ნომერი_რევიზია, მაგ. INS-26017-ZZ-00-FA-102_P01.")
+                "ფორმატი: შემსრულებელი-პროექტი-ზონა-სართული-სისტემა-ნომერი_რევიზია, მაგ. INS-26TBL-ZZ-00-FA-102_P01.")
 
 
 def check_name(filename: str, role: Optional[str], rules: dict, col: Collector, originators: set[str]) -> Optional[ParsedName]:
