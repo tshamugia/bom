@@ -18,7 +18,7 @@ import {
 } from "@/server/actions/drawing-files";
 
 /** Posts the file to the bucket form, reporting progress; resolves false on any failure. */
-function postToBucket(
+export function postToBucket(
   url: string,
   fields: Record<string, string>,
   file: File,

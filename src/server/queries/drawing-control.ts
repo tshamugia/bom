@@ -79,6 +79,8 @@ export async function listRemarks(drawingId: string) {
       resolvedInRevisionNumber: resolvedIn.number,
       resolvedInRevisionLabel: resolvedIn.label,
       resolution: drawingRemarks.resolution,
+      checkRuleId: drawingRemarks.checkRuleId,
+      checkSeverity: drawingRemarks.checkSeverity,
     })
     .from(drawingRemarks)
     .innerJoin(raisedIn, eq(raisedIn.id, drawingRemarks.revisionId))

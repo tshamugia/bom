@@ -246,6 +246,13 @@
       "when": 1794309789049,
       "tag": "0034_bom_pc_revisions",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1794340958521,
+      "tag": "0035_drawing_checks",
+      "breakpoints": true
     }
   ]
 }

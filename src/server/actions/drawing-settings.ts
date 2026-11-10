@@ -91,6 +91,33 @@ export async function setDrawingFileGate(input: z.infer<typeof FileGateInput>): 
   return { ok: true };
 }
 
+const CheckEnabledInput = z.object({ enabled: z.boolean() });
+
+/** The switch for automatic DXF checks (issue #18). Off: the card says so and uploads are refused. */
+export async function setDrawingCheckEnabled(input: z.infer<typeof CheckEnabledInput>): Promise<DrawingActionResult> {
+  const { enabled } = CheckEnabledInput.parse(input);
+  const session = await requireSession();
+  if (!isAdmin(session.user)) return fail(ADMIN_ONLY_ERROR);
+
+  const now = new Date();
+  await db
+    .insert(systemSettings)
+    .values({ id: SYSTEM_SETTINGS_ID, drawingCheckEnabled: enabled, updatedById: session.user.id, updatedAt: now })
+    .onConflictDoUpdate({
+      target: systemSettings.id,
+      set: { drawingCheckEnabled: enabled, updatedById: session.user.id, updatedAt: now },
+    });
+
+  await audit({
+    kind: "drawing.check.settings.changed",
+    summary: `Automatic DXF checks turned ${enabled ? "on" : "off"}`,
+    payload: { drawingCheckEnabled: enabled },
+  });
+  revalidatePath("/settings/drawings");
+  revalidatePath("/drawings/[id]", "page");
+  return { ok: true };
+}
+
 const DisciplineName = z.string().trim().min(1).max(60);
 
 async function isDisciplineNameTaken(name: string, exceptId?: string) {

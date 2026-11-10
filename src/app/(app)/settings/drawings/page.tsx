@@ -4,11 +4,13 @@ import { RecipientsForm } from "@/components/drawings/recipients-form";
 import { DisciplinesEditor } from "@/components/drawings/disciplines-editor";
 import { ReminderSettingsForm } from "@/components/drawings/reminder-settings-form";
 import { FileGateForm } from "@/components/drawings/file-gate-form";
+import { CheckSwitchForm } from "@/components/drawings/check-switch-form";
 import { HelpTip } from "@/components/help/help-tip";
 import {
   getDrawingRecipientIds, getReminderRecipientIds, getReminderSettings, listDisciplines,
 } from "@/server/queries/drawings";
 import { getDrawingFileGate } from "@/server/queries/drawing-files";
+import { getDrawingCheckSettings } from "@/server/queries/drawing-checks";
 import { listOwnerCandidates } from "@/server/queries/projects";
 import { requireSession } from "@/server/auth-context";
 import { isAdmin } from "@/lib/roles";
@@ -18,13 +20,14 @@ export default async function DrawingSettingsPage() {
   const session = await requireSession();
   // Email recipients, reminders and disciplines are workspace configuration — admins only.
   if (!isAdmin(session.user)) redirect("/settings");
-  const [users, recipientIds, disciplines, reminders, reminderIds, fileGate] = await Promise.all([
+  const [users, recipientIds, disciplines, reminders, reminderIds, fileGate, checks] = await Promise.all([
     listOwnerCandidates(),
     getDrawingRecipientIds(null),
     listDisciplines(),
     getReminderSettings(),
     getReminderRecipientIds(null),
     getDrawingFileGate(),
+    getDrawingCheckSettings(),
   ]);
   const lastRun = reminders.lastRun
     ? `${formatDate(reminders.lastRun.day)}, ${reminders.lastRun.recipients} ${reminders.lastRun.recipients === 1 ? "person" : "people"}${
@@ -37,7 +40,7 @@ export default async function DrawingSettingsPage() {
       <PageHead
         back={{ href: "/settings", label: "Settings" }}
         title="Drawings"
-        subtitle="Status emails, daily reminders, drawing PDFs, and the disciplines drawings are grouped by."
+        subtitle="Status emails, daily reminders, drawing PDFs, automatic DXF checks, and the disciplines drawings are grouped by."
       />
       <div className="grid gap-5">
         <div className="card">
@@ -93,6 +96,20 @@ export default async function DrawingSettingsPage() {
           </div>
           <div className="p-4">
             <FileGateForm initial={fileGate} />
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-head">
+            <div>
+              <h3 className="card-title flex items-center gap-1.5">Automatic DXF check <HelpTip topic="drawing-check" /></h3>
+              <p className="card-sub">
+                Checks DXFs against the naming and drafting standards and raises what it finds as remarks. Leave it off until it has been tried on real drawings.
+              </p>
+            </div>
+          </div>
+          <div className="p-4">
+            <CheckSwitchForm initial={checks.enabled} configured={checks.configured} />
           </div>
         </div>
 

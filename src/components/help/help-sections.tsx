@@ -2,6 +2,7 @@ import Link from "next/link";
 import { EDITOR_ROLES, type UserRole } from "@/lib/roles";
 import { DRAWING_STATUSES, DRAWING_STATUS_LABEL, type DrawingStatus } from "@/lib/drawing-status";
 import { MAX_DRAWING_FILE_MB } from "@/lib/drawing-files";
+import { MAX_DXF_MB } from "@/lib/drawing-checks";
 import { HELP_TOPICS, type HelpTopicId } from "@/lib/help-topics";
 import { DrawingStatusBadge } from "@/components/drawings/drawing-status-badge";
 import { HelpDiagram } from "./help-diagram";
@@ -53,10 +54,11 @@ const PERMISSIONS: Can[] = [
   ["Change drawing status, issue transmittals, log hours", true, true, false],
   ["Own a drawing or approve it as the second engineer", true, true, false],
   ["Upload a drawing's PDF (as its owner)", true, true, false],
+  ["Check a drawing's DXF automatically", true, true, false],
   ["Edit the item catalog and vendors", true, true, false],
   ["Delete or archive projects, BOMs, vendors, drawings (a BOM with a reason)", true, false, false],
   ["Create users, change roles, reset passwords", true, false, false],
-  ["Settings: procurement email, drawing emails, reminders, disciplines", true, false, false],
+  ["Settings: procurement email, drawing emails, reminders, disciplines, DXF checks", true, false, false],
   ["Audit log", true, false, false],
 ];
 
@@ -232,12 +234,12 @@ export const HELP_SECTIONS: HelpSection[] = [
           <li>
             <strong>To do</strong> — what waits for you:
             {role !== "viewer"
-              ? <> drawings you were asked to approve, revisions issued to you to confirm, open remarks on your drawings and your BOMs built from older drawings.</>
+              ? <> drawings you were asked to approve, revisions issued to you to confirm, open remarks on your drawings (the automatic DXF check&apos;s too) and your BOMs built from older drawings.</>
               : <> drawing revisions issued to you to confirm.</>}
             {" "}An item leaves the list once it&apos;s done — there is nothing to tick off.
           </li>
           <li><strong>Deadlines</strong> — {role !== "viewer" && <>your drawings due in the next 14 days (late ones first) and </>}dates of the projects you manage in the next 30.</li>
-          <li><strong>Updates</strong> — what others did on your work in the last 30 days: comments, status changes, remarks, revisions issued to you{role !== "viewer" && <>, BOMs approved or handed to you</>}. Updates since your last visit are marked <span className="mw-new">New</span>; opening My work marks them seen.</li>
+          <li><strong>Updates</strong> — what others did on your work in the last 30 days: comments, status changes, remarks (including those the automatic check raised), revisions issued to you{role !== "viewer" && <>, DXF checks, BOMs approved or handed to you</>}. Updates since your last visit are marked <span className="mw-new">New</span>; opening My work marks them seen.</li>
           {role !== "viewer" && <li><strong>Waiting on others</strong> — your drawings sent for approval and how long they have waited.</li>}
         </ul>
         <p>The number on the bell is what needs you (to do and overdue) plus updates you haven&apos;t seen.</p>
@@ -541,6 +543,33 @@ export const HELP_SECTIONS: HelpSection[] = [
     ),
   },
   {
+    ...topic("drawing-check"),
+    group: "Drawings",
+    body: role => (
+      <>
+        <p>The checker reads a DXF of a drawing and compares it with the company standards — the file name (NAMING), the title block, the legend, blocks, layers and units (DRAFTING). It is advice: it blocks no status change, and uploading a DXF is never required.</p>
+        {role === "viewer" ? (
+          <p>You see what it found as remarks from <Ui>Automatic check</Ui> on the drawing&apos;s Remarks card.</p>
+        ) : (
+          <ol className="help-steps">
+            <li>Save the drawing as DXF (in AutoCAD <Ui>SAVEAS</Ui> → AutoCAD 2018 DXF) and name it by the standard, e.g. <span className="mono">INS-26TGT-ZZ-00-FA-102.dxf</span>. A DWG can&apos;t be checked, even renamed to .dxf.</li>
+            <li>On the drawing&apos;s <Ui>Automatic DXF check</Ui> card, click <Ui>Check a DXF</Ui> — any editor can, on the latest revision, in any status. Up to {MAX_DXF_MB} MB.</li>
+            <li>The card shows <Ui>Checking</Ui> and fills in by itself when the result arrives — usually within a minute. <Ui>All findings</Ui> lists everything, with what was found and how to fix it.</li>
+            <li>Fix the drawing, start a new revision if needed, and check the new DXF.</li>
+          </ol>
+        )}
+        <ul>
+          <li>Each broken rule becomes <strong>one remark</strong> per drawing, however many places break it. <Ui>Error</Ui> findings are remarks; <Ui>To check</Ui> findings are remarks marked to check, because some checks are guesses; <Ui>Info</Ui> findings stay in the report.</li>
+          <li>Checking again doesn&apos;t repeat remarks: one that is still broken is updated, one whose rule now passes closes by itself in the checked revision. Rules that are switched off, or couldn&apos;t be checked in that file (no title block, a file name the standard can&apos;t read), leave their remarks as they are.</li>
+          <li>You can resolve an automatic remark by hand. If the next check still finds the problem, it raises a new one.</li>
+          <li>The DXF is deleted once it has been checked; its name, size, SHA-256 and the result stay. Owners see the remarks in <Link href="/my-work">My work</Link>.</li>
+          <li>If the checker can&apos;t read the file or doesn&apos;t answer, the check fails with the reason and no remark changes.</li>
+          {role === "admin" && <li>Turn checks on or off in <Link href="/settings/drawings">Settings → Drawings</Link>. They are off until they have been tried on real drawings.</li>}
+        </ul>
+      </>
+    ),
+  },
+  {
     ...topic("bom-impact"),
     group: "Drawings",
     roles: EDITORS,
@@ -610,7 +639,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     body: () => (
       <ul>
         <li><Link href="/settings/procurement">Procurement email</Link> — who receives BOMs sent to procurement, and the email text.</li>
-        <li><Link href="/settings/drawings">Drawings</Link> — who gets status emails for every drawing, the daily reminders, the list of disciplines and from which status drawing PDFs can be uploaded.</li>
+        <li><Link href="/settings/drawings">Drawings</Link> — who gets status emails for every drawing, the daily reminders, the list of disciplines, from which status drawing PDFs can be uploaded, and the switch for automatic DXF checks.</li>
         <li>Each project page can add more recipients for that project only.</li>
         <li><Link href="/audit">Audit log</Link> — sign-ins, password resets, role changes, settings and deletions. Everyone else sees ordinary activity in History → Activity.</li>
       </ul>

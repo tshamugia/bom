@@ -9,6 +9,7 @@ import {
   listBomLinksForDrawing, listRemarks, listTimeEntries, listTransmittals,
 } from "@/server/queries/drawing-control";
 import { getDrawingFileGate, listDrawingFiles } from "@/server/queries/drawing-files";
+import { getDrawingCheckPanel } from "@/server/queries/drawing-checks";
 import { listOwnerCandidates } from "@/server/queries/projects";
 import { PageHead } from "@/components/master/page-head";
 import { DrawingStatusBadge } from "@/components/drawings/drawing-status-badge";
@@ -25,6 +26,7 @@ import { BomUsageCard } from "@/components/drawings/bom-usage-card";
 import { DrawingPipeline } from "@/components/drawings/drawing-pipeline";
 import { FileLocation } from "@/components/drawings/file-location";
 import { DrawingPdfCard, type PdfRevision } from "@/components/drawings/drawing-pdf-card";
+import { DrawingCheckCard } from "@/components/drawings/drawing-check-card";
 import { HelpTip } from "@/components/help/help-tip";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { isDrawingOverdue, nextRevisionLabel } from "@/lib/drawing-status";
@@ -33,7 +35,7 @@ import { checkFileUpload, fileUploadErrorMessage, isFileStatus } from "@/lib/dra
 export default async function DrawingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await requireSession();
-  const [drawing, revisions, events, projects, disciplines, users, timeEntries, remarks, transmittals, bomLinks, files, fileGate] =
+  const [drawing, revisions, events, projects, disciplines, users, timeEntries, remarks, transmittals, bomLinks, files, fileGate, checks] =
     await Promise.all([
       getDrawing(id),
       listDrawingRevisions(id),
@@ -47,6 +49,7 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
       listBomLinksForDrawing(id),
       listDrawingFiles(id),
       getDrawingFileGate(),
+      getDrawingCheckPanel(id),
     ]);
   if (!drawing || revisions.length === 0) notFound();
   const admin = isAdmin(session.user);
@@ -213,6 +216,11 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
       </div>
 
       {!readOnly && pdfCard}
+
+      {/* An engineering tool, like hours: viewers see what it raised on the Remarks card. */}
+      {!readOnly && (
+        <DrawingCheckCard panel={checks} drawingCode={drawing.code} current={{ id: current.id, label: current.label }} />
+      )}
 
       <div className="grid-2 mb-5" style={{ alignItems: "start" }}>
         {/* Viewers confirm receipt in Transmittals, so it comes first for them. */}

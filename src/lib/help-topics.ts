@@ -19,6 +19,7 @@ export const HELP_TOPIC_IDS = [
   "drawing-approval",
   "drawing-bulk",
   "drawing-pdf",
+  "drawing-check",
   "transmittals",
   "procurement",
   "exports",
@@ -95,6 +96,11 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
     title: "Drawing PDF",
     summary:
       "The drawing owner or an admin uploads the PDF of the latest revision once the client approved it (Approved A, Approved B or As Built — an admin can allow it from Need to be approved). Viewers see that PDF only. A new upload replaces the old one, which stays in the archive.",
+  },
+  "drawing-check": {
+    title: "Automatic DXF check",
+    summary:
+      "Upload a DXF of the latest revision: it is checked against the naming and drafting standards, and each broken rule becomes one remark from Automatic check (To check means the check may be wrong). Checking a fixed file closes the remarks of rules that now pass. Advisory only — it blocks nothing. An admin turns it on in Settings → Drawings.",
   },
   "transmittals": {
     title: "Transmittals",

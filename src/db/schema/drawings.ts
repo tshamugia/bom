@@ -1,10 +1,12 @@
-import { pgTable, pgEnum, text, integer, numeric, boolean, timestamp, date, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, pgEnum, text, integer, numeric, boolean, timestamp, date, index, uniqueIndex, jsonb } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { projects } from "./projects";
 import { user } from "./auth";
 import { DRAWING_STATUSES } from "../../lib/drawing-status";
 import { REMARK_SOURCES, TRANSMITTAL_PURPOSES } from "../../lib/drawing-meta";
+import { CHECK_RUN_STATUSES, type CheckConfigSnapshot, type CheckCounts, type CheckFinding } from "../../lib/drawing-checks";
+import type { CheckSeverity } from "../../lib/drawing-check-rules";
 
 export const drawingStatusEnum = pgEnum("drawing_status", DRAWING_STATUSES);
 export const drawingRemarkSourceEnum = pgEnum("drawing_remark_source", REMARK_SOURCES);
@@ -16,6 +18,7 @@ export const drawingEventKindEnum = pgEnum("drawing_event_kind", [
   "status",
   "comment",
   "file",
+  "check",
 ]);
 
 export const drawingDisciplines = pgTable(
@@ -206,10 +209,19 @@ export const drawingRemarks = pgTable(
     resolvedById: text("resolved_by_id").references(() => user.id, { onDelete: "set null" }),
     resolvedInRevisionId: text("resolved_in_revision_id").references(() => drawingRevisions.id, { onDelete: "set null" }),
     resolution: text("resolution"),
+    /** Set on `check` remarks: the rule they report. One open remark per rule per drawing. */
+    checkRuleId: text("check_rule_id"),
+    /** ERROR or WARNING ("to check") from the latest run that reported the rule. */
+    checkSeverity: text("check_severity").$type<CheckSeverity>(),
+    /** The run that last created, updated or closed this remark. */
+    lastCheckRunId: text("last_check_run_id").references(() => drawingCheckRuns.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   t => ({
     drawingIdx: index("drawing_remark_drawing_idx").on(t.drawingId),
+    openCheckRuleUq: uniqueIndex("drawing_remark_open_check_rule_uq")
+      .on(t.drawingId, t.checkRuleId)
+      .where(sql`"resolved_at" IS NULL AND "check_rule_id" IS NOT NULL`),
   }),
 );
 
@@ -266,4 +278,86 @@ export const drawingReminderRuns = pgTable("drawing_reminder_run", {
   recipients: integer("recipients").notNull().default(0),
   startedAt: timestamp("started_at").notNull().defaultNow(),
   finishedAt: timestamp("finished_at"),
+});
+
+export const drawingCheckStatusEnum = pgEnum("drawing_check_status", CHECK_RUN_STATUSES);
+
+/** What the checker said besides the findings (see services/dxf-checker/README.md). */
+export type DrawingCheckDetails = {
+  standards?: Record<string, unknown> | null;
+  parsedName?: Record<string, unknown> | null;
+  titleblock?: Record<string, unknown> | null;
+  stats?: Record<string, unknown> | null;
+  ignoredRules?: string[];
+  durationMs?: number | null;
+};
+
+/** Remark ids a run created, updated and closed — and why it changed none, when it didn't. */
+export type DrawingCheckRemarkChanges = {
+  created: string[];
+  updated: string[];
+  closed: string[];
+  skipped?: "newer-check";
+};
+
+/**
+ * One automatic check of a DXF uploaded to a drawing revision (issue #18). The
+ * DXF only lives in the bucket until the checker has answered; the row keeps
+ * its name, size, SHA-256 and the result.
+ */
+export const drawingCheckRuns = pgTable(
+  "drawing_check_run",
+  {
+    id: text("id").primaryKey().$defaultFn(() => createId()),
+    drawingId: text("drawing_id").notNull().references(() => drawings.id, { onDelete: "cascade" }),
+    revisionId: text("revision_id").notNull().references(() => drawingRevisions.id, { onDelete: "cascade" }),
+    /** The revision label at upload: a P02 check stays P02 after the revision is approved. */
+    revisionLabel: text("revision_label").notNull(),
+    uploadedById: text("uploaded_by_id").references(() => user.id, { onDelete: "set null" }),
+    originalName: text("original_name").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    sha256: text("sha256"),
+    objectKey: text("object_key").notNull(),
+    status: drawingCheckStatusEnum("status").notNull().default("pending"),
+    /** NOT_DXF, X-READ, DOWNLOAD, TOO_LARGE, TIMEOUT, MEMORY, INTERNAL from the checker; UNREACHABLE, BUSY, REFUSED, STALE from the app. */
+    errorCode: text("error_code"),
+    error: text("error"),
+    configVersion: integer("config_version").notNull().default(0),
+    configSnapshot: jsonb("config_snapshot").$type<CheckConfigSnapshot>(),
+    findings: jsonb("findings").$type<CheckFinding[]>(),
+    counts: jsonb("counts").$type<CheckCounts>(),
+    details: jsonb("details").$type<DrawingCheckDetails>(),
+    remarkChanges: jsonb("remark_changes").$type<DrawingCheckRemarkChanges>(),
+    engineVersion: text("engine_version"),
+    /** When the checker accepted the file. */
+    startedAt: timestamp("started_at"),
+    finishedAt: timestamp("finished_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  t => ({
+    drawingCreatedIdx: index("drawing_check_run_drawing_created_idx").on(t.drawingId, t.createdAt),
+    objectKeyUq: uniqueIndex("drawing_check_run_object_key_uq").on(t.objectKey),
+    // One upload or check at a time per revision.
+    revisionActiveUq: uniqueIndex("drawing_check_run_revision_active_uq")
+      .on(t.revisionId)
+      .where(sql`"status" IN ('pending', 'queued')`),
+  }),
+);
+
+export const DRAWING_CHECK_CONFIG_ID = "default";
+
+/**
+ * The rules and parameters every check is sent with (a single row; stage 3 of
+ * issue #18 adds the forms). No row means every rule on with the checker's
+ * defaults, version 0. Each change bumps `version`; runs keep a snapshot.
+ */
+export const drawingCheckConfig = pgTable("drawing_check_config", {
+  id: text("id").primaryKey().default(DRAWING_CHECK_CONFIG_ID),
+  version: integer("version").notNull().default(1),
+  /** Parsed with `parseCheckRulesConfig`: `{ disabled: string[], severity: { [rule]: severity } }`. */
+  rules: jsonb("rules").notNull().$type<Record<string, unknown>>().default({}),
+  /** Merged over the checker's rules.yaml defaults. */
+  params: jsonb("params").notNull().$type<Record<string, unknown>>().default({}),
+  updatedById: text("updated_by_id").references(() => user.id, { onDelete: "set null" }),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

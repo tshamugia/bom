@@ -16,6 +16,7 @@ export const ADMIN_ONLY_KINDS = [
   "settings.procurement.updated",
   // Every time someone opens a drawing PDF — kept for document control, too noisy for Activity.
   "drawing.file.downloaded",
+  "drawing.check.settings.changed",
 ] as const satisfies readonly AuditKind[];
 
 const ADMIN_ONLY = new Set<string>(ADMIN_ONLY_KINDS);
@@ -43,6 +44,7 @@ export const DELETION_KINDS = [
 export const SETTINGS_KINDS = [
   "settings.procurement.updated",
   "drawing.settings.updated",
+  "drawing.check.settings.changed",
 ] as const satisfies readonly AuditKind[];
 
 export type AuditPreset = "all" | "deletions" | "security" | "users" | "settings";

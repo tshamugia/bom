@@ -13,6 +13,7 @@ const KIND_LOOK: Record<UpdateKind, { icon: IconName; tone: string }> = {
   "updated": { icon: "Edit", tone: "" },
   "created": { icon: "Plus", tone: "" },
   "file": { icon: "Doc", tone: "" },
+  "check": { icon: "Shield", tone: "tone-accent" },
   "remark": { icon: "Flag", tone: "tone-pink" },
   "remark-resolved": { icon: "CheckCircle", tone: "tone-green" },
   "transmittal": { icon: "Send", tone: "tone-accent" },
