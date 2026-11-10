@@ -1,6 +1,6 @@
 # dxf-checker
 
-Checks one DXF against the drawing standards (NAMING 0.0.2, DRAFTING 0.0.4) and
+Checks one DXF against the drawing standards (NAMING 0.0.3, DRAFTING 0.0.5) and
 posts the findings back to Revline (issue #18). Python + ezdxf, built from the
 `drawing-standard-checker` skill. It runs as its own Railway service with no
 public domain: only the app calls it, over the private network.
@@ -51,7 +51,7 @@ Same bearer secret. Retried at 0/2/5/15/30 s on network errors, 5xx, 408 and
   "errorCode": null,                       // failed: NOT_DXF | X-READ | DOWNLOAD | TOO_LARGE | TIMEOUT | MEMORY | INTERNAL
   "error": null,                           // failed: Georgian text for the user
   "engineVersion": "1.0.0",
-  "standards": { "naming": "0.0.2", "drafting": "0.0.4" },
+  "standards": { "naming": "0.0.3", "drafting": "0.0.5" },
   "file": { "name": "…", "sizeBytes": 1234, "sha256": "…" },
   "durationMs": 840,
   "counts": { "ERROR": 9, "WARNING": 7, "INFO": 1 },
@@ -113,9 +113,17 @@ python -m venv .venv
 changes, update both (the skill's `validate_standards.py` keeps the yaml and the
 documents in sync); the Settings export should produce the same yaml.
 
+CI (`.github/workflows/ci.yml`) runs the same pytest suite on every pull request.
+
 ## Deploy
 
-Railway service `dxf-checker` in project `bom`, no public domain:
+Railway service `dxf-checker` in project `bom`, no public domain. It runs the
+image `ghcr.io/tshamugia/bom-dxf-checker:<version>`, which the release workflow
+builds from this folder and deploys together with the app (see the repository
+README, "CI/CD"). Railway's healthcheck is `/healthz`.
+
+`railway.json` only applies to a manual upload, which is for emergencies; the
+next release puts the service back on the image:
 
 ```bash
 railway up services/dxf-checker --path-as-root --service dxf-checker --detach

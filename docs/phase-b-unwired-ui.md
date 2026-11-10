@@ -1,5 +1,8 @@
 # Phase B — Unwired UI Buttons
 
+> **Historical plan (May 2026), kept for reference.** The current state is in `CLAUDE.md` and `README.md`; open work is tracked in GitHub issues.
+
+
 _Source: `docs/plan.md` §2.3, §3 steps 11–14 · Priority: **P1** · Estimate: ~1 day_
 
 ## Context
