@@ -11,6 +11,8 @@ import { formatDateTime } from "@/lib/format";
 import { MANUAL_REMARK_SOURCES, REMARK_SOURCE_LABEL, type RemarkSource } from "@/lib/drawing-meta";
 import { CHECK_SEVERITY_LABEL } from "@/lib/drawing-checks";
 import { addDrawingRemark, reopenDrawingRemark, resolveDrawingRemark } from "@/server/actions/drawing-remarks";
+import { markCheckRemarkFalse } from "@/server/actions/drawing-check-settings";
+import { HelpTip } from "@/components/help/help-tip";
 import type { RemarkRow } from "@/server/queries/drawing-control";
 import { SELECT_CLASS, TEXTAREA_CLASS } from "./drawing-form-fields";
 import type { RevisionOption } from "./time-card";
@@ -122,17 +124,22 @@ function AddRemarkForm({ revisions, onDone }: { revisions: RevisionOption[]; onD
 function OpenRemark({ r, readOnly, drawingId }: { r: RemarkRow; readOnly: boolean; drawingId: string }) {
   const [resolving, setResolving] = useState(false);
   const [resolution, setResolution] = useState("");
+  // "მცდარი შეცდომა": the automatic check is wrong here — close it and stop the rule on this drawing.
+  const [falseError, setFalseError] = useState(false);
   const [pending, start] = useTransition();
   const router = useRouter();
+  const automatic = r.source === "check" && !!r.checkRuleId;
 
   const resolve = () => {
     start(async () => {
-      const res = await resolveDrawingRemark({ id: r.id, resolution: resolution.trim() || undefined });
+      const res = falseError
+        ? await markCheckRemarkFalse({ id: r.id, reason: resolution.trim() })
+        : await resolveDrawingRemark({ id: r.id, resolution: resolution.trim() || undefined });
       if (!res.ok) {
         toast.error(res.error);
         return;
       }
-      toast.success("Remark resolved");
+      toast.success(falseError ? `Marked as a false error — ${r.checkRuleId} isn't checked on this drawing any more` : "Remark resolved");
       router.refresh();
     });
   };
@@ -163,12 +170,25 @@ function OpenRemark({ r, readOnly, drawingId }: { r: RemarkRow; readOnly: boolea
             value={resolution}
             maxLength={2000}
             onChange={e => setResolution(e.target.value)}
-            placeholder="How was it addressed? (optional)"
+            placeholder={falseError ? "Why is the check wrong here? (required)" : "How was it addressed? (optional)"}
             autoFocus
           />
+          {automatic && (
+            <label className="flex cursor-pointer items-start gap-2 text-[12.5px]">
+              <input type="checkbox" className="mt-0.5" checked={falseError} onChange={e => setFalseError(e.target.checked)} />
+              <span className="grid gap-0.5">
+                <span className="flex items-center gap-1.5 font-medium">False error <HelpTip topic="drawing-check" /></span>
+                <span className="muted">
+                  The check is wrong here: {r.checkRuleId} stops being checked on this drawing until an admin takes it back.
+                </span>
+              </span>
+            </label>
+          )}
           <div className="flex justify-end gap-2">
             <Button size="sm" variant="outline" onClick={() => setResolving(false)} disabled={pending}>Cancel</Button>
-            <Button size="sm" onClick={resolve} disabled={pending}>{pending ? "Saving…" : "Mark resolved"}</Button>
+            <Button size="sm" onClick={resolve} disabled={pending || (falseError && !resolution.trim())}>
+              {pending ? "Saving…" : falseError ? "Mark as false error" : "Mark resolved"}
+            </Button>
           </div>
         </div>
       )}

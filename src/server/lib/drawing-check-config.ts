@@ -2,11 +2,13 @@ import "server-only";
 import { and, eq, inArray, isNull, lt, or } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
-  DRAWING_CHECK_CONFIG_ID, SYSTEM_SETTINGS_ID, drawingCheckConfig, drawingCheckRuns, systemSettings,
+  DRAWING_CHECK_CONFIG_ID, SYSTEM_SETTINGS_ID, drawingCheckConfig, drawingCheckRuns, drawingCheckWaivers, drawings,
+  projects, systemSettings, user,
 } from "@/db/schema";
 import {
-  PENDING_STALE_MS, QUEUED_STALE_MS, STALE_RUN_ERROR, parseCheckRulesConfig, type CheckRulesConfig,
+  PENDING_STALE_MS, QUEUED_STALE_MS, STALE_RUN_ERROR, parseCheckRulesConfig, type CheckExceptions, type CheckRulesConfig,
 } from "@/lib/drawing-checks";
+import { parseParamOverrides, type ParamOverrides } from "@/lib/drawing-check-params";
 import { deleteObject } from "@/lib/s3";
 
 // No session checks here — callers (actions, queries, the callback route) have done them.
@@ -21,20 +23,56 @@ export async function loadDrawingCheckEnabled(): Promise<boolean> {
   return row?.enabled ?? false;
 }
 
-export type DrawingCheckConfig = { version: number; rules: CheckRulesConfig; params: Record<string, unknown> };
+export type DrawingCheckConfig = {
+  version: number;
+  rules: CheckRulesConfig;
+  /** Only what differs from rules.yaml (see lib/drawing-check-params). */
+  params: ParamOverrides;
+  updatedAt: Date | null;
+  updatedByName: string | null;
+};
 
 /** Rules and parameters for the next run. No row yet: every rule on, the checker's defaults, version 0. */
 export async function loadDrawingCheckConfig(): Promise<DrawingCheckConfig> {
   const [row] = await db
-    .select({ version: drawingCheckConfig.version, rules: drawingCheckConfig.rules, params: drawingCheckConfig.params })
+    .select({
+      version: drawingCheckConfig.version,
+      rules: drawingCheckConfig.rules,
+      params: drawingCheckConfig.params,
+      updatedAt: drawingCheckConfig.updatedAt,
+      updatedByName: user.name,
+    })
     .from(drawingCheckConfig)
+    .leftJoin(user, eq(user.id, drawingCheckConfig.updatedById))
     .where(eq(drawingCheckConfig.id, DRAWING_CHECK_CONFIG_ID))
     .limit(1);
   return {
     version: row?.version ?? 0,
     rules: parseCheckRulesConfig(row?.rules),
-    params: row?.params && typeof row.params === "object" ? row.params : {},
+    params: parseParamOverrides(row?.params),
+    updatedAt: row?.updatedAt ?? null,
+    updatedByName: row?.updatedByName ?? null,
   };
+}
+
+type Executor = Pick<typeof db, "select">;
+
+/**
+ * The drawing's own exceptions: its project's client naming (NAMING §1) and
+ * its false errors. Pass the transaction when the caller holds the drawing row.
+ */
+export async function loadCheckExceptions(drawingId: string, exec: Executor = db): Promise<CheckExceptions> {
+  const [row] = await exec
+    .select({ clientNaming: projects.checkClientNaming })
+    .from(drawings)
+    .innerJoin(projects, eq(projects.id, drawings.projectId))
+    .where(eq(drawings.id, drawingId))
+    .limit(1);
+  const waivers = await exec
+    .select({ ruleId: drawingCheckWaivers.ruleId })
+    .from(drawingCheckWaivers)
+    .where(eq(drawingCheckWaivers.drawingId, drawingId));
+  return { clientNaming: row?.clientNaming ?? false, waived: waivers.map(w => w.ruleId).sort() };
 }
 
 /**

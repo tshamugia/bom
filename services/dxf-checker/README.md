@@ -74,6 +74,17 @@ a drawing and to compare the title block with `drawing.sheet_code`.
 An empty or truncated DXF fails with `X-READ`: an empty drawing would otherwise
 pass most rules and close open Remarks.
 
+### `POST /v1/params/validate` → 200 / 422
+
+`{ "params": { … } }` as in `rules.params` of a check. 200 `{ "ok": true }` when a
+check would accept them, 422 with the Georgian message naming the bad parameter
+otherwise. Revline's Settings asks before it saves, so a pattern Python can't
+compile is never stored.
+
+`params` merge over rules.yaml key by key and lists are replaced; the code tables
+`naming.originators`, `naming.systems`, `naming.series` and `naming.extension_series`
+are replaced whole, so a code removed in Settings is gone here too.
+
 ### `GET /v1/catalog`
 
 The 60 rules in the 12 Settings groups (id, default severity, standard

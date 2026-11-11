@@ -586,9 +586,29 @@ export const HELP_SECTIONS: HelpSection[] = [
           <li>Each broken rule becomes <strong>one remark</strong> per drawing, however many places break it. <Ui>Error</Ui> findings are remarks; <Ui>To check</Ui> findings are remarks marked to check, because some checks are guesses; <Ui>Info</Ui> findings stay in the report.</li>
           <li>Checking again doesn&apos;t repeat remarks: one that is still broken is updated, one whose rule now passes closes by itself in the checked revision. Rules that are switched off, or couldn&apos;t be checked in that file (no title block, a file name the standard can&apos;t read), leave their remarks as they are.</li>
           <li>You can resolve an automatic remark by hand. If the next check still finds the problem, it raises a new one.</li>
+          {role !== "viewer" && <li><strong>False error.</strong> When the check is wrong about a drawing, tick <Ui>False error</Ui> while resolving its remark and say why. That rule then isn&apos;t checked on that drawing any more; the card lists it under <Ui>False errors</Ui>, and only an admin can have it checked again.</li>}
+          <li>Projects that use the client&apos;s own file naming (NAMING §1) skip the file-name rules; the title block and the drawing are still checked.</li>
           <li>The DXF is deleted once it has been checked; its name, size, SHA-256 and the result stay. Owners see the remarks in <Link href="/my-work">My work</Link>.</li>
           <li>If the checker can&apos;t read the file or doesn&apos;t answer, the check fails with the reason and no remark changes.</li>
-          {role === "admin" && <li>Turn checks on or off in <Link href="/settings/drawings">Settings → Drawings</Link>. They are off until they have been tried on real drawings.</li>}
+          {role === "admin" && <li>Turn checks on or off in <Link href="/settings/drawings">Settings → Drawings</Link>. They are off until they have been tried on real drawings. Which rules run and with what values: <Link href="/settings/drawing-checks">DXF check settings</Link>.</li>}
+        </ul>
+      </>
+    ),
+  },
+  {
+    ...topic("drawing-check-settings"),
+    group: "Drawings",
+    roles: EDITORS,
+    body: role => (
+      <>
+        <p>What the automatic DXF check looks for is set by admins in {role === "admin" ? <Link href="/settings/drawing-checks">Settings → Drawings → DXF check settings</Link> : <>Settings → Drawings → DXF check settings</>}. The defaults are the standards&apos; own values (NAMING 0.0.3, DRAFTING 0.0.5).</p>
+        <ul>
+          <li><strong>Rules.</strong> Each of the 60 rules, in 12 groups, can be switched off — alone or with its group — and given another severity: <Ui>Error</Ui> and <Ui>To check</Ui> become remarks, <Ui>Info</Ui> only shows in the report. A rule that is off, or lowered to Info, leaves its open remarks as they are.</li>
+          <li><strong>Parameters.</strong> The codes a file name may use (originators, zones, floors, systems, series), forbidden words and date formats, how the title block is found and which tags its fields have, and the drawing values — units, the legend layer, cable layers, approved blocks, model codes, typical floors. Patterns are checked when saved, and a value that isn&apos;t valid is not stored.</li>
+          <li><strong>Versions.</strong> Every save is a new version and goes to the audit log. A change applies to the next check without a deploy; each check remembers the version it ran with (shown under <Ui>All findings</Ui>).</li>
+          <li><strong>Client file naming.</strong> On a project whose client has its own naming (NAMING §1), an admin turns off the three file-name groups — on the project page or in the settings.</li>
+          <li><strong>False errors.</strong> Listed in the settings and on each drawing&apos;s check card; an admin removes one to check that rule on that drawing again.</li>
+          {role === "admin" && <li><Ui>Export rules.yaml</Ui> downloads the settings in the drawing-standard-checker skill&apos;s format, so the skill can be kept in line with Revline. Rules that are off are listed at the top as a comment.</li>}
         </ul>
       </>
     ),
@@ -663,7 +683,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     body: () => (
       <ul>
         <li><Link href="/settings/procurement">Procurement email</Link> — who receives BOMs sent to procurement, and the email text.</li>
-        <li><Link href="/settings/drawings">Drawings</Link> — who gets status emails for every drawing, the daily reminders, the list of disciplines, from which status drawing PDFs can be uploaded, and the switch for automatic DXF checks.</li>
+        <li><Link href="/settings/drawings">Drawings</Link> — who gets status emails for every drawing, the daily reminders, the list of disciplines, from which status drawing PDFs can be uploaded, and the switch for automatic DXF checks; under it, <Link href="/settings/drawing-checks">DXF check settings</Link> — rules, severities, parameters, client file naming and false errors.</li>
         <li>Each project page can add more recipients for that project only.</li>
         <li><Link href="/audit">Audit log</Link> — sign-ins, password resets, role changes, settings and deletions. Everyone else sees ordinary activity in History → Activity.</li>
       </ul>

@@ -157,3 +157,12 @@ def test_refused_callback_is_not_retried(tmp_path, monkeypatch):
     ok = asyncio.run(runner.send_callback(job, {"runId": "run3", "status": "failed"}))
     assert ok is False
     assert calls == ["POST"]
+
+
+def test_settings_can_validate_parameters_before_saving(client):
+    url = "/v1/params/validate"
+    assert client.post(url, json={"params": {}}).status_code == 401
+    assert client.post(url, json={"params": {"naming": {"zones": {"patterns": ["^K[1-9]$"]}}}}, headers=AUTH).json() == {"ok": True}
+    bad = client.post(url, json={"params": {"drafting": {"sku_generic_pattern": "(?<=a+)b"}}}, headers=AUTH)
+    assert bad.status_code == 422
+    assert "drafting.sku_generic_pattern" in bad.json()["detail"]

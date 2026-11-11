@@ -82,6 +82,8 @@ export const auditKindEnum = pgEnum("audit_kind", [
   "drawing.check.requested",
   "drawing.check.finished",
   "drawing.check.settings.changed",
+  "drawing.check.waived",
+  "drawing.check.waiver.removed",
   "drawing.time.shared.logged",
   "drawing.time.shared.deleted",
 ]);

@@ -257,8 +257,15 @@
     {
       "idx": 36,
       "version": "7",
-      "when": 1794416245991,
-      "tag": "0036_shared_drawing_entries",
+      "when": 1794416681335,
+      "tag": "0036_drawing_check_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1794419490917,
+      "tag": "0037_shared_drawing_entries",
       "breakpoints": true
     }
   ]
