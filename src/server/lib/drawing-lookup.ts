@@ -2,7 +2,7 @@ import "server-only";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
-import { drawingRevisions, drawings } from "@/db/schema";
+import { drawingRevisions, drawings, projects } from "@/db/schema";
 
 /** A revision of a live (not archived) drawing, plus whether it is the latest one. */
 export async function findDrawingRevision(revisionId: string) {
@@ -16,10 +16,13 @@ export async function findDrawingRevision(revisionId: string) {
       code: drawings.code,
       name: drawings.name,
       projectId: drawings.projectId,
+      projectCode: projects.code,
       ownerId: drawings.ownerId,
+      sheetCode: drawings.sheetCode,
     })
     .from(drawingRevisions)
     .innerJoin(drawings, eq(drawings.id, drawingRevisions.drawingId))
+    .innerJoin(projects, eq(projects.id, drawings.projectId))
     .where(and(eq(drawingRevisions.id, revisionId), isNull(drawings.deletedAt)))
     .limit(1);
   if (!rev) return null;

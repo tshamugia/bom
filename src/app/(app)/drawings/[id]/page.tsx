@@ -139,6 +139,7 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
                     dueDate: drawing.dueDate ?? "",
                     estimatedHours: drawing.estimatedHours?.toString() ?? "",
                     fileLocation: drawing.fileLocation ?? "",
+                    sheetCode: drawing.sheetCode ?? "",
                   }}
                   projects={projects}
                   disciplines={disciplines}
@@ -193,6 +194,12 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
           <dd style={overdue ? { color: "var(--red)", fontWeight: 600 } : undefined}>
             {drawing.dueDate ? formatDate(drawing.dueDate) : "—"}{overdue && " · overdue"}
           </dd>
+          <dt>Sheet code</dt>
+          <dd>
+            {drawing.sheetCode
+              ? <span className="mono">{drawing.sheetCode}</span>
+              : <span className="muted">{readOnly ? "—" : "Not set — the first DXF linked to it sets it"}</span>}
+          </dd>
           <dt>File location</dt>
           <dd>
             {drawing.fileLocation
@@ -219,7 +226,7 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
 
       {/* An engineering tool, like hours: viewers see what it raised on the Remarks card. */}
       {!readOnly && (
-        <DrawingCheckCard panel={checks} drawingCode={drawing.code} current={{ id: current.id, label: current.label }} />
+        <DrawingCheckCard panel={checks} drawingCode={drawing.code} sheetCode={drawing.sheetCode} current={{ id: current.id, label: current.label }} />
       )}
 
       <div className="grid-2 mb-5" style={{ alignItems: "start" }}>

@@ -13,7 +13,7 @@ import { Icon } from "@/components/icons";
 import { createDrawing, suggestDrawingCode } from "@/server/actions/drawings";
 import { useSuggestedCode } from "@/components/master/code-field";
 import {
-  DrawingFormFields, isDrawingFormComplete, parseHours, TEXTAREA_CLASS,
+  DrawingFormFields, isDrawingFormComplete, parseHours, parseSheetCode, TEXTAREA_CLASS,
   type DisciplineOption, type DrawingFormValue, type ProjectOption, type UserOption,
 } from "./drawing-form-fields";
 
@@ -38,6 +38,7 @@ export function NewDrawingDialog({
     dueDate: "",
     estimatedHours: "",
     fileLocation: "",
+    sheetCode: "",
   });
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState<DrawingFormValue>(blank);
@@ -59,6 +60,7 @@ export function NewDrawingDialog({
         dueDate: value.dueDate || null,
         estimatedHours: parseHours(value.estimatedHours) ?? null,
         fileLocation: value.fileLocation.trim() || null,
+        sheetCode: parseSheetCode(value.sheetCode) ?? null,
         commitMessage: note.trim() || undefined,
       });
       if (!res.ok) {

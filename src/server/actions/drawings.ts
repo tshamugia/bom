@@ -21,9 +21,11 @@ import {
 import { MAX_BULK_DRAWINGS, planBulkDueDate, planBulkOwner, planBulkStatus, type BulkSkip } from "@/lib/drawing-bulk";
 import { MAX_ESTIMATE_HOURS, formatHours } from "@/lib/drawing-meta";
 import { ADMIN_ONLY_ERROR, READ_ONLY_ERROR, canEdit, isAdmin } from "@/lib/roles";
+import { SHEET_CODE_FORMAT_ERROR, isSheetCode, normalizeSheetCode, sheetCodeTakenMessage } from "@/lib/drawing-check-link";
 import { requireSession } from "../auth-context";
 import { audit } from "../audit";
-import { isUniqueViolation } from "../lib/db-errors";
+import { constraintName, isUniqueViolation } from "../lib/db-errors";
+import { sheetCodeOwner } from "../lib/drawing-sheet-codes";
 import { drawingCodeInProject, lockDrawingCodes, nextDrawingCode } from "../lib/codes";
 import { notifyDrawingStatusChange, notifyDrawingStatusChanges, type DrawingStatusNotice } from "../lib/drawing-notify";
 
@@ -46,7 +48,27 @@ const DrawingFields = z.object({
   estimatedHours: z.number().positive().max(MAX_ESTIMATE_HOURS).nullable(),
   /** Path on the company file server, e.g. `2026/BMW/CCTV`; blank clears it. */
   fileLocation: z.string().trim().max(500).nullish().transform(v => v || null),
+  /** `ZZ-00-FA-102`; blank clears it. Checked in the action, so a typo comes back as a message. */
+  sheetCode: z.string().max(40).nullish().transform(v => (v ? normalizeSheetCode(v) : null) || null),
 });
+
+const SHEET_CODE_INDEX = "drawing_project_sheet_code_uq";
+
+/** Why this sheet code can't be saved on the drawing, or null. */
+async function sheetCodeProblem(sheetCode: string | null, projectId: string, drawingId?: string): Promise<string | null> {
+  if (!sheetCode) return null;
+  if (!isSheetCode(sheetCode)) return SHEET_CODE_FORMAT_ERROR;
+  const owner = await sheetCodeOwner(db, projectId, sheetCode, drawingId);
+  return owner ? sheetCodeTakenMessage(sheetCode, owner) : null;
+}
+
+/** A unique violation on save: the sheet code was taken meanwhile, or the drawing code was. */
+async function uniqueError(e: unknown, sheetCode: string | null, projectId: string, drawingId?: string): Promise<string> {
+  if (constraintName(e) === SHEET_CODE_INDEX && sheetCode) {
+    return (await sheetCodeProblem(sheetCode, projectId, drawingId)) ?? sheetCodeTakenMessage(sheetCode, "another drawing");
+  }
+  return CODE_RACE_ERROR;
+}
 
 async function findProject(id: string) {
   const [p] = await db
@@ -140,6 +162,8 @@ export async function createDrawing(
   if (!project) return fail("Project not found.");
   if (!(await findDiscipline(data.disciplineId))) return fail("Discipline not found.");
   if (!(await findActiveEngineer(data.ownerId))) return fail("The owner must be an active user who isn't a viewer.");
+  const sheetProblem = await sheetCodeProblem(data.sheetCode, data.projectId);
+  if (sheetProblem) return fail(sheetProblem);
 
   let created: { id: string; code: string };
   try {
@@ -154,6 +178,7 @@ export async function createDrawing(
         dueDate: data.dueDate,
         estimatedHours: data.estimatedHours,
         fileLocation: data.fileLocation,
+        sheetCode: data.sheetCode,
         createdById: session.user.id,
         lastModifiedById: session.user.id,
       }).returning({ id: drawings.id, code: drawings.code });
@@ -173,7 +198,7 @@ export async function createDrawing(
       return d;
     });
   } catch (e) {
-    if (isUniqueViolation(e)) return fail(CODE_RACE_ERROR);
+    if (isUniqueViolation(e)) return fail(await uniqueError(e, data.sheetCode, data.projectId));
     throw e;
   }
 
@@ -184,7 +209,7 @@ export async function createDrawing(
     refType: "drawing",
     refId: id,
     summary: `${project.code} · ${code} — ${data.name} created`,
-    payload: { projectId: data.projectId, code },
+    payload: { projectId: data.projectId, code, ...(data.sheetCode ? { sheetCode: data.sheetCode } : {}) },
   });
   return { ok: true, id, code };
 }
@@ -206,11 +231,17 @@ export async function updateDrawing(input: z.input<typeof UpdateInput>): Promise
       dueDate: drawings.dueDate,
       estimatedHours: drawings.estimatedHours,
       fileLocation: drawings.fileLocation,
+      sheetCode: drawings.sheetCode,
     })
     .from(drawings)
     .where(and(eq(drawings.id, id), isNull(drawings.deletedAt)))
     .limit(1);
   if (!current) return fail("Drawing not found.");
+  // Checked again when the drawing moves: sheet codes are unique per project.
+  if (data.sheetCode !== current.sheetCode || data.projectId !== current.projectId) {
+    const sheetProblem = await sheetCodeProblem(data.sheetCode, data.projectId, id);
+    if (sheetProblem) return fail(sheetProblem);
+  }
 
   const project = await findProject(data.projectId);
   if (!project) return fail("Project not found.");
@@ -242,6 +273,7 @@ export async function updateDrawing(input: z.input<typeof UpdateInput>): Promise
   if (current.fileLocation !== data.fileLocation) {
     changes.push(`File location: ${current.fileLocation ?? "—"} → ${data.fileLocation ?? "—"}`);
   }
+  if (current.sheetCode !== data.sheetCode) changes.push(`Sheet code: ${current.sheetCode ?? "—"} → ${data.sheetCode ?? "—"}`);
   if (changes.length === 0) return { ok: true };
 
   const rev = await latestRevision(id);
@@ -273,7 +305,7 @@ export async function updateDrawing(input: z.input<typeof UpdateInput>): Promise
       });
     });
   } catch (e) {
-    if (isUniqueViolation(e)) return fail(CODE_RACE_ERROR);
+    if (isUniqueViolation(e)) return fail(await uniqueError(e, data.sheetCode, data.projectId, id));
     throw e;
   }
 

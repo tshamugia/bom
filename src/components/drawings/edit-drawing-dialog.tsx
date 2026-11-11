@@ -12,7 +12,7 @@ import { Icon } from "@/components/icons";
 import { suggestDrawingCode, updateDrawing } from "@/server/actions/drawings";
 import { useSuggestedCode } from "@/components/master/code-field";
 import {
-  DrawingFormFields, isDrawingFormComplete, parseHours,
+  DrawingFormFields, isDrawingFormComplete, parseHours, parseSheetCode,
   type DisciplineOption, type DrawingFormValue, type ProjectOption, type UserOption,
 } from "./drawing-form-fields";
 
@@ -53,6 +53,7 @@ export function EditDrawingDialog({
         dueDate: value.dueDate || null,
         estimatedHours: parseHours(value.estimatedHours) ?? null,
         fileLocation: value.fileLocation.trim() || null,
+        sheetCode: parseSheetCode(value.sheetCode) ?? null,
       });
       if (!res.ok) {
         toast.error(res.error);

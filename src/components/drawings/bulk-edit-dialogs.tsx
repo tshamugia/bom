@@ -23,6 +23,7 @@ import {
   type BulkDrawingResult,
 } from "@/server/actions/drawings";
 import { SELECT_CLASS, TEXTAREA_CLASS, type UserOption } from "./drawing-form-fields";
+import { BulkCheckDialog, type BulkCheckRow } from "./bulk-check-dialog";
 
 const drawingsCount = (n: number) => `${n} drawing${n === 1 ? "" : "s"}`;
 
@@ -40,10 +41,13 @@ export function BulkDrawingBar({
   rows,
   users,
   currentUserId,
+  checkRows,
   onDone,
   onClear,
 }: {
   rows: BulkDrawing[];
+  /** The same drawings for "Check DXFs"; null while automatic checks are off or not connected. */
+  checkRows: BulkCheckRow[] | null;
   /** Possible owners and approving engineers — active users who aren't viewers. */
   users: UserOption[];
   currentUserId: string;
@@ -60,6 +64,13 @@ export function BulkDrawingBar({
         <BulkStatusDialog rows={rows} users={users} currentUserId={currentUserId} onDone={onDone} />
         <BulkOwnerDialog rows={rows} users={users} onDone={onDone} />
         <BulkDueDateDialog rows={rows} onDone={onDone} />
+        {checkRows && (
+          <BulkCheckDialog
+            rows={checkRows}
+            onDone={onDone}
+            trigger={<BarButton icon={Icon.Upload} label="Check DXFs" short="DXFs" />}
+          />
+        )}
       </div>
       <button type="button" className="btn btn-ghost btn-sm bulk-clear" onClick={onClear}>
         <Icon.X className="ico" /> Clear

@@ -3,6 +3,7 @@ import { EDITOR_ROLES, type UserRole } from "@/lib/roles";
 import { DRAWING_STATUSES, DRAWING_STATUS_LABEL, type DrawingStatus } from "@/lib/drawing-status";
 import { MAX_DRAWING_FILE_MB } from "@/lib/drawing-files";
 import { MAX_DXF_MB } from "@/lib/drawing-checks";
+import { MAX_BULK_DRAWINGS } from "@/lib/drawing-bulk";
 import { HELP_TOPICS, type HelpTopicId } from "@/lib/help-topics";
 import { DrawingStatusBadge } from "@/components/drawings/drawing-status-badge";
 import { HelpDiagram } from "./help-diagram";
@@ -565,6 +566,48 @@ export const HELP_SECTIONS: HelpSection[] = [
           <li>The DXF is deleted once it has been checked; its name, size, SHA-256 and the result stay. Owners see the remarks in <Link href="/my-work">My work</Link>.</li>
           <li>If the checker can&apos;t read the file or doesn&apos;t answer, the check fails with the reason and no remark changes.</li>
           {role === "admin" && <li>Turn checks on or off in <Link href="/settings/drawings">Settings → Drawings</Link>. They are off until they have been tried on real drawings.</li>}
+        </ul>
+      </>
+    ),
+  },
+  {
+    ...topic("drawing-sheet-code"),
+    group: "Drawings",
+    roles: EDITORS,
+    body: () => (
+      <>
+        <p>File names follow the standard: <span className="mono">INS-26TGT-ZZ-00-FA-102_P01.dxf</span> — originator, project code, then zone, floor, system and number. Those last four, <span className="mono">ZZ-00-FA-102</span>, are the drawing&apos;s <strong>sheet code</strong>. The same sheet code appears in many projects, so it is unique only within one.</p>
+        <ul>
+          <li>The first DXF with a standard name checked on a drawing gives it its sheet code. You can also type it, or change it, with <Ui>Edit</Ui> — the standard lets a sheet be renumbered until it is first issued.</li>
+          <li>From then on a DXF goes to a drawing only if its name carries <strong>exactly that sheet code</strong> and <strong>the drawing&apos;s project code</strong>. A file named for another sheet or another project is refused before it is uploaded. A name that doesn&apos;t follow the standard is your call.</li>
+          <li>A renamed file passes by its name but not by its title block. When the result comes in, the sheet number in the title block is compared with the sheet code:
+            <ul>
+              <li><strong>It matches</strong> — remarks are written and fixed ones close, as usual.</li>
+              <li><strong>It names another sheet</strong> — nothing changes. The check shows <Ui>Needs confirming</Ui> on the drawing and in the uploader&apos;s <Link href="/my-work">My work</Link>: <Ui>Confirm</Ui> applies its findings as this drawing&apos;s, <Ui>Wrong file</Ui> sets it aside.</li>
+              <li><strong>It can&apos;t be read</strong> (no title block, no sheet number) — new remarks are written, but none closes by itself.</li>
+            </ul>
+          </li>
+          <li><Ui>Wrong file</Ui> on the latest check undoes what it did: remarks it raised are removed, remarks it closed reopen, remarks it updated get their earlier text back, and a sheet code it set is cleared. Remarks someone changed by hand since are left alone. Only the drawing&apos;s latest check that changed remarks can be undone.</li>
+        </ul>
+      </>
+    ),
+  },
+  {
+    ...topic("drawing-check-bulk"),
+    group: "Drawings",
+    roles: EDITORS,
+    body: () => (
+      <>
+        <ol className="help-steps">
+          <li>On <Link href="/drawings">Drawings</Link>, tick the drawings the files are for (up to {MAX_BULK_DRAWINGS}) and click <Ui>Check DXFs</Ui> in the bar under the list.</li>
+          <li>Drop the DXF files, or pick them. A table shows which file goes to which drawing before anything is uploaded.</li>
+          <li>Click <Ui>Upload and check</Ui>. The files go up one by one; keep the page open until the list says they are all handed over. Results then arrive on each drawing like a single check.</li>
+        </ol>
+        <ul>
+          <li>A standard name goes to the ticked drawing of its project with that sheet code. If none of them has it yet, pick the drawing — it keeps the file&apos;s sheet code. A name off the standard is always picked by hand.</li>
+          <li>Left out, with the reason: another project&apos;s file, two files for one drawing or of one sheet (remove the extra one), a sheet that belongs to a drawing you didn&apos;t tick, a drawing whose check is still running, and drawings of a project that still has an old-style code like <span className="mono">BS-005</span> — an admin changes the code in the project passport first.</li>
+          <li>The server checks the plan again before uploading and gives a reason for any file it leaves out.</li>
+          <li>When the checker is busy, files wait their turn and are sent again automatically.</li>
         </ul>
       </>
     ),

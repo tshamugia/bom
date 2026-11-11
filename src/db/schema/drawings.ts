@@ -7,6 +7,7 @@ import { DRAWING_STATUSES } from "../../lib/drawing-status";
 import { REMARK_SOURCES, TRANSMITTAL_PURPOSES } from "../../lib/drawing-meta";
 import { CHECK_RUN_STATUSES, type CheckConfigSnapshot, type CheckCounts, type CheckFinding } from "../../lib/drawing-checks";
 import type { CheckSeverity } from "../../lib/drawing-check-rules";
+import type { SheetCheck } from "../../lib/drawing-check-link";
 
 export const drawingStatusEnum = pgEnum("drawing_status", DRAWING_STATUSES);
 export const drawingRemarkSourceEnum = pgEnum("drawing_remark_source", REMARK_SOURCES);
@@ -48,6 +49,12 @@ export const drawings = pgTable(
     estimatedHours: numeric("estimated_hours", { precision: 8, scale: 2, mode: "number" }),
     /** Where the drawing files sit on the company file server, e.g. `2026/BMW/CCTV` — the app stores no files. */
     fileLocation: text("file_location"),
+    /**
+     * Zone-floor-system-number from the standard file name, e.g. `ZZ-00-FA-102`
+     * (`src/lib/drawing-check-link.ts`). Set when a DXF is first linked to the
+     * drawing by hand, or typed in Edit; DXFs then have to carry exactly this code.
+     */
+    sheetCode: text("sheet_code"),
     createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
     lastModifiedById: text("last_modified_by_id").references(() => user.id, { onDelete: "set null" }),
     deletedAt: timestamp("deleted_at"),
@@ -61,6 +68,10 @@ export const drawings = pgTable(
       .on(t.projectId, t.code)
       .where(sql`"deleted_at" IS NULL`),
     deletedAtIdx: index("drawing_deleted_at_idx").on(t.deletedAt),
+    // `ZZ-00-FA-102` repeats across projects; within one it names one drawing.
+    projectSheetCodeUq: uniqueIndex("drawing_project_sheet_code_uq")
+      .on(t.projectId, t.sheetCode)
+      .where(sql`"deleted_at" IS NULL AND "sheet_code" IS NOT NULL`),
   }),
 );
 
@@ -298,6 +309,8 @@ export type DrawingCheckRemarkChanges = {
   updated: string[];
   closed: string[];
   skipped?: "newer-check";
+  /** Updated and closed remarks as they were before, so "Wrong file" can put them back. */
+  previous?: Array<{ id: string; body: string; severity: CheckSeverity | null; lastCheckRunId: string | null }>;
 };
 
 /**
@@ -328,6 +341,15 @@ export const drawingCheckRuns = pgTable(
     counts: jsonb("counts").$type<CheckCounts>(),
     details: jsonb("details").$type<DrawingCheckDetails>(),
     remarkChanges: jsonb("remark_changes").$type<DrawingCheckRemarkChanges>(),
+    /** How the title block compared with the drawing's sheet code when the result came in. */
+    sheetCheck: text("sheet_check").$type<SheetCheck>(),
+    /** The sheet code this upload gave the drawing (its first link by hand); "Wrong file" takes it back. */
+    linkedSheetCode: text("linked_sheet_code"),
+    /** When its Remark changes were written — "Wrong file" only undoes the drawing's latest. */
+    appliedAt: timestamp("applied_at"),
+    /** Who confirmed a held run or marked the run as the wrong file, and when. */
+    decidedById: text("decided_by_id").references(() => user.id, { onDelete: "set null" }),
+    decidedAt: timestamp("decided_at"),
     engineVersion: text("engine_version"),
     /** When the checker accepted the file. */
     startedAt: timestamp("started_at"),

@@ -20,6 +20,8 @@ export const HELP_TOPIC_IDS = [
   "drawing-bulk",
   "drawing-pdf",
   "drawing-check",
+  "drawing-sheet-code",
+  "drawing-check-bulk",
   "transmittals",
   "procurement",
   "exports",
@@ -101,6 +103,16 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
     title: "Automatic DXF check",
     summary:
       "Upload a DXF of the latest revision: it is checked against the naming and drafting standards, and each broken rule becomes one remark from Automatic check (To check means the check may be wrong). Checking a fixed file closes the remarks of rules that now pass. Advisory only — it blocks nothing. An admin turns it on in Settings → Drawings.",
+  },
+  "drawing-sheet-code": {
+    title: "Sheet code and the right file",
+    summary:
+      "A drawing's sheet code (ZZ-00-FA-102) ties DXFs to it. The first standard-named DXF checked on a drawing sets it; after that a DXF must carry exactly that code and the drawing's project code. If the title block names another sheet, nothing changes until someone confirms the file or marks it as the wrong file — which undoes what the check changed.",
+  },
+  "drawing-check-bulk": {
+    title: "Checking many DXFs at once",
+    summary:
+      "Tick drawings on the Drawings list, click Check DXFs and drop the files. Each file goes to the ticked drawing with its sheet code; a file nobody can match is picked by hand. Another project's file, and two files for one drawing, are left out. Each file is then checked like a single upload.",
   },
   "transmittals": {
     title: "Transmittals",

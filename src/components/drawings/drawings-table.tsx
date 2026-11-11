@@ -23,6 +23,8 @@ export type DrawingTableRow = {
   openRemarks: number;
   updatedAt: Date;
   lastModifiedByName: string | null;
+  /** `ZZ-00-FA-102`, shown under the code on wide screens. */
+  sheetCode?: string | null;
 };
 
 /** Checkboxes for bulk edits; only the /drawings register passes it, from a client component. */
@@ -112,6 +114,9 @@ export function DrawingsTable({
                 <td className="mono l-title" style={{ whiteSpace: "nowrap" }}>
                   <Link href={`/drawings/${r.id}`} style={{ color: "inherit", fontWeight: 600 }}>{r.code}</Link>
                   <span className="muted min-[701px]:hidden"> {r.revisionLabel}</span>
+                  {r.sheetCode && (
+                    <div className="muted max-[701px]:hidden" style={{ fontSize: 11, fontWeight: 400 }}>{r.sheetCode}</div>
+                  )}
                 </td>
                 <td className="l-line">
                   <Link href={`/drawings/${r.id}`} style={{ color: "inherit", fontWeight: 500 }}>{r.name}</Link>

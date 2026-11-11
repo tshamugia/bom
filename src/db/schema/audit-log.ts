@@ -82,6 +82,8 @@ export const auditKindEnum = pgEnum("audit_kind", [
   "drawing.check.requested",
   "drawing.check.finished",
   "drawing.check.settings.changed",
+  "drawing.check.confirmed",
+  "drawing.check.wrong-file",
 ]);
 
 export const auditLog = pgTable(
