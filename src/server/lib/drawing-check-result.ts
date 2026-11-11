@@ -6,11 +6,12 @@ import { drawingCheckRuns, drawingEvents, drawingRemarks, drawingRevisions, draw
 import type { DrawingCheckDetails, DrawingCheckRemarkChanges } from "@/db/schema";
 import { CHECK_RULE_IDS, CHECK_SEVERITIES, type CheckSeverity } from "@/lib/drawing-check-rules";
 import {
-  countFindings, describeCounts, describeRemarkChanges, planRemarkChanges, uncheckedRules, type CheckFinding,
+  countFindings, describeCounts, describeRemarkChanges, planRemarkChanges, suppressedCheckRules, uncheckedRules,
+  type CheckFinding,
 } from "@/lib/drawing-checks";
 import { checkTitleBlockSheet, describeUndo, sheetCheckNote, type SheetCheck } from "@/lib/drawing-check-link";
 import { writeAudit, type AuditRow } from "./audit-write";
-import { deleteCheckFiles } from "./drawing-check-config";
+import { deleteCheckFiles, loadCheckExceptions } from "./drawing-check-config";
 import { revalidateDrawingViews } from "./drawing-lookup";
 
 // The checker's callback (services/dxf-checker/README.md, "Callback"). Text
@@ -189,11 +190,15 @@ async function writeRemarkChanges(
       isNull(drawingRemarks.resolvedAt),
       isNotNull(drawingRemarks.checkRuleId),
     ));
+  // Read now, not at upload: a false error marked or a project exception set while the
+  // file was being checked (or held) already applies to this result.
+  const suppressed = suppressedCheckRules(await loadCheckExceptions(run.drawingId, tx));
   const plan = planRemarkChanges({
     findings: i.findings,
     enabled: i.enabled,
     open: open.map(r => ({ ...r, ruleId: r.ruleId! })),
     unchecked: i.unchecked,
+    suppressed,
   });
   if (!i.close) {
     plan.untouched.push(...plan.close);

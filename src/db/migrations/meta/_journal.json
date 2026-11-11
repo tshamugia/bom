@@ -257,8 +257,15 @@
     {
       "idx": 36,
       "version": "7",
-      "when": 1794416808781,
-      "tag": "0036_drawing_sheet_codes",
+      "when": 1794416681335,
+      "tag": "0036_drawing_check_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1794419570493,
+      "tag": "0037_drawing_sheet_codes",
       "breakpoints": true
     }
   ]

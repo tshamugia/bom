@@ -18,7 +18,8 @@ import { requireSession } from "../auth-context";
 import { audit } from "../audit";
 import { isUniqueViolation } from "../lib/db-errors";
 import {
-  activeCheckRevisionIds, closeStaleCheckRuns, deleteCheckFiles, loadDrawingCheckConfig, loadDrawingCheckEnabled,
+  activeCheckRevisionIds, closeStaleCheckRuns, deleteCheckFiles, loadCheckExceptions, loadDrawingCheckConfig,
+  loadDrawingCheckEnabled,
 } from "../lib/drawing-check-config";
 import { findDrawingRevision, findLatestRevision, revalidateDrawingViews } from "../lib/drawing-lookup";
 import { sheetCodeOwner } from "../lib/drawing-sheet-codes";
@@ -221,7 +222,9 @@ export async function confirmDrawingCheckUpload(input: z.input<typeof ConfirmInp
   const linked = await fileLinkProblem(rev, run.originalName);
   if ("error" in linked) return discard(linked.error);
 
-  const snapshot = checkConfigSnapshot(await loadDrawingCheckConfig());
+  // Only what runs on this drawing: rules on in Settings, minus its project's client naming and its false errors.
+  const [config, exceptions] = await Promise.all([loadDrawingCheckConfig(), loadCheckExceptions(rev.drawingId)]);
+  const snapshot = checkConfigSnapshot(config, exceptions);
   const now = new Date();
   try {
     // Queued before the checker hears of it, so even an instant callback finds the run waiting.

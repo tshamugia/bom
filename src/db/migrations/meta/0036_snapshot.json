@@ -1,5 +1,5 @@
 {
-  "id": "5dff94cf-2055-4d13-b3a7-3accec17946b",
+  "id": "8f9e4675-cb16-4ffb-8c8c-59ecfdc6373f",
   "prevId": "d93c7b5f-81b9-44e6-b17f-9c80a936e1a7",
   "version": "7",
   "dialect": "postgresql",
@@ -1708,6 +1708,139 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.drawing_check_waiver": {
+      "name": "drawing_check_waiver",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "drawing_id": {
+          "name": "drawing_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rule_id": {
+          "name": "rule_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "remark_id": {
+          "name": "remark_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_by_id": {
+          "name": "created_by_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "drawing_check_waiver_drawing_rule_uq": {
+          "name": "drawing_check_waiver_drawing_rule_uq",
+          "columns": [
+            {
+              "expression": "drawing_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "rule_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "drawing_check_waiver_remark_idx": {
+          "name": "drawing_check_waiver_remark_idx",
+          "columns": [
+            {
+              "expression": "remark_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "drawing_check_waiver_drawing_id_drawing_id_fk": {
+          "name": "drawing_check_waiver_drawing_id_drawing_id_fk",
+          "tableFrom": "drawing_check_waiver",
+          "tableTo": "drawing",
+          "columnsFrom": [
+            "drawing_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "drawing_check_waiver_remark_id_drawing_remark_id_fk": {
+          "name": "drawing_check_waiver_remark_id_drawing_remark_id_fk",
+          "tableFrom": "drawing_check_waiver",
+          "tableTo": "drawing_remark",
+          "columnsFrom": [
+            "remark_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "drawing_check_waiver_created_by_id_user_id_fk": {
+          "name": "drawing_check_waiver_created_by_id_user_id_fk",
+          "tableFrom": "drawing_check_waiver",
+          "tableTo": "user",
+          "columnsFrom": [
+            "created_by_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.drawing_check_config": {
       "name": "drawing_check_config",
       "schema": "",
@@ -1891,36 +2024,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "sheet_check": {
-          "name": "sheet_check",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "linked_sheet_code": {
-          "name": "linked_sheet_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "applied_at": {
-          "name": "applied_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "decided_by_id": {
-          "name": "decided_by_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "decided_at": {
-          "name": "decided_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
         "engine_version": {
           "name": "engine_version",
           "type": "text",
@@ -2034,19 +2137,6 @@
           "tableTo": "user",
           "columnsFrom": [
             "uploaded_by_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "drawing_check_run_decided_by_id_user_id_fk": {
-          "name": "drawing_check_run_decided_by_id_user_id_fk",
-          "tableFrom": "drawing_check_run",
-          "tableTo": "user",
-          "columnsFrom": [
-            "decided_by_id"
           ],
           "columnsTo": [
             "id"
@@ -3498,12 +3588,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "sheet_code": {
-          "name": "sheet_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_by_id": {
           "name": "created_by_id",
           "type": "text",
@@ -3586,28 +3670,6 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "drawing_project_sheet_code_uq": {
-          "name": "drawing_project_sheet_code_uq",
-          "columns": [
-            {
-              "expression": "project_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "sheet_code",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"deleted_at\" IS NULL AND \"sheet_code\" IS NOT NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -4012,6 +4074,13 @@
           "type": "date",
           "primaryKey": false,
           "notNull": false
+        },
+        "check_client_naming": {
+          "name": "check_client_naming",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "deleted_at": {
           "name": "deleted_at",
@@ -4634,8 +4703,8 @@
         "drawing.check.requested",
         "drawing.check.finished",
         "drawing.check.settings.changed",
-        "drawing.check.confirmed",
-        "drawing.check.wrong-file"
+        "drawing.check.waived",
+        "drawing.check.waiver.removed"
       ]
     },
     "public.export_format": {
@@ -4663,9 +4732,7 @@
         "pending",
         "queued",
         "done",
-        "failed",
-        "held",
-        "wrong-file"
+        "failed"
       ]
     },
     "public.drawing_event_kind": {

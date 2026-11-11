@@ -1,10 +1,10 @@
 import "server-only";
-import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db/client";
-import { drawingCheckRuns, user } from "@/db/schema";
+import { drawingCheckRuns, drawingCheckWaivers, drawings, projects, user } from "@/db/schema";
 import { requireSession } from "../auth-context";
-import { loadDrawingCheckEnabled } from "../lib/drawing-check-config";
+import { loadCheckExceptions, loadDrawingCheckConfig, loadDrawingCheckEnabled } from "../lib/drawing-check-config";
 import { dxfCheckerSetup } from "../lib/dxf-checker";
 
 /** How many runs the card lists; the full findings come only for the latest finished one. */
@@ -14,8 +14,10 @@ const RUNS_SHOWN = 6;
 export async function getDrawingCheckPanel(drawingId: string) {
   await requireSession();
   const decider = alias(user, "decider");
-  const [enabled, runs, [undoable]] = await Promise.all([
+  const [enabled, exceptions, waivers, runs, [undoable]] = await Promise.all([
     loadDrawingCheckEnabled(),
+    loadCheckExceptions(drawingId),
+    listCheckWaivers(drawingId),
     db
       .select({
         id: drawingCheckRuns.id,
@@ -71,6 +73,8 @@ export async function getDrawingCheckPanel(drawingId: string) {
   return {
     enabled,
     configured: dxfCheckerSetup() !== null,
+    clientNaming: exceptions.clientNaming,
+    waivers,
     runs,
     /** The run "Wrong file" can undo; held runs can always be set aside. */
     undoableRunId: undoable?.id ?? null,
@@ -87,3 +91,44 @@ export async function getDrawingCheckSettings() {
   await requireSession();
   return { enabled: await loadDrawingCheckEnabled(), configured: dxfCheckerSetup() !== null };
 }
+
+/** Rules marked as a false error — on one drawing, or everywhere for Settings. */
+async function listCheckWaivers(drawingId?: string) {
+  return db
+    .select({
+      id: drawingCheckWaivers.id,
+      ruleId: drawingCheckWaivers.ruleId,
+      reason: drawingCheckWaivers.reason,
+      createdAt: drawingCheckWaivers.createdAt,
+      createdByName: user.name,
+      drawingId: drawings.id,
+      drawingCode: drawings.code,
+      projectCode: projects.code,
+    })
+    .from(drawingCheckWaivers)
+    .innerJoin(drawings, eq(drawings.id, drawingCheckWaivers.drawingId))
+    .innerJoin(projects, eq(projects.id, drawings.projectId))
+    .leftJoin(user, eq(user.id, drawingCheckWaivers.createdById))
+    .where(drawingId ? eq(drawingCheckWaivers.drawingId, drawingId) : isNull(drawings.deletedAt))
+    .orderBy(asc(projects.code), asc(drawings.code), asc(drawingCheckWaivers.ruleId));
+}
+
+export type CheckWaiverRow = Awaited<ReturnType<typeof listCheckWaivers>>[number];
+
+/** Settings → Drawings → DXF check settings (admins; the page checks the role). */
+export async function getDrawingCheckSettingsPage() {
+  await requireSession();
+  const [enabled, config, projectRows, waivers] = await Promise.all([
+    loadDrawingCheckEnabled(),
+    loadDrawingCheckConfig(),
+    db
+      .select({ id: projects.id, code: projects.code, name: projects.name, clientNaming: projects.checkClientNaming })
+      .from(projects)
+      .where(isNull(projects.deletedAt))
+      .orderBy(asc(projects.code)),
+    listCheckWaivers(),
+  ]);
+  return { enabled, configured: dxfCheckerSetup() !== null, config, projects: projectRows, waivers };
+}
+
+export type DrawingCheckSettingsPage = Awaited<ReturnType<typeof getDrawingCheckSettingsPage>>;

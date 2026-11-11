@@ -369,16 +369,16 @@ export const drawingCheckRuns = pgTable(
 export const DRAWING_CHECK_CONFIG_ID = "default";
 
 /**
- * The rules and parameters every check is sent with (a single row; stage 3 of
- * issue #18 adds the forms). No row means every rule on with the checker's
- * defaults, version 0. Each change bumps `version`; runs keep a snapshot.
+ * The rules and parameters every check is sent with (a single row, edited in
+ * Settings → Drawings → DXF check settings). No row means every rule on with
+ * the checker's defaults, version 0. Each change bumps `version`; runs keep a snapshot.
  */
 export const drawingCheckConfig = pgTable("drawing_check_config", {
   id: text("id").primaryKey().default(DRAWING_CHECK_CONFIG_ID),
   version: integer("version").notNull().default(1),
-  /** Parsed with `parseCheckRulesConfig`: `{ disabled: string[], severity: { [rule]: severity } }`. */
+  /** Parsed with `parseCheckRulesConfig`: `{ disabled: string[], disabledGroups: string[], severity: { [rule]: severity } }`. */
   rules: jsonb("rules").notNull().$type<Record<string, unknown>>().default({}),
-  /** Merged over the checker's rules.yaml defaults. */
+  /** Only what differs from rules.yaml, nested like it (`parseParamOverrides`); merged over the checker's defaults. */
   params: jsonb("params").notNull().$type<Record<string, unknown>>().default({}),
   updatedById: text("updated_by_id").references(() => user.id, { onDelete: "set null" }),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

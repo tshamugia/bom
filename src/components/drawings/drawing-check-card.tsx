@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { Badge, type Tone } from "@/components/ui/badge";
 import { HelpTip } from "@/components/help/help-tip";
@@ -14,6 +15,7 @@ import { normalizeSheetCode, sheetCheckNote } from "@/lib/drawing-check-link";
 import { UploadDxfDialog } from "./upload-dxf-dialog";
 import { CheckRefresher } from "./check-refresher";
 import { CheckRunActions } from "./check-run-actions";
+import { CheckWaivers } from "./check-waivers";
 
 const SEVERITY_TONE: Record<CheckSeverity, Tone> = { ERROR: "danger", WARNING: "warning", INFO: "gray" };
 
@@ -159,7 +161,8 @@ function FindingItem({ f }: { f: CheckFinding }) {
 
 /**
  * The automatic DXF check on the drawing page (issue #18): upload a DXF of the
- * latest revision, follow its status, read the latest result and every finding.
+ * latest revision, follow its status, read the latest result and every finding,
+ * and see what this drawing skips (false errors, the project's client naming).
  * Editors only — viewers follow the Remarks it raises.
  */
 export function DrawingCheckCard({
@@ -167,12 +170,15 @@ export function DrawingCheckCard({
   drawingCode,
   sheetCode,
   current,
+  canManage = false,
 }: {
   panel: DrawingCheckPanel;
   drawingCode: string;
   /** The drawing's sheet code, which DXFs and their title blocks are held against. */
   sheetCode: string | null;
   current: { id: string; label: string };
+  /** Admins remove false errors and reach the settings. */
+  canManage?: boolean;
 }) {
   const outcome = (r: DrawingCheckRunRow) => (
     <RunOutcome run={r} sheetCode={sheetCode} undoable={r.id === panel.undoableRunId} />
@@ -214,6 +220,16 @@ export function DrawingCheckCard({
           </div>
         )}
         {block && block !== "RUNNING" && <BlockedNote topic="drawing-check">{CHECK_UPLOAD_BLOCK_MESSAGE[block]}</BlockedNote>}
+        {panel.clientNaming && (
+          <BlockedNote topic="drawing-check-settings">
+            This project uses the client&apos;s file naming: the file name, its codes and its revision aren&apos;t checked.
+          </BlockedNote>
+        )}
+        {canManage && (
+          <Link href="/settings/drawing-checks" className="text-[12px] text-[var(--color-text-2)] hover:underline">
+            Rules and parameters in Settings →
+          </Link>
+        )}
       </div>
 
       {report && reportRun && (
@@ -230,6 +246,20 @@ export function DrawingCheckCard({
             <ul className="m-0 list-none p-0">
               {findings.map((f, i) => <FindingItem key={`${f.rule}-${i}`} f={f} />)}
             </ul>
+          )}
+        </details>
+      )}
+
+      {panel.waivers.length > 0 && (
+        <details style={{ borderTop: "1px solid var(--line-soft)" }}>
+          <summary className="cursor-pointer px-4 py-2.5 text-[12.5px] text-[var(--color-text-2)]">
+            False errors — not checked on this drawing ({panel.waivers.length})
+          </summary>
+          <CheckWaivers waivers={panel.waivers} canRemove={canManage} />
+          {!canManage && (
+            <div className="px-4 pb-2.5">
+              <BlockedNote topic="drawing-check">Only an admin can have a rule checked here again.</BlockedNote>
+            </div>
           )}
         </details>
       )}

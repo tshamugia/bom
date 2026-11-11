@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { BlockedNote } from "@/components/help/blocked-note";
 import { setDrawingCheckEnabled } from "@/server/actions/drawing-settings";
 
-/** The admin switch for automatic DXF checks; the per-rule settings come later (issue #18, stage 3). */
+/** The admin switch for automatic DXF checks; rules and parameters are on /settings/drawing-checks. */
 export function CheckSwitchForm({ initial, configured }: { initial: boolean; configured: boolean }) {
   const [enabled, setEnabled] = useState(initial);
   const [pending, start] = useTransition();

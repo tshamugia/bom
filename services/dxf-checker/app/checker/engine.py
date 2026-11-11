@@ -56,12 +56,22 @@ def default_rules() -> dict:
     return copy.deepcopy(_defaults())
 
 
-def _merge(base: Any, override: Any) -> Any:
-    """Dicts merge key by key; anything else (lists included) is replaced."""
-    if isinstance(base, dict) and isinstance(override, dict):
+# Parameters whose keys are data (code → description), not structure: Settings
+# sends the whole table, so a code removed there has to disappear here too.
+REPLACED_MAPS: frozenset[tuple[str, ...]] = frozenset({
+    ("naming", "originators"),
+    ("naming", "systems"),
+    ("naming", "series"),
+    ("naming", "extension_series"),
+})
+
+
+def _merge(base: Any, override: Any, path: tuple[str, ...] = ()) -> Any:
+    """Dicts merge key by key, except the code tables in REPLACED_MAPS; anything else (lists included) is replaced."""
+    if isinstance(base, dict) and isinstance(override, dict) and path not in REPLACED_MAPS:
         out = dict(base)
         for k, v in override.items():
-            out[k] = _merge(base.get(k), v) if k in base else v
+            out[k] = _merge(base.get(k), v, path + (k,)) if k in base else copy.deepcopy(v)
         return out
     return copy.deepcopy(override)
 
