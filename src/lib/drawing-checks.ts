@@ -124,19 +124,63 @@ export function checkFileRole(status: DrawingStatus): "wip" | "issued" {
 
 // ── Configuration ──────────────────────────────────────────────────────────
 
-/** What admins switch per rule (stage 3 adds the forms); stored in `drawing_check_config.rules`. */
-export type CheckRulesConfig = { disabled: string[]; severity: Record<string, CheckSeverity> };
+function groupRules(id: string): string[] {
+  return CHECK_RULE_GROUPS.find(g => g.id === id)?.rules.map(r => r.id) ?? [];
+}
+
+/**
+ * What admins switch in Settings → DXF check settings; stored in
+ * `drawing_check_config.rules`. A rule runs when it and its group are on, so
+ * turning a group back on brings back the rules as they were. `severity` only
+ * holds rules whose severity differs from the catalog's.
+ */
+export type CheckRulesConfig = { disabled: string[]; disabledGroups: string[]; severity: Record<string, CheckSeverity> };
+
+const GROUP_IDS = new Set(CHECK_RULE_GROUPS.map(g => g.id));
+const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
 
 export function parseCheckRulesConfig(value: unknown): CheckRulesConfig {
   const v = (value && typeof value === "object" ? value : {}) as Record<string, unknown>;
-  const disabled = Array.isArray(v.disabled) ? v.disabled.filter((x): x is string => typeof x === "string") : [];
+  const disabled = [...new Set(strings(v.disabled).filter(id => checkRule(id)))];
+  const disabledGroups = [...new Set(strings(v.disabledGroups).filter(id => GROUP_IDS.has(id)))];
   const severity: Record<string, CheckSeverity> = {};
   if (v.severity && typeof v.severity === "object") {
     for (const [k, s] of Object.entries(v.severity as Record<string, unknown>)) {
-      if (checkRule(k) && (s === "ERROR" || s === "WARNING" || s === "INFO")) severity[k] = s;
+      const rule = checkRule(k);
+      if (rule && (s === "ERROR" || s === "WARNING" || s === "INFO") && s !== rule.severity) severity[k] = s;
     }
   }
-  return { disabled, severity };
+  return { disabled, disabledGroups, severity };
+}
+
+/** The file-name groups NAMING §1 lets a client's own naming replace — off on projects with the exception. */
+export const CLIENT_NAMING_GROUPS = ["file-name", "name-codes", "name-revision"] as const;
+export const CLIENT_NAMING_RULES: ReadonlySet<string> = new Set(CLIENT_NAMING_GROUPS.flatMap(groupRules));
+
+/**
+ * What applies to one drawing besides Settings: its project uses the client's
+ * file naming, and the rules someone marked as a false error on it.
+ */
+export type CheckExceptions = { clientNaming: boolean; waived: readonly string[] };
+
+export const NO_CHECK_EXCEPTIONS: CheckExceptions = { clientNaming: false, waived: [] };
+
+/** Rules that never touch this drawing's Remarks, whatever the checker reports. */
+export function suppressedCheckRules(e: CheckExceptions): Set<string> {
+  return new Set([...(e.clientNaming ? CLIENT_NAMING_RULES : []), ...e.waived]);
+}
+
+/** Whether Settings has a rule on (the rule and its group). */
+export function isCheckRuleOn(rules: CheckRulesConfig, ruleId: string): boolean {
+  if (rules.disabled.includes(ruleId)) return false;
+  const group = CHECK_RULE_GROUPS.find(g => g.rules.some(r => r.id === ruleId));
+  return !!group && !rules.disabledGroups.includes(group.id);
+}
+
+/** The rules a check of this drawing runs: on in Settings, not excepted for the drawing. */
+export function enabledCheckRules(rules: CheckRulesConfig, e: CheckExceptions = NO_CHECK_EXCEPTIONS): string[] {
+  const suppressed = suppressedCheckRules(e);
+  return CHECK_RULE_IDS.filter(id => isCheckRuleOn(rules, id) && !suppressed.has(id));
 }
 
 /** Kept on every run, so an old result always shows what it was checked against. */
@@ -145,19 +189,25 @@ export type CheckConfigSnapshot = {
   enabled: string[];
   severity: Record<string, CheckSeverity>;
   params: Record<string, unknown>;
+  /** The project used the client's file naming (stage 3; older runs don't say). */
+  clientNaming?: boolean;
+  /** Rules marked as a false error on the drawing. */
+  waived?: string[];
 };
 
-export function checkConfigSnapshot(cfg: {
-  version: number;
-  rules: CheckRulesConfig;
-  params: Record<string, unknown>;
-}): CheckConfigSnapshot {
-  const off = new Set(cfg.rules.disabled);
+export function checkConfigSnapshot(
+  cfg: { version: number; rules: CheckRulesConfig; params: Record<string, unknown> },
+  e: CheckExceptions = NO_CHECK_EXCEPTIONS,
+): CheckConfigSnapshot {
+  const enabled = enabledCheckRules(cfg.rules, e);
+  const on = new Set(enabled);
   return {
     version: cfg.version,
-    enabled: CHECK_RULE_IDS.filter(id => !off.has(id)),
-    severity: cfg.rules.severity,
+    enabled,
+    severity: Object.fromEntries(Object.entries(cfg.rules.severity).filter(([id]) => on.has(id))),
     params: cfg.params,
+    clientNaming: e.clientNaming,
+    waived: [...e.waived].sort(),
   };
 }
 
@@ -210,8 +260,6 @@ export const CHECK_SEVERITY_LABEL: Record<CheckSeverity, string> = {
   WARNING: "To check",
   INFO: "Info",
 };
-
-const groupRules = (id: string) => CHECK_RULE_GROUPS.find(g => g.id === id)?.rules.map(r => r.id) ?? [];
 
 /** Rules that compare against the parsed file name: they can't run when the name doesn't parse. */
 const NEEDS_PARSED_NAME = new Set([
@@ -293,24 +341,33 @@ export type RemarkPlan = {
  * - rule still broken, open Remark → its text and run are updated, nothing new;
  * - rule broken, no open Remark → a new one;
  * - rule enabled and passed, open Remark → it closes;
- * - rule off in this run (or not checkable in this file) → its open Remark stays.
+ * - rule off in this run, suppressed on this drawing (a false error, the
+ *   project's client naming) or not checkable in this file → its open Remark stays.
  *
- * A rule is broken when it has an ERROR or WARNING finding; INFO-only rules
- * passed as far as Remarks go. Findings of rules that weren't enabled are
- * ignored. A failed run never gets here — it changes no Remark.
+ * A rule is broken when it has an ERROR or WARNING finding. A rule reported
+ * only as INFO (an admin may have lowered it) makes no Remark but hasn't
+ * passed either, so its open Remark stays too. Findings of rules that weren't
+ * enabled or are suppressed are ignored. A failed run never gets here — it
+ * changes no Remark.
  */
 export function planRemarkChanges(i: {
   findings: CheckFinding[];
   enabled: readonly string[];
   open: OpenCheckRemark[];
   unchecked?: ReadonlySet<string>;
+  suppressed?: ReadonlySet<string>;
 }): RemarkPlan {
-  const enabled = new Set(i.enabled);
-  const unchecked = i.unchecked ?? new Set<string>();
+  const suppressed = i.suppressed ?? new Set<string>();
+  const enabled = new Set(i.enabled.filter(id => !suppressed.has(id)));
+  const unchecked = new Set(i.unchecked ?? []);
 
   const broken = new Map<string, CheckFinding[]>();
   for (const f of i.findings) {
-    if (!enabled.has(f.rule) || !isRemarkSeverity(f.severity)) continue;
+    if (!enabled.has(f.rule)) continue;
+    if (!isRemarkSeverity(f.severity)) {
+      unchecked.add(f.rule);
+      continue;
+    }
     const list = broken.get(f.rule) ?? [];
     list.push(f);
     broken.set(f.rule, list);

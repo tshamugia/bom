@@ -1,10 +1,10 @@
 import { describe, expect, test } from "vitest";
 import { CHECK_RULE_IDS } from "@/lib/drawing-check-rules";
 import {
-  CHECK_REMARK_MAX, MAX_DXF_BYTES, PENDING_STALE_MS, QUEUED_STALE_MS, checkConfigSnapshot, checkDxfFile, checkFileRole,
-  checkRemarkBody, checkRequestBody, checkUploadBlock, countFindings, describeCounts, describeRemarkChanges,
-  isCheckRunStale, parseCheckRulesConfig, planRemarkChanges, sniffDxf, storedDxfError, uncheckedRules,
-  type CheckFinding,
+  CHECK_REMARK_MAX, CLIENT_NAMING_RULES, MAX_DXF_BYTES, PENDING_STALE_MS, QUEUED_STALE_MS, checkConfigSnapshot,
+  checkDxfFile, checkFileRole, checkRemarkBody, checkRequestBody, checkUploadBlock, countFindings, describeCounts,
+  describeRemarkChanges, enabledCheckRules, isCheckRuleOn, isCheckRunStale, parseCheckRulesConfig, planRemarkChanges,
+  sniffDxf, storedDxfError, suppressedCheckRules, uncheckedRules, type CheckFinding,
 } from "@/lib/drawing-checks";
 import { DRAWING_STATUSES } from "@/lib/drawing-status";
 
@@ -72,9 +72,14 @@ describe("runs", () => {
   });
 
   test("every check carries the enabled rules, severities and parameters it ran with", () => {
-    const cfg = parseCheckRulesConfig({ disabled: ["D07-SKU", 42], severity: { "D13-CABLE-LAYER-NAME": "ERROR", "NOPE": "ERROR", "D15-UNITS": "LOUD" } });
-    expect(cfg).toEqual({ disabled: ["D07-SKU"], severity: { "D13-CABLE-LAYER-NAME": "ERROR" } });
-    expect(parseCheckRulesConfig(null)).toEqual({ disabled: [], severity: {} });
+    const cfg = parseCheckRulesConfig({
+      disabled: ["D07-SKU", 42, "NOPE"],
+      disabledGroups: ["nope"],
+      // D07-SKU-STRONG is ERROR in the catalog already: not an override.
+      severity: { "D13-CABLE-LAYER-NAME": "ERROR", "NOPE": "ERROR", "D15-UNITS": "LOUD", "D07-SKU-STRONG": "ERROR" },
+    });
+    expect(cfg).toEqual({ disabled: ["D07-SKU"], disabledGroups: [], severity: { "D13-CABLE-LAYER-NAME": "ERROR" } });
+    expect(parseCheckRulesConfig(null)).toEqual({ disabled: [], disabledGroups: [], severity: {} });
 
     const snap = checkConfigSnapshot({ version: 3, rules: cfg, params: { drafting: { insunits_required: 4 } } });
     expect(snap.version).toBe(3);
@@ -96,6 +101,39 @@ describe("runs", () => {
       rules: { enabled: snap.enabled, severity: { "D13-CABLE-LAYER-NAME": "ERROR" }, params: { drafting: { insunits_required: 4 } } },
       callbackUrl: "http://bom.railway.internal:3000/api/internal/drawing-checks/run1/result",
     });
+  });
+});
+
+describe("which rules run", () => {
+  test("a rule runs when it and its group are on; a group switched back on keeps its rules as they were", () => {
+    const cfg = parseCheckRulesConfig({ disabled: ["D07-SKU"], disabledGroups: ["sku", "xref"] });
+    expect(isCheckRuleOn(cfg, "D07-SKU-STRONG")).toBe(false);
+    expect(isCheckRuleOn(cfg, "D05-XREF-ABS")).toBe(false);
+    expect(isCheckRuleOn(cfg, "D15-UNITS")).toBe(true);
+    expect(enabledCheckRules(cfg)).toHaveLength(CHECK_RULE_IDS.length - 4);
+
+    const groupBack = parseCheckRulesConfig({ disabled: ["D07-SKU"], disabledGroups: ["xref"] });
+    expect(isCheckRuleOn(groupBack, "D07-SKU-STRONG")).toBe(true);
+    expect(isCheckRuleOn(groupBack, "D07-SKU")).toBe(false);
+  });
+
+  test("a project with the client's file naming skips the three file-name groups; a false error skips its rule", () => {
+    expect(CLIENT_NAMING_RULES.size).toBe(25);
+    expect(CLIENT_NAMING_RULES.has("N-FORMAT")).toBe(true);
+    expect(CLIENT_NAMING_RULES.has("N-SYSTEM")).toBe(true);
+    expect(CLIENT_NAMING_RULES.has("N-REV-WIP")).toBe(true);
+    expect(CLIENT_NAMING_RULES.has("T-SHEET")).toBe(false);
+
+    const cfg = parseCheckRulesConfig({ severity: { "N-FORMAT": "WARNING", "D07-SKU": "ERROR" } });
+    const e = { clientNaming: true, waived: ["D07-SKU-STRONG", "D06-DUPLICATE"] };
+    expect(suppressedCheckRules(e).size).toBe(27);
+    const snap = checkConfigSnapshot({ version: 4, rules: cfg, params: {} }, e);
+    expect(snap.enabled).toHaveLength(CHECK_RULE_IDS.length - 27);
+    expect(snap.enabled).not.toContain("N-FORMAT");
+    expect(snap.enabled).toContain("T-SHEET");
+    // Only the severities of rules that run are sent.
+    expect(snap.severity).toEqual({ "D07-SKU": "ERROR" });
+    expect(snap).toMatchObject({ version: 4, clientNaming: true, waived: ["D06-DUPLICATE", "D07-SKU-STRONG"] });
   });
 });
 
@@ -151,9 +189,9 @@ describe("findings → Remarks", () => {
     expect(plan.update).toEqual([expect.objectContaining({ id: "r-still", ruleId: "T-SHEET", severity: "ERROR" })]);
     expect(plan.update[0].body).toContain("still wrong");
     expect(plan.create.map(c => c.ruleId)).toEqual(["N-FORMAT"]);
-    // INFO-only counts as passed for Remarks.
-    expect(plan.close).toEqual([{ id: "r-fixed", ruleId: "D15-UNITS" }, { id: "r-info", ruleId: "D11-LEGEND-UNITS" }]);
-    expect(plan.untouched).toEqual([{ id: "r-off", ruleId: "D07-SKU" }]);
+    expect(plan.close).toEqual([{ id: "r-fixed", ruleId: "D15-UNITS" }]);
+    // Reported as INFO only (an admin lowered it): no remark, but not passed either.
+    expect(plan.untouched).toEqual([{ id: "r-off", ruleId: "D07-SKU" }, { id: "r-info", ruleId: "D11-LEGEND-UNITS" }]);
   });
 
   test("rules the file couldn't be checked against keep their remarks open", () => {
@@ -179,6 +217,23 @@ describe("findings → Remarks", () => {
     expect(plan.untouched).toEqual([{ id: "a", ruleId: "T-REV" }]);
     expect(plan.close).toEqual([{ id: "b", ruleId: "D15-UNITS" }]);
     expect(plan.create.map(c => c.ruleId)).toEqual(["T-MISSING"]);
+  });
+
+  test("a suppressed rule's findings are ignored and its open remark stays, like a rule that is off", () => {
+    const plan = planRemarkChanges({
+      findings: [finding("D07-SKU", "ERROR"), finding("N-FORMAT", "ERROR")],
+      enabled: all,
+      open: [
+        { id: "a", ruleId: "D07-SKU", body: "", severity: "ERROR" },
+        { id: "b", ruleId: "N-LOWER", body: "", severity: "ERROR" },
+        { id: "c", ruleId: "D15-UNITS", body: "", severity: "ERROR" },
+      ],
+      suppressed: suppressedCheckRules({ clientNaming: true, waived: ["D07-SKU"] }),
+    });
+    expect(plan.create).toEqual([]);
+    expect(plan.update).toEqual([]);
+    expect(plan.close).toEqual([{ id: "c", ruleId: "D15-UNITS" }]);
+    expect(plan.untouched).toEqual([{ id: "a", ruleId: "D07-SKU" }, { id: "b", ruleId: "N-LOWER" }]);
   });
 
   test("a clean file closes every open automatic remark of an enabled rule", () => {

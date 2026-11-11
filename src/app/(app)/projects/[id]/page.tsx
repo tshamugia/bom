@@ -20,6 +20,8 @@ import {
 import { DrawingsTable } from "@/components/drawings/drawings-table";
 import { NewDrawingDialog } from "@/components/drawings/new-drawing-dialog";
 import { RecipientsForm } from "@/components/drawings/recipients-form";
+import { ClientNamingForm } from "@/components/drawings/client-naming-form";
+import { HelpTip } from "@/components/help/help-tip";
 import { isClosedStatus, isDrawingOverdue, todayIso } from "@/lib/drawing-status";
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
@@ -136,7 +138,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       {!readOnly && (
         <>
           <div className="mt-8 mb-2">
-            <h2 className="text-[15px] font-semibold tracking-tight">Notifications</h2>
+            <h2 className="text-[15px] font-semibold tracking-tight">Notifications and checks</h2>
           </div>
           <div className="grid-2" style={{ alignItems: "start", gap: 16 }}>
             <div className="card">
@@ -170,6 +172,18 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                   list="reminders"
                   readOnly={!admin}
                 />
+              </div>
+            </div>
+
+            <div className="card">
+              <div className="card-head">
+                <div>
+                  <h3 className="card-title flex items-center gap-1.5">Automatic DXF check <HelpTip topic="drawing-check-settings" /></h3>
+                  <p className="card-sub">How DXFs of {project.code}&apos;s drawings are checked.</p>
+                </div>
+              </div>
+              <div className="p-4">
+                <ClientNamingForm projectId={project.id} initial={project.checkClientNaming} readOnly={!admin} />
               </div>
             </div>
           </div>

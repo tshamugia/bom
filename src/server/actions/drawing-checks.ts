@@ -16,7 +16,8 @@ import { requireSession } from "../auth-context";
 import { audit } from "../audit";
 import { isUniqueViolation } from "../lib/db-errors";
 import {
-  activeCheckRevisionIds, closeStaleCheckRuns, deleteCheckFiles, loadDrawingCheckConfig, loadDrawingCheckEnabled,
+  activeCheckRevisionIds, closeStaleCheckRuns, deleteCheckFiles, loadCheckExceptions, loadDrawingCheckConfig,
+  loadDrawingCheckEnabled,
 } from "../lib/drawing-check-config";
 import { findDrawingRevision, revalidateDrawingViews } from "../lib/drawing-lookup";
 import { checkCallbackUrl, dxfCheckerSetup, submitCheck } from "../lib/dxf-checker";
@@ -158,7 +159,9 @@ export async function confirmDrawingCheckUpload(input: { runId: string }): Promi
   const notDxf = storedDxfError(head);
   if (notDxf) return discard(notDxf);
 
-  const snapshot = checkConfigSnapshot(await loadDrawingCheckConfig());
+  // Only what runs on this drawing: rules on in Settings, minus its project's client naming and its false errors.
+  const [config, exceptions] = await Promise.all([loadDrawingCheckConfig(), loadCheckExceptions(rev.drawingId)]);
+  const snapshot = checkConfigSnapshot(config, exceptions);
   const now = new Date();
   // Queued before the checker hears of it, so even an instant callback finds the run waiting.
   const [queued] = await db

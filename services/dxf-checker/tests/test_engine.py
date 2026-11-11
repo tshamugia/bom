@@ -146,3 +146,14 @@ def test_broken_or_empty_dxf_fails_the_run(tmp_path: Path, data: bytes):
     with pytest.raises(CheckFailed) as exc:
         run_check(p, GOOD_NAME)
     assert exc.value.code == "X-READ"
+
+
+def test_code_tables_from_settings_replace_the_defaults():
+    rules = build_rules({"naming": {"systems": {"FA": "ხანძრის სიგნალიზაცია"}, "originators": {"ARC": "Architect"}}})
+    # A code removed in Settings is gone, not merged back from rules.yaml.
+    assert rules["naming"]["systems"] == {"FA": "ხანძრის სიგნალიზაცია"}
+    assert rules["naming"]["originators"] == {"ARC": "Architect"}
+    # Structural tables still merge field by field.
+    rules = build_rules({"titleblock": {"fields": {"revision": ["REV_X"]}}})
+    assert rules["titleblock"]["fields"]["revision"] == ["REV_X"]
+    assert "SHEET_NO" in rules["titleblock"]["fields"]["sheet_no"]

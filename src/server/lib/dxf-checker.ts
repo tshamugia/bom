@@ -86,3 +86,32 @@ export function isCheckerRequest(authorization: string | null): boolean {
   if (scheme?.toLowerCase() !== "bearer" || !token) return false;
   return timingSafeEqual(digest(token), digest(secret));
 }
+
+/**
+ * Asks the checker whether a check would accept these parameters — its Python
+ * compiles the patterns, which is the final word on them. `unknown` when it
+ * couldn't answer (not running, an older version without the endpoint):
+ * Settings then relies on its own check.
+ */
+export async function validateParamsWithChecker(
+  setup: DxfCheckerSetup,
+  params: Record<string, unknown>,
+): Promise<{ ok: true } | { ok: false; error: string } | { ok: "unknown" }> {
+  try {
+    const res = await fetch(`${setup.url}/v1/params/validate`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${setup.secret}`, "content-type": "application/json" },
+      body: JSON.stringify({ params }),
+      signal: AbortSignal.timeout(SUBMIT_TIMEOUT_MS),
+      cache: "no-store",
+    });
+    if (res.ok) return { ok: true };
+    if (res.status === 422) {
+      const detail = await refusalDetail(res);
+      if (detail) return { ok: false, error: detail };
+    }
+    return { ok: "unknown" };
+  } catch {
+    return { ok: "unknown" };
+  }
+}

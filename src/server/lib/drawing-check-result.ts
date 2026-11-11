@@ -6,10 +6,11 @@ import { drawingCheckRuns, drawingEvents, drawingRemarks, drawingRevisions, draw
 import type { DrawingCheckRemarkChanges } from "@/db/schema";
 import { CHECK_RULE_IDS, CHECK_SEVERITIES, type CheckSeverity } from "@/lib/drawing-check-rules";
 import {
-  countFindings, describeCounts, describeRemarkChanges, planRemarkChanges, uncheckedRules, type CheckFinding,
+  countFindings, describeCounts, describeRemarkChanges, planRemarkChanges, suppressedCheckRules, uncheckedRules,
+  type CheckFinding,
 } from "@/lib/drawing-checks";
 import { writeAudit } from "./audit-write";
-import { deleteCheckFiles } from "./drawing-check-config";
+import { deleteCheckFiles, loadCheckExceptions } from "./drawing-check-config";
 import { revalidateDrawingViews } from "./drawing-lookup";
 
 // The checker's callback (services/dxf-checker/README.md, "Callback"). Text
@@ -218,11 +219,15 @@ export async function applyCheckResult(runId: string, result: CheckCallback): Pr
             isNull(drawingRemarks.resolvedAt),
             isNotNull(drawingRemarks.checkRuleId),
           ));
+        // Read now, not at upload: a false error marked or a project exception set while the
+        // file was being checked already applies to this result.
+        const suppressed = suppressedCheckRules(await loadCheckExceptions(run.drawingId, tx));
         const plan = planRemarkChanges({
           findings,
           enabled,
           open: open.map(r => ({ ...r, ruleId: r.ruleId! })),
           unchecked,
+          suppressed,
         });
 
         const created = plan.create.length

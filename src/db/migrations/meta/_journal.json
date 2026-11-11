@@ -253,6 +253,13 @@
       "when": 1794340958521,
       "tag": "0035_drawing_checks",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794416681335,
+      "tag": "0036_drawing_check_settings",
+      "breakpoints": true
     }
   ]
 }

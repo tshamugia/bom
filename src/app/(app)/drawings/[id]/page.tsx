@@ -219,7 +219,7 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
 
       {/* An engineering tool, like hours: viewers see what it raised on the Remarks card. */}
       {!readOnly && (
-        <DrawingCheckCard panel={checks} drawingCode={drawing.code} current={{ id: current.id, label: current.label }} />
+        <DrawingCheckCard panel={checks} drawingCode={drawing.code} current={{ id: current.id, label: current.label }} canManage={admin} />
       )}
 
       <div className="grid-2 mb-5" style={{ alignItems: "start" }}>

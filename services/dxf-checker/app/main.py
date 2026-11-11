@@ -1,7 +1,8 @@
 """dxf-checker HTTP API (issue #18).
 
-    POST /v1/checks   queue a check of one DXF; the result goes to callbackUrl
-    GET  /v1/catalog  rules (grouped as in Settings) and default parameters
+    POST /v1/checks           queue a check of one DXF; the result goes to callbackUrl
+    POST /v1/params/validate  whether a check would accept these parameters (Settings asks before saving)
+    GET  /v1/catalog          rules (grouped as in Settings) and default parameters
     GET  /healthz     liveness for Railway
 
 Only the Revline app talks to this service, over Railway's private network,
@@ -89,6 +90,15 @@ def create_app(settings: Optional[Settings] = None, runner: Optional[Runner] = N
     @app.get("/v1/catalog", dependencies=[Depends(require_secret)])
     async def get_catalog():
         return catalog()
+
+    @app.post("/v1/params/validate", dependencies=[Depends(require_secret)])
+    async def validate_params(spec: RulesSpec):
+        """Settings asks before it saves: 200 when a check would accept these parameters, else 422 naming the bad one."""
+        try:
+            build_rules(spec.params)
+        except ValueError as exc:
+            raise HTTPException(422, detail=str(exc)) from exc
+        return {"ok": True}
 
     @app.post("/v1/checks", status_code=202, dependencies=[Depends(require_secret)])
     async def create_check(req: CheckRequest, request: Request):
