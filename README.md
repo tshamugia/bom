@@ -42,7 +42,7 @@ admin-set password has to be changed at the first sign-in.
 | `npm run lint` | ESLint |
 | `npx tsc --noEmit` | Typecheck |
 | `npm test` | Vitest, once |
-| `npm run test:e2e` | Playwright (starts `npm run dev`) |
+| `npm run test:e2e` | Playwright (starts `npm run dev`; first run `npx playwright install chromium`) |
 | `npm run db:generate` | Generate a migration from the schema |
 | `npm run db:migrate` | Apply pending migrations |
 | `npm run db:seed` | Seed dev data and the root user |
@@ -56,6 +56,10 @@ docker exec bom-postgres psql -U bom -d bom -c "create database bom_test"
 DATABASE_URL=postgres://bom:bom@localhost:5432/bom_test npx drizzle-kit migrate
 DATABASE_URL=postgres://bom:bom@localhost:5432/bom_test npx vitest run
 ```
+
+The Playwright suite is gentler: before each run it recreates only the projects
+named `E2E …` (and removes the `E2E…` items and vendors earlier runs added), so it
+can run against the dev database.
 
 ## Layout
 
@@ -77,7 +81,7 @@ revisions, drawings, My work, UI conventions).
 
 | Workflow | When | What |
 |---|---|---|
-| `ci.yml` | every pull request and push to `main` | lint, types, migrations + Vitest on Postgres 18, dxf-checker pytest, Docker builds; `main` pushes `ghcr.io/tshamugia/bom:main` and `bom-dxf-checker:main` |
+| `ci.yml` | every pull request and push to `main` | lint, types, migrations + Vitest on Postgres 18, Playwright e2e on a production build, dxf-checker pytest, Docker builds; `main` pushes `ghcr.io/tshamugia/bom:main` and `bom-dxf-checker:main` |
 | `release.yml` | tag `vX.Y.Z` | checks the tag against `package.json`, reruns CI, pushes `X.Y.Z`, `X.Y`, `latest`, deploys, creates the GitHub release |
 | `deploy.yml` | called by a release, or by hand | points Railway `dxf-checker` and `bom` at an image version, waits for both, checks `/api/health` |
 

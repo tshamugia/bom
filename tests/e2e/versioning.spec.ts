@@ -1,34 +1,45 @@
 import { test, expect } from "@playwright/test";
-import { signUpAndGo } from "./helpers";
+import { expectRevision, openBom, projectHistoryLink } from "./helpers";
+import { scenario } from "./e2e-data";
 
-test("draft revision shows commit + discard controls; non-draft shows new-revision", async ({ page }) => {
-  await signUpAndGo(page, "/builder");
-  await page.getByText("Northstar Beacon v3.2").click();
-  await expect(page.getByRole("heading", { name: /Northstar Beacon v3\.2/ })).toBeVisible();
+const { bom } = scenario("versioning");
 
-  // The header shows a status badge (Draft for seeded project) and the P/C revision label.
-  await expect(page.getByText(/^[PC]\d{2}$/)).toBeVisible();
+// In order: the last test commits P01 and opens P02, which the earlier ones don't expect.
+test.describe.configure({ mode: "serial" });
 
-  // History link is present.
-  await expect(page.getByRole("link", { name: /History/i })).toBeVisible();
+test("a draft shows its P label with commit and discard controls", async ({ page }) => {
+  await openBom(page, bom);
+  await expectRevision(page, "Draft", "P01");
+  await expect(page.getByRole("button", { name: "Commit revision" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Discard draft" })).toBeVisible();
+  await expect(projectHistoryLink(page)).toBeVisible();
 });
 
-test("history page loads for a seeded project", async ({ page }) => {
-  await signUpAndGo(page, "/builder");
-  await page.getByText("Northstar Beacon v3.2").click();
-
-  await page.getByRole("link", { name: /History/i }).click();
+test("the history page lists the project's revisions", async ({ page }) => {
+  await openBom(page, bom);
+  await projectHistoryLink(page).click();
   await expect(page).toHaveURL(/\/projects\/[^/]+\/history$/);
   await expect(page.getByRole("heading", { name: /history/i })).toBeVisible();
-  // At least one revision row exists for the seeded project.
   await expect(page.locator("table tbody tr")).toHaveCount(1);
 });
 
-test("commit dialog opens from header and shows preflight checks", async ({ page }) => {
-  await signUpAndGo(page, "/builder");
-  await page.getByText("Northstar Beacon v3.2").click();
+test("the commit dialog names the revision and runs its checks", async ({ page }) => {
+  await openBom(page, bom);
+  await page.getByRole("button", { name: "Commit revision" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("heading", { name: "Commit P01" })).toBeVisible();
+  await expect(dialog.getByText(/no empty quantities/i)).toBeVisible();
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expectRevision(page, "Draft", "P01");
+});
 
-  await page.getByRole("button", { name: /commit revision/i }).click();
-  await expect(page.getByRole("heading", { name: /commit [PC]\d{2}/i })).toBeVisible();
-  await expect(page.getByText(/no empty quantities|some lines have zero quantity/i)).toBeVisible();
+test("committing P01 and opening a new revision gives a P02 draft", async ({ page }) => {
+  await openBom(page, bom);
+  await page.getByRole("button", { name: "Commit revision" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Commit P01" }).click();
+  await expectRevision(page, "Committed", "P01");
+
+  await page.getByRole("button", { name: "New revision" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Create revision" }).click();
+  await expectRevision(page, "Draft", "P02");
 });

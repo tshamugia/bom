@@ -1,5 +1,6 @@
 # Every pull request and every push to main: the app (lint, types, migrations,
-# Vitest) and the dxf-checker service (pytest), then both Docker images.
+# Vitest), the Playwright suite against a production build, and the dxf-checker
+# service (pytest), then both Docker images.
 # Images are pushed to GHCR only from main (`main`, `sha-…`); pull requests just
 # build them. Release tags call this workflow first (see release.yml).
 name: CI
@@ -60,6 +61,71 @@ jobs:
       - name: Unit and server tests
         run: npx vitest run
 
+  e2e:
+    name: App · e2e (Playwright)
+    # Pinned: Playwright 1.59 has no Chromium build for ubuntu-latest (26.04) yet.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: bom
+          POSTGRES_PASSWORD: bom
+          POSTGRES_DB: bom_e2e
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U bom -d bom_e2e"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    # Throwaway values for a throwaway stack. The catalog import stages files in S3,
+    # hence MinIO; email stays off (no SMTP_HOST).
+    env:
+      DATABASE_URL: postgres://bom:bom@localhost:5432/bom_e2e
+      BETTER_AUTH_SECRET: ci-only-placeholder-secret-0123456789abcdef
+      BETTER_AUTH_URL: http://localhost:3000
+      NEXT_PUBLIC_BETTER_AUTH_URL: http://localhost:3000
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: minio
+      AWS_SECRET_ACCESS_KEY: minio12345
+      AWS_S3_ENDPOINT: http://localhost:9000
+      S3_FORCE_PATH_STYLE: "true"
+      S3_BUCKET: bom-e2e
+      EMAIL_FROM: ci@example.com
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: MinIO
+        # Official MinIO images are no longer published; pgsty/minio is the community build.
+        run: |
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=minio -e MINIO_ROOT_PASSWORD=minio12345 \
+            pgsty/minio:RELEASE.2026-08-04T00-00-00Z server /data
+          for i in $(seq 1 30); do curl -fsS http://localhost:9000/minio/health/live && break; sleep 1; done
+          node -e '
+            const { S3Client, CreateBucketCommand } = require("@aws-sdk/client-s3");
+            new S3Client({ region: process.env.AWS_REGION, endpoint: process.env.AWS_S3_ENDPOINT, forcePathStyle: true })
+              .send(new CreateBucketCommand({ Bucket: process.env.S3_BUCKET }));'
+      - name: Migrations
+        run: node scripts/migrate.mjs
+      - name: Browser
+        run: npx playwright install --with-deps chromium
+      - name: e2e
+        # playwright.config.ts builds the app and runs it with `next start` when CI is set;
+        # tests/e2e/global-setup.ts seeds the catalog and the E2E projects.
+        run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: ${{ failure() }}
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
   dxf-checker:
     name: dxf-checker · pytest
     runs-on: ubuntu-latest
@@ -79,7 +145,7 @@ jobs:
 
   images:
     name: Images
-    needs: [app, dxf-checker]
+    needs: [app, e2e, dxf-checker]
     # A release tag builds and pushes its own images in release.yml.
     if: ${{ !startsWith(github.ref, 'refs/tags/') }}
     uses: ./.github/workflows/images.yml
