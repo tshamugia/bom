@@ -10,8 +10,9 @@ export type RegisterRow = DrawingTableRow & BulkDrawing & { sheetCode: string | 
 
 /**
  * The /drawings list for editors: tick drawings (shift-click ticks a range),
- * then change their status, owner or due date together, or check their DXFs,
- * from the bar under the table. The page remounts it when the filters change, which clears the ticks.
+ * then change their status, owner or due date together, write one shared
+ * remark or shared time entry for them, or check their DXFs, from the bar under
+ * the table. The page remounts it when the filters change, which clears the ticks.
  */
 export function DrawingsRegister({
   rows,

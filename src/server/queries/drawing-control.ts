@@ -1,5 +1,5 @@
 import "server-only";
-import { aliasedTable, and, asc, desc, eq, gt, isNull, or, sql } from "drizzle-orm";
+import { aliasedTable, and, asc, desc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db/client";
 import {
@@ -9,11 +9,14 @@ import {
   drawingDisciplines,
   drawingRemarks,
   drawingRevisions,
+  drawingSharedTimeEntries,
+  drawingSharedTimeMembers,
   drawingTimeEntries,
   drawingTransmittals,
   drawings,
   user,
 } from "@/db/schema";
+import { canEdit } from "@/lib/roles";
 import { requireSession } from "../auth-context";
 import { bomImpactRevisions, isOutdatedSql } from "../lib/bom-drawing-outdated";
 
@@ -56,6 +59,69 @@ export async function listTimeEntries(drawingId: string) {
 
 export type TimeEntryRow = Awaited<ReturnType<typeof listTimeEntries>>[number];
 
+/** A drawing a shared entry covers, as the other drawings' pages list it. */
+export type SharedDrawingRef = {
+  drawingId: string;
+  code: string;
+  name: string;
+  /** The revision it had when the entry was written (time) or the remark was raised. */
+  revisionLabel: string;
+  /** Archived since: listed without a link. */
+  archived: boolean;
+};
+
+/**
+ * Shared time entries this drawing is in (issue #17), newest first, each with
+ * every drawing it covers. Hours are an engineering figure: viewers get none.
+ */
+export async function listSharedTimeEntries(drawingId: string) {
+  const session = await requireSession();
+  if (!canEdit(session.user)) return [];
+  const entries = await db
+    .select({
+      id: drawingSharedTimeEntries.id,
+      userId: drawingSharedTimeEntries.userId,
+      userName: user.name,
+      hours: drawingSharedTimeEntries.hours,
+      workDate: drawingSharedTimeEntries.workDate,
+      note: drawingSharedTimeEntries.note,
+      createdAt: drawingSharedTimeEntries.createdAt,
+      /** This drawing's revision in the entry. */
+      revisionId: drawingSharedTimeMembers.revisionId,
+      revisionLabel: drawingRevisions.label,
+    })
+    .from(drawingSharedTimeMembers)
+    .innerJoin(drawingSharedTimeEntries, eq(drawingSharedTimeEntries.id, drawingSharedTimeMembers.sharedEntryId))
+    .innerJoin(drawingRevisions, eq(drawingRevisions.id, drawingSharedTimeMembers.revisionId))
+    .leftJoin(user, eq(user.id, drawingSharedTimeEntries.userId))
+    .where(eq(drawingSharedTimeMembers.drawingId, drawingId))
+    .orderBy(desc(drawingSharedTimeEntries.workDate), desc(drawingSharedTimeEntries.createdAt));
+  if (entries.length === 0) return [];
+
+  const members = await db
+    .select({
+      entryId: drawingSharedTimeMembers.sharedEntryId,
+      drawingId: drawings.id,
+      code: drawings.code,
+      name: drawings.name,
+      revisionLabel: drawingRevisions.label,
+      archived: sql<boolean>`${drawings.deletedAt} is not null`,
+    })
+    .from(drawingSharedTimeMembers)
+    .innerJoin(drawings, eq(drawings.id, drawingSharedTimeMembers.drawingId))
+    .innerJoin(drawingRevisions, eq(drawingRevisions.id, drawingSharedTimeMembers.revisionId))
+    .where(inArray(drawingSharedTimeMembers.sharedEntryId, entries.map(e => e.id)))
+    .orderBy(asc(drawings.code));
+  return entries.map(e => ({
+    ...e,
+    drawings: members
+      .filter(m => m.entryId === e.id)
+      .map((m): SharedDrawingRef => ({ drawingId: m.drawingId, code: m.code, name: m.name, revisionLabel: m.revisionLabel, archived: m.archived })),
+  }));
+}
+
+export type SharedTimeRow = Awaited<ReturnType<typeof listSharedTimeEntries>>[number];
+
 export async function listRemarks(drawingId: string) {
   await requireSession();
   // `alias` (not `aliasedTable`) keeps the names apart at the type level; an
@@ -64,7 +130,7 @@ export async function listRemarks(drawingId: string) {
   const resolvedIn = alias(drawingRevisions, "resolved_in");
   const raisedBy = aliasedTable(user, "raised_by");
   const resolvedBy = aliasedTable(user, "resolved_by");
-  return db
+  const rows = await db
     .select({
       id: drawingRemarks.id,
       revisionId: drawingRemarks.revisionId,
@@ -81,6 +147,7 @@ export async function listRemarks(drawingId: string) {
       resolution: drawingRemarks.resolution,
       checkRuleId: drawingRemarks.checkRuleId,
       checkSeverity: drawingRemarks.checkSeverity,
+      sharedGroupId: drawingRemarks.sharedGroupId,
     })
     .from(drawingRemarks)
     .innerJoin(raisedIn, eq(raisedIn.id, drawingRemarks.revisionId))
@@ -89,6 +156,36 @@ export async function listRemarks(drawingId: string) {
     .leftJoin(resolvedBy, eq(resolvedBy.id, drawingRemarks.resolvedById))
     .where(eq(drawingRemarks.drawingId, drawingId))
     .orderBy(sql`${drawingRemarks.resolvedAt} IS NOT NULL`, desc(drawingRemarks.createdAt));
+
+  // A shared remark lists every drawing it was written for, each open or closed on its own.
+  const groupIds = [...new Set(rows.flatMap(r => r.sharedGroupId ?? []))];
+  const siblings = groupIds.length
+    ? await db
+      .select({
+        groupId: drawingRemarks.sharedGroupId,
+        drawingId: drawings.id,
+        code: drawings.code,
+        name: drawings.name,
+        revisionLabel: raisedIn.label,
+        archived: sql<boolean>`${drawings.deletedAt} is not null`,
+        resolved: sql<boolean>`${drawingRemarks.resolvedAt} is not null`,
+      })
+      .from(drawingRemarks)
+      .innerJoin(drawings, eq(drawings.id, drawingRemarks.drawingId))
+      .innerJoin(raisedIn, eq(raisedIn.id, drawingRemarks.revisionId))
+      .where(inArray(drawingRemarks.sharedGroupId, groupIds))
+      .orderBy(asc(drawings.code))
+    : [];
+  return rows.map(r => ({
+    ...r,
+    shared: r.sharedGroupId
+      ? siblings
+        .filter(s => s.groupId === r.sharedGroupId)
+        .map((s): SharedDrawingRef & { resolved: boolean } => ({
+          drawingId: s.drawingId, code: s.code, name: s.name, revisionLabel: s.revisionLabel, archived: s.archived, resolved: s.resolved,
+        }))
+      : null,
+  }));
 }
 
 export type RemarkRow = Awaited<ReturnType<typeof listRemarks>>[number];

@@ -13,7 +13,7 @@ import {
   DueSoonTable, GroupTable, OutdatedBomTable, OverBudgetTable, OverdueTable,
   ProjectTable, ReviewQueueTable, StatusBars,
 } from "@/components/drawings/dashboard-parts";
-import { DUE_SOON_DAYS } from "@/lib/drawing-dashboard";
+import { DUE_SOON_DAYS, sharedTimeFootnote } from "@/lib/drawing-dashboard";
 import { DEADLINE_WINDOW_DAYS, countDeadlines } from "@/lib/deadlines";
 import { roundHours } from "@/lib/drawing-meta";
 import { formatDate } from "@/lib/format";
@@ -137,10 +137,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <StatTile label="Awaiting approval" value={t.awaitingApproval} />
         <StatTile label="Open remarks" value={t.openRemarks} />
         <StatTile label="Transmittals not acknowledged" value={drawingData.openTransmittals} />
+        {/* Shared time is in the total once, however many drawings it covers. */}
         <StatTile
           label="Hours logged"
           value={roundHours(t.loggedHours)}
-          delta={t.estimatedHours ? `of ${roundHours(t.estimatedHours)} est.` : ""}
+          delta={[
+            t.estimatedHours ? `of ${roundHours(t.estimatedHours)} est.` : "",
+            t.sharedHours ? `incl. ${roundHours(t.sharedHours)} shared` : "",
+          ].filter(Boolean).join(" · ")}
           deltaTone={overHours ? "down" : "neutral"}
         />
         <StatTile
@@ -188,10 +192,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
             <div className="grid-2" style={{ alignItems: "start", gap: 16 }}>
               <Section title="Engineers" sub="Drawings by owner, busiest first.">
-                <GroupTable groups={s.byOwner} title="Owner" />
+                <GroupTable groups={s.byOwner} title="Owner" footnote={sharedTimeFootnote(t.sharedHours, "owner")} />
               </Section>
               <Section title="Disciplines">
-                <GroupTable groups={s.byDiscipline} title="Discipline" />
+                <GroupTable groups={s.byDiscipline} title="Discipline" footnote={sharedTimeFootnote(t.sharedHours, "discipline")} />
               </Section>
             </div>
 

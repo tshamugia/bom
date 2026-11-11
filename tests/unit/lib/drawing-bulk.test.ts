@@ -1,9 +1,13 @@
 import { describe, expect, test } from "vitest";
 import {
   BULK_OWNER_IS_REVIEWER,
+  MAX_BULK_DRAWINGS,
   planBulkDueDate,
   planBulkOwner,
   planBulkStatus,
+  sameDaySharedTime,
+  sharedRemarkBlock,
+  sharedTimeBlock,
   type BulkDrawing,
 } from "@/lib/drawing-bulk";
 import { TRANSITION_ERROR_MESSAGE } from "@/lib/drawing-status";
@@ -100,5 +104,34 @@ describe("planBulkDueDate", () => {
     const clear = planBulkDueDate(rows, null);
     expect(ids(clear.ready)).toEqual(["a-001"]);
     expect(clear.skipped[0].reason).toBe("Already has no due date.");
+  });
+});
+
+describe("shared remark and shared time", () => {
+  const rows = (...projects: string[]) => projects.map(projectId => ({ projectId }));
+
+  test("need at least two drawings and at most the bulk limit", () => {
+    expect(sharedRemarkBlock(rows("p1"))).toBe("too-few");
+    expect(sharedTimeBlock(rows("p1"))).toBe("too-few");
+    expect(sharedRemarkBlock(rows("p1", "p1"))).toBeNull();
+    const many = rows(...Array(MAX_BULK_DRAWINGS + 1).fill("p1"));
+    expect(sharedRemarkBlock(many)).toBe("too-many");
+    expect(sharedTimeBlock(many)).toBe("too-many");
+  });
+
+  test("shared time stays in one project; a shared remark may span projects", () => {
+    expect(sharedTimeBlock(rows("p1", "p1", "p1"))).toBeNull();
+    expect(sharedTimeBlock(rows("p1", "p2"))).toBe("projects");
+    expect(sharedRemarkBlock(rows("p1", "p2"))).toBeNull();
+  });
+
+  test("the Log time hint finds the user's shared entry on that revision and day only", () => {
+    const shared = [
+      { id: "s1", userId: "me", revisionId: "r2", workDate: "2026-11-10" },
+      { id: "s2", userId: "other", revisionId: "r2", workDate: "2026-11-11" },
+    ];
+    expect(sameDaySharedTime(shared, { userId: "me", revisionId: "r2", workDate: "2026-11-10" })?.id).toBe("s1");
+    expect(sameDaySharedTime(shared, { userId: "me", revisionId: "r1", workDate: "2026-11-10" })).toBeNull();
+    expect(sameDaySharedTime(shared, { userId: "me", revisionId: "r2", workDate: "2026-11-11" })).toBeNull();
   });
 });

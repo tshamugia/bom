@@ -60,6 +60,8 @@ const KIND_META: Record<AuditKind, { label: string; tone: Tone; group: string }>
   "drawing.settings.updated":    { label: "Drawing settings",      tone: "gray",    group: "Drawings" },
   "drawing.time.logged":         { label: "Time logged",           tone: "gray",    group: "Drawings" },
   "drawing.time.deleted":        { label: "Time removed",          tone: "warning", group: "Drawings" },
+  "drawing.time.shared.logged":  { label: "Shared time logged",    tone: "gray",    group: "Drawings" },
+  "drawing.time.shared.deleted": { label: "Shared time removed",   tone: "warning", group: "Drawings" },
   "drawing.remark.added":        { label: "Remark added",          tone: "warning", group: "Drawings" },
   "drawing.remark.resolved":     { label: "Remark resolved",       tone: "success", group: "Drawings" },
   "drawing.remark.reopened":     { label: "Remark reopened",       tone: "warning", group: "Drawings" },

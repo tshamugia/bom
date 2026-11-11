@@ -1394,16 +1394,13 @@ html {
 }
 .bulk-count { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--text-2); }
 .bulk-count strong { color: var(--text); font-variant-numeric: tabular-nums; }
+/* Phones: status, owner and due date on one row; shared remark, shared time and Check DXFs on the next. */
 .bulk-actions { order: 3; flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 8px; }
-.bulk-actions > * { flex: 1 1 0; justify-content: center; }
-@media (max-width: 700.98px) {
-  /* Four actions (with "Check DXFs") don't fit one row of a phone: two a row. */
-  .bulk-actions:has(> :nth-child(4)) > * { flex: 1 1 calc(50% - 4px); }
-}
+.bulk-actions > * { flex: 1 1 28%; justify-content: center; }
 .bulk-clear { margin-left: auto; }
 @media (min-width: 701px) {
-  .bulk-bar { bottom: 0; flex-wrap: nowrap; }
-  .bulk-actions { order: 0; flex: none; flex-wrap: nowrap; }
+  .bulk-bar { bottom: 0; }
+  .bulk-actions { order: 0; flex: 0 1 auto; }
   .bulk-actions > * { flex: none; }
 }
 

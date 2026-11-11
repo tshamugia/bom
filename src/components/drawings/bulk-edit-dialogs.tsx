@@ -12,17 +12,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Icon } from "@/components/icons";
 import { HelpTip } from "@/components/help/help-tip";
-import { DRAWING_STATUSES, DRAWING_STATUS_LABEL, type DrawingStatus } from "@/lib/drawing-status";
+import { BlockedNote } from "@/components/help/blocked-note";
+import { DRAWING_STATUSES, DRAWING_STATUS_LABEL, todayIso, type DrawingStatus } from "@/lib/drawing-status";
 import {
-  planBulkDueDate, planBulkOwner, planBulkStatus,
+  SHARED_BLOCK_MESSAGE,
+  planBulkDueDate, planBulkOwner, planBulkStatus, sharedRemarkBlock, sharedTimeBlock,
   type BulkDrawing, type BulkSkip,
 } from "@/lib/drawing-bulk";
+import { MANUAL_REMARK_SOURCES, MAX_ENTRY_HOURS, REMARK_SOURCE_LABEL, formatHours } from "@/lib/drawing-meta";
 import { formatDate } from "@/lib/format";
 import {
   bulkChangeDrawingStatus, bulkSetDrawingDueDate, bulkSetDrawingOwner,
   type BulkDrawingResult,
 } from "@/server/actions/drawings";
-import { SELECT_CLASS, TEXTAREA_CLASS, type UserOption } from "./drawing-form-fields";
+import { addSharedDrawingRemark, logSharedDrawingTime } from "@/server/actions/drawing-shared";
+import { SELECT_CLASS, TEXTAREA_CLASS, parseHours, type UserOption } from "./drawing-form-fields";
 import { BulkCheckDialog, type BulkCheckRow } from "./bulk-check-dialog";
 
 const drawingsCount = (n: number) => `${n} drawing${n === 1 ? "" : "s"}`;
@@ -31,6 +35,9 @@ const drawingsCount = (n: number) => `${n} drawing${n === 1 ? "" : "s"}`;
 const STAND_IN_REVIEWER = "(stand-in reviewer)";
 
 type DoneHandler = (updatedIds: string[]) => void;
+
+/** A selected row as the bar sees it: the bulk rules' fields plus what the shared dialogs list. */
+export type BulkBarRow = BulkDrawing & { name: string; projectId: string; projectCode: string };
 
 /**
  * The bar under the drawings table while drawings are selected. Each action
@@ -45,7 +52,7 @@ export function BulkDrawingBar({
   onDone,
   onClear,
 }: {
-  rows: BulkDrawing[];
+  rows: BulkBarRow[];
   /** The same drawings for "Check DXFs"; null while automatic checks are off or not connected. */
   checkRows: BulkCheckRow[] | null;
   /** Possible owners and approving engineers — active users who aren't viewers. */
@@ -64,6 +71,8 @@ export function BulkDrawingBar({
         <BulkStatusDialog rows={rows} users={users} currentUserId={currentUserId} onDone={onDone} />
         <BulkOwnerDialog rows={rows} users={users} onDone={onDone} />
         <BulkDueDateDialog rows={rows} onDone={onDone} />
+        <SharedRemarkDialog rows={rows} onDone={onDone} />
+        <SharedTimeDialog rows={rows} onDone={onDone} />
         {checkRows && (
           <BulkCheckDialog
             rows={checkRows}
@@ -412,6 +421,211 @@ function BulkDueDateDialog({ rows, onDone }: { rows: BulkDrawing[]; onDone: Done
           <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
           <Button onClick={submit} disabled={pending || !plan || plan.ready.length === 0}>
             {pending ? "Saving…" : plan?.ready.length ? `Change ${drawingsCount(plan.ready.length)}` : "Change due date"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Shared remark and shared time: one entry for all the selected drawings ──
+
+/** The drawings a shared remark or shared time will cover. */
+function SelectedDrawings({ rows }: { rows: BulkBarRow[] }) {
+  const sorted = [...rows].sort((a, b) => a.projectCode.localeCompare(b.projectCode) || a.code.localeCompare(b.code));
+  return (
+    <div className="rounded-md border border-[var(--color-line)] bg-[var(--color-surface-2)]">
+      <div className="border-b border-[var(--color-line-soft)] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-3)]">
+        For {drawingsCount(rows.length)}
+      </div>
+      <ul className="max-h-40 overflow-auto px-3 py-1.5 text-[12px]" aria-label="Selected drawings">
+        {sorted.map(r => (
+          <li key={r.id} className="flex min-w-0 gap-1.5 py-0.5">
+            <span className="shrink-0 font-mono font-semibold">{r.code}</span>
+            <span className="min-w-0 truncate text-[var(--color-text-2)]">{r.name}</span>
+            <span className="ml-auto shrink-0 font-mono text-[var(--color-text-3)]">{r.projectCode}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Saves a shared remark or shared time; the selection is cleared once it is written. */
+function useSharedSubmit(rows: BulkBarRow[], onDone: DoneHandler, close: () => void) {
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  const run = (action: () => Promise<{ ok: true } | { ok: false; error: string }>, success: string) => {
+    start(async () => {
+      const res = await action();
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success(success);
+      onDone(rows.map(r => r.id));
+      close();
+      router.refresh();
+    });
+  };
+  return { pending, run };
+}
+
+type ManualSource = (typeof MANUAL_REMARK_SOURCES)[number];
+
+function SharedRemarkDialog({ rows, onDone }: { rows: BulkBarRow[]; onDone: DoneHandler }) {
+  const [open, setOpen] = useState(false);
+  const [source, setSource] = useState<ManualSource>("client");
+  const [body, setBody] = useState("");
+  const { pending, run } = useSharedSubmit(rows, onDone, () => setOpen(false));
+  const block = sharedRemarkBlock(rows);
+
+  const submit = () => {
+    if (block || !body.trim()) return;
+    run(
+      () => addSharedDrawingRemark({ drawingIds: rows.map(r => r.id), source, body: body.trim() }),
+      `Remark added to ${drawingsCount(rows.length)}`,
+    );
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={next => {
+        setOpen(next);
+        if (!next) {
+          setSource("client");
+          setBody("");
+        }
+      }}
+    >
+      <DialogTrigger render={<BarButton icon={Icon.Remark} label="Shared remark" short="Remark" />} />
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Remark on {drawingsCount(rows.length)}</DialogTitle>
+          <DialogDescription>
+            The same remark goes on each drawing&apos;s latest revision, marked as shared. Each drawing closes it on its
+            own, once its revision fixes it. <HelpTip topic="drawing-shared" />
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-3">
+          {block && <BlockedNote>{SHARED_BLOCK_MESSAGE[block]}</BlockedNote>}
+          <div className="grid gap-1.5">
+            <Label htmlFor="shared-remark-source">Raised by</Label>
+            <select
+              id="shared-remark-source"
+              className={SELECT_CLASS}
+              value={source}
+              onChange={e => setSource(e.target.value as ManualSource)}
+            >
+              {MANUAL_REMARK_SOURCES.map(s => <option key={s} value={s}>{REMARK_SOURCE_LABEL[s]}</option>)}
+            </select>
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="shared-remark-body">Remark</Label>
+            <textarea
+              id="shared-remark-body"
+              className={TEXTAREA_CLASS}
+              value={body}
+              maxLength={4000}
+              onChange={e => setBody(e.target.value)}
+              placeholder="What needs to change on all of them? e.g. Use the new cable tray legend"
+            />
+          </div>
+          <SelectedDrawings rows={rows} />
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
+          <Button onClick={submit} disabled={pending || !!block || !body.trim()}>
+            {pending ? "Adding…" : `Add to ${drawingsCount(rows.length)}`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SharedTimeDialog({ rows, onDone }: { rows: BulkBarRow[]; onDone: DoneHandler }) {
+  const [open, setOpen] = useState(false);
+  const [hours, setHours] = useState("");
+  const [workDate, setWorkDate] = useState(todayIso);
+  const [note, setNote] = useState("");
+  const { pending, run } = useSharedSubmit(rows, onDone, () => setOpen(false));
+  const block = sharedTimeBlock(rows);
+  const parsed = parseHours(hours);
+  const valid = typeof parsed === "number" && parsed <= MAX_ENTRY_HOURS && !!workDate && workDate <= todayIso();
+
+  const submit = () => {
+    if (block || typeof parsed !== "number") return;
+    run(
+      () => logSharedDrawingTime({ drawingIds: rows.map(r => r.id), hours: parsed, workDate, note: note.trim() || undefined }),
+      `${formatHours(parsed)} logged once for ${drawingsCount(rows.length)}`,
+    );
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={next => {
+        setOpen(next);
+        if (next) {
+          setWorkDate(todayIso());
+        } else {
+          setHours("");
+          setNote("");
+        }
+      }}
+    >
+      <DialogTrigger render={<BarButton icon={Icon.Clock} label="Shared time" short="Time" />} />
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Shared time for {drawingsCount(rows.length)}</DialogTitle>
+          <DialogDescription>
+            Time spent on these drawings together. The hours are logged once and not split between the drawings: each
+            shows them apart from its own logged hours, and the project total counts them once.{" "}
+            <HelpTip topic="drawing-shared" />
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-3">
+          {block && <BlockedNote>{SHARED_BLOCK_MESSAGE[block]}</BlockedNote>}
+          <div className="grid grid-cols-[110px_1fr] gap-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="shared-time-hours">Hours</Label>
+              <Input
+                id="shared-time-hours"
+                inputMode="decimal"
+                value={hours}
+                placeholder="e.g. 5"
+                aria-invalid={!!hours && !valid}
+                onChange={e => setHours(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="shared-time-date">Date</Label>
+              <Input id="shared-time-date" type="date" max={todayIso()} value={workDate} onChange={e => setWorkDate(e.target.value)} />
+            </div>
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="shared-time-note">Note (optional)</Label>
+            <textarea
+              id="shared-time-note"
+              className={TEXTAREA_CLASS}
+              value={note}
+              maxLength={500}
+              onChange={e => setNote(e.target.value)}
+              placeholder="e.g. Coordination meeting with the client"
+            />
+          </div>
+          <SelectedDrawings rows={rows} />
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
+          <Button onClick={submit} disabled={pending || !!block || !valid}>
+            {pending ? "Saving…" : valid ? `Log ${formatHours(parsed)} once` : "Log shared time"}
           </Button>
         </DialogFooter>
       </DialogContent>

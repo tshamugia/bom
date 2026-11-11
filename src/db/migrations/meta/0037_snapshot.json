@@ -1,5 +1,5 @@
 {
-  "id": "6ba016df-98cf-43ce-bdae-f3309483be2f",
+  "id": "e9f89f03-3b47-46b8-bec1-cbacd057077f",
   "prevId": "8f9e4675-cb16-4ffb-8c8c-59ecfdc6373f",
   "version": "7",
   "dialect": "postgresql",
@@ -2024,36 +2024,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "sheet_check": {
-          "name": "sheet_check",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "linked_sheet_code": {
-          "name": "linked_sheet_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "applied_at": {
-          "name": "applied_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "decided_by_id": {
-          "name": "decided_by_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "decided_at": {
-          "name": "decided_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
         "engine_version": {
           "name": "engine_version",
           "type": "text",
@@ -2167,19 +2137,6 @@
           "tableTo": "user",
           "columnsFrom": [
             "uploaded_by_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "drawing_check_run_decided_by_id_user_id_fk": {
-          "name": "drawing_check_run_decided_by_id_user_id_fk",
-          "tableFrom": "drawing_check_run",
-          "tableTo": "user",
-          "columnsFrom": [
-            "decided_by_id"
           ],
           "columnsTo": [
             "id"
@@ -2775,6 +2732,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "shared_group_id": {
+          "name": "shared_group_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -2789,6 +2752,21 @@
           "columns": [
             {
               "expression": "drawing_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "drawing_remark_shared_group_idx": {
+          "name": "drawing_remark_shared_group_idx",
+          "columns": [
+            {
+              "expression": "shared_group_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3275,6 +3253,215 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.drawing_shared_time_entry": {
+      "name": "drawing_shared_time_entry",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "hours": {
+          "name": "hours",
+          "type": "numeric(6, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "work_date": {
+          "name": "work_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "drawing_shared_time_project_idx": {
+          "name": "drawing_shared_time_project_idx",
+          "columns": [
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "drawing_shared_time_user_idx": {
+          "name": "drawing_shared_time_user_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "drawing_shared_time_entry_project_id_project_id_fk": {
+          "name": "drawing_shared_time_entry_project_id_project_id_fk",
+          "tableFrom": "drawing_shared_time_entry",
+          "tableTo": "project",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "drawing_shared_time_entry_user_id_user_id_fk": {
+          "name": "drawing_shared_time_entry_user_id_user_id_fk",
+          "tableFrom": "drawing_shared_time_entry",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.drawing_shared_time_member": {
+      "name": "drawing_shared_time_member",
+      "schema": "",
+      "columns": {
+        "shared_entry_id": {
+          "name": "shared_entry_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "drawing_id": {
+          "name": "drawing_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "revision_id": {
+          "name": "revision_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "drawing_shared_time_member_drawing_idx": {
+          "name": "drawing_shared_time_member_drawing_idx",
+          "columns": [
+            {
+              "expression": "drawing_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "drawing_shared_time_member_shared_entry_id_drawing_shared_time_entry_id_fk": {
+          "name": "drawing_shared_time_member_shared_entry_id_drawing_shared_time_entry_id_fk",
+          "tableFrom": "drawing_shared_time_member",
+          "tableTo": "drawing_shared_time_entry",
+          "columnsFrom": [
+            "shared_entry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "drawing_shared_time_member_drawing_id_drawing_id_fk": {
+          "name": "drawing_shared_time_member_drawing_id_drawing_id_fk",
+          "tableFrom": "drawing_shared_time_member",
+          "tableTo": "drawing",
+          "columnsFrom": [
+            "drawing_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "drawing_shared_time_member_revision_id_drawing_revision_id_fk": {
+          "name": "drawing_shared_time_member_revision_id_drawing_revision_id_fk",
+          "tableFrom": "drawing_shared_time_member",
+          "tableTo": "drawing_revision",
+          "columnsFrom": [
+            "revision_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "drawing_shared_time_member_shared_entry_id_drawing_id_pk": {
+          "name": "drawing_shared_time_member_shared_entry_id_drawing_id_pk",
+          "columns": [
+            "shared_entry_id",
+            "drawing_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.drawing_time_entry": {
       "name": "drawing_time_entry",
       "schema": "",
@@ -3631,12 +3818,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "sheet_code": {
-          "name": "sheet_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_by_id": {
           "name": "created_by_id",
           "type": "text",
@@ -3719,28 +3900,6 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "drawing_project_sheet_code_uq": {
-          "name": "drawing_project_sheet_code_uq",
-          "columns": [
-            {
-              "expression": "project_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "sheet_code",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"deleted_at\" IS NULL AND \"sheet_code\" IS NOT NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -4776,8 +4935,8 @@
         "drawing.check.settings.changed",
         "drawing.check.waived",
         "drawing.check.waiver.removed",
-        "drawing.check.confirmed",
-        "drawing.check.wrong-file"
+        "drawing.time.shared.logged",
+        "drawing.time.shared.deleted"
       ]
     },
     "public.export_format": {
@@ -4805,9 +4964,7 @@
         "pending",
         "queued",
         "done",
-        "failed",
-        "held",
-        "wrong-file"
+        "failed"
       ]
     },
     "public.drawing_event_kind": {

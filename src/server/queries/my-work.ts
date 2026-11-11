@@ -25,6 +25,7 @@ import {
   collectWaiting,
   countMyWork,
   describeUpdate,
+  foldRaisedRemarks,
   groupBomTasks,
   updatesSince,
   type ApprovalTask,
@@ -42,6 +43,8 @@ import { listMyPendingReceipts } from "./status-overview";
 const MS_PER_DAY = 86_400_000;
 /** Most updates the page lists (and counts as new on the bell). */
 const UPDATE_LIMIT = 40;
+/** Raised remarks read before shared ones fold into one update — a shared remark can cover many drawings. */
+const REMARK_ROW_LIMIT = UPDATE_LIMIT * 5;
 
 function latestRevisions() {
   return db
@@ -245,12 +248,16 @@ async function loadUpdates(userId: string, since: Date): Promise<MyWorkUpdate[]>
     db
       .select({
         ...drawingColumns,
-        id: drawingRemarks.id,
+        remarkId: drawingRemarks.id,
         at: drawingRemarks.createdAt,
         actorName: actor.name,
         remarkSource: drawingRemarks.source,
         body: drawingRemarks.body,
         resolution: drawingRemarks.resolution,
+        sharedGroupId: drawingRemarks.sharedGroupId,
+        sharedTotal: sql<number>`case when ${drawingRemarks.sharedGroupId} is null then 1 else (
+          select count(*) from drawing_remark sg where sg.shared_group_id = ${drawingRemarks.sharedGroupId}
+        ) end`.mapWith(Number),
       })
       .from(drawingRemarks)
       .innerJoin(drawings, eq(drawings.id, drawingRemarks.drawingId))
@@ -259,7 +266,7 @@ async function loadUpdates(userId: string, since: Date): Promise<MyWorkUpdate[]>
       .leftJoin(actor, eq(actor.id, drawingRemarks.raisedById))
       .where(and(gt(drawingRemarks.createdAt, since), notBy(drawingRemarks.raisedById, userId), liveDrawing(), involvedIn(userId)))
       .orderBy(desc(drawingRemarks.createdAt))
-      .limit(UPDATE_LIMIT),
+      .limit(REMARK_ROW_LIMIT),
     db
       .select({
         ...drawingColumns,
@@ -363,7 +370,8 @@ async function loadUpdates(userId: string, since: Date): Promise<MyWorkUpdate[]>
 
   const raw: RawUpdate[] = [
     ...events.map(e => ({ ...e, id: `event:${e.id}`, source: "drawing-event" as const })),
-    ...raised.map(r => ({ ...r, id: `remark:${r.id}`, source: "remark" as const, resolved: false })),
+    // A remark shared by several of the user's drawings is one update, not one per drawing.
+    ...foldRaisedRemarks(raised),
     ...resolved.map(r => ({ ...r, at: r.at!, id: `resolved:${r.id}`, source: "remark" as const, resolved: true })),
     ...issued.map(t => ({ ...t, id: `issued:${t.id}`, source: "transmittal" as const })),
     ...bomStatus.map(b => ({ ...b, at: b.at!, id: `bom-status:${b.id}`, source: "bom-status" as const })),

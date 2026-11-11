@@ -104,6 +104,9 @@ export function ProjectTable({ groups, projectHref }: { groups: GroupSummary[]; 
                 <td className="num" data-label="Remarks">{g.openRemarks}</td>
                 <td className="num" data-label="Hours" style={{ whiteSpace: "nowrap" }}>
                   {roundHours(g.loggedHours)}<span className="muted"> / {roundHours(g.estimatedHours)}</span>
+                  {g.sharedHours > 0 && (
+                    <div className="muted max-[701px]:ml-1 max-[701px]:inline" style={{ fontSize: 11 }}>incl. {roundHours(g.sharedHours)} shared</div>
+                  )}
                 </td>
                 <td className="td-full">
                   <div className="flex items-center gap-2">
@@ -122,8 +125,18 @@ export function ProjectTable({ groups, projectHref }: { groups: GroupSummary[]; 
   );
 }
 
-export function GroupTable({ groups, title }: { groups: GroupSummary[]; title: string }) {
+export function GroupTable({
+  groups,
+  title,
+  footnote,
+}: {
+  groups: GroupSummary[];
+  title: string;
+  /** Said under the table — e.g. that shared time isn't split by owner or discipline. */
+  footnote?: string;
+}) {
   return (
+    <>
     <div className="table-wrap">
       <table className="tbl tbl-cards cards-4">
         <thead>
@@ -155,6 +168,8 @@ export function GroupTable({ groups, title }: { groups: GroupSummary[]; title: s
         </tbody>
       </table>
     </div>
+    {footnote && <p className="muted m-0 px-4 py-2.5 text-[12px]" style={{ borderTop: "1px solid var(--line-soft)" }}>{footnote}</p>}
+    </>
   );
 }
 
