@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, timestamp, date, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, date, boolean, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createId } from "@paralleldrive/cuid2";
 import { user } from "./auth";
 
@@ -17,6 +17,8 @@ export const projects = pgTable(
     description: text("description"),
     startDate: date("start_date"),
     targetDate: date("target_date"),
+    /** The client's own file naming applies (NAMING §1): automatic DXF checks skip the three file-name groups. */
+    checkClientNaming: boolean("check_client_naming").notNull().default(false),
     deletedAt: timestamp("deleted_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PageHead } from "@/components/master/page-head";
 import { RecipientsForm } from "@/components/drawings/recipients-form";
@@ -108,8 +109,11 @@ export default async function DrawingSettingsPage() {
               </p>
             </div>
           </div>
-          <div className="p-4">
+          <div className="grid gap-3 p-4">
             <CheckSwitchForm initial={checks.enabled} configured={checks.configured} />
+            <Link href="/settings/drawing-checks" className="text-[12.5px] font-medium text-[var(--accent-text)] hover:underline">
+              Rules, severities and parameters →
+            </Link>
           </div>
         </div>
 

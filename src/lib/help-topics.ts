@@ -20,6 +20,7 @@ export const HELP_TOPIC_IDS = [
   "drawing-bulk",
   "drawing-pdf",
   "drawing-check",
+  "drawing-check-settings",
   "transmittals",
   "procurement",
   "exports",
@@ -100,7 +101,12 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
   "drawing-check": {
     title: "Automatic DXF check",
     summary:
-      "Upload a DXF of the latest revision: it is checked against the naming and drafting standards, and each broken rule becomes one remark from Automatic check (To check means the check may be wrong). Checking a fixed file closes the remarks of rules that now pass. Advisory only — it blocks nothing. An admin turns it on in Settings → Drawings.",
+      "Upload a DXF of the latest revision: it is checked against the naming and drafting standards, and each broken rule becomes one remark from Automatic check (To check means the check may be wrong). Checking a fixed file closes the remarks of rules that now pass. If the check is wrong, resolve the remark as a false error: that rule stops on this drawing until an admin takes it back. Advisory only — it blocks nothing. An admin turns it on in Settings → Drawings.",
+  },
+  "drawing-check-settings": {
+    title: "DXF check settings",
+    summary:
+      "Admins choose which rules run, how severe each is (Error and To check become remarks, Info stays in the report) and the values from the standards — codes, title block tags, layers. Every save is a new version and checks remember the version they ran with. A project can use the client's file naming, and a false error stops one rule on one drawing.",
   },
   "transmittals": {
     title: "Transmittals",
