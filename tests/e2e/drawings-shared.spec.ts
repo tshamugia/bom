@@ -34,7 +34,7 @@ test("shared time is logged once for drawings of one project and counted once in
   await tick(page, L3);
   await bar(page).getByRole("button", { name: "Shared time" }).click();
   dialog = page.getByRole("dialog");
-  await expect(dialog.getByText("For 3 drawings")).toBeVisible();
+  await expect(dialog.getByText("For 3 drawings", { exact: true })).toBeVisible();
   await dialog.getByLabel("Hours").fill("5");
   await dialog.getByLabel("Note (optional)").fill("Coordination meeting");
   await dialog.getByRole("button", { name: "Log 5 h once" }).click();
@@ -55,7 +55,8 @@ test("shared time is logged once for drawings of one project and counted once in
   const projectId = projectHref!.split("/").pop();
   await page.goto(`/dashboard?project=${projectId}`);
   const hours = page.locator(".stat", { hasText: "Hours logged" });
-  await expect(hours.locator(".stat-value")).toContainText(/^5\b/);
+  // The value, then "of 12 est." (three drawings of 4 h): 5 h, not 15.
+  await expect(hours.locator(".stat-value")).toContainText(/^5\s*of 12 est\./);
   await expect(hours).toContainText("incl. 5 shared");
 
   // Removing it takes it off every drawing at once.

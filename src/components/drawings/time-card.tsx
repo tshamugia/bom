@@ -346,10 +346,11 @@ export function TimeCard({
       )}
       {shared.length > 0 && (
         <div style={{ borderTop: "1px solid var(--line-soft)" }}>
-          <div className="flex items-center gap-1.5 px-4 pb-1 pt-3 text-[12px] font-semibold">
-            Shared entries
-            <span className="font-normal text-[var(--color-text-3)]">— logged once for several drawings, not part of Logged</span>
-            <HelpTip topic="drawing-shared" />
+          <div className="px-4 pb-1 pt-3">
+            <div className="flex items-center gap-1.5 text-[12px] font-semibold">
+              Shared entries <HelpTip topic="drawing-shared" />
+            </div>
+            <p className="muted m-0 text-[11.5px]">Logged once for several drawings — not part of Logged.</p>
           </div>
           <div className="table-wrap" style={{ maxHeight: 280 }}>
             <table className="tbl tbl-list">
