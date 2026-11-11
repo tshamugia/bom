@@ -250,6 +250,11 @@ export type RawUpdate = { id: string; at: Date; actorName: string | null; projec
       remarkSource: RemarkSource;
       body: string;
       resolution: string | null;
+      /**
+       * A remark written for several drawings at once, raised as one update:
+       * how many drawings it went on, and the codes of those the user is involved in.
+       */
+      shared?: { total: number; codes: string[] } | null;
     }
   | {
       source: "transmittal";
@@ -278,6 +283,46 @@ export type RawUpdate = { id: string; at: Date; actorName: string | null; projec
       revisionLetter: string;
     }
 );
+
+/** A raised remark as the server reads it, before shared ones are folded together. */
+export type RaisedRemark = Omit<Extract<RawUpdate, { source: "remark" }>, "source" | "resolved" | "shared" | "id"> & {
+  remarkId: string;
+  sharedGroupId: string | null;
+  /** How many drawings the shared remark went on (1 for an ordinary remark). */
+  sharedTotal: number;
+};
+
+/**
+ * Raised remarks as updates, newest first: a remark written for several
+ * drawings at once is one update, however many of them the user is involved in.
+ */
+export function foldRaisedRemarks(rows: RaisedRemark[]): Array<Extract<RawUpdate, { source: "remark" }>> {
+  const groups = new Map<string, RaisedRemark[]>();
+  for (const r of [...rows].sort((a, b) => b.at.getTime() - a.at.getTime())) {
+    const key = r.sharedGroupId ? `group:${r.sharedGroupId}` : `remark:${r.remarkId}`;
+    groups.set(key, [...(groups.get(key) ?? []), r]);
+  }
+  return [...groups.entries()].map(([key, rows]) => {
+    const { sharedGroupId, sharedTotal, ...r } = rows[0];
+    return {
+      id: key,
+      source: "remark" as const,
+      resolved: false,
+      at: r.at,
+      actorName: r.actorName,
+      projectCode: r.projectCode,
+      drawingId: r.drawingId,
+      code: r.code,
+      name: r.name,
+      revisionNumber: r.revisionNumber,
+      revisionLabel: r.revisionLabel,
+      remarkSource: r.remarkSource,
+      body: r.body,
+      resolution: r.resolution,
+      shared: sharedGroupId ? { total: sharedTotal, codes: rows.map(x => x.code) } : null,
+    };
+  });
+}
 
 export type MyWorkUpdate = {
   id: string;
@@ -339,6 +384,18 @@ export function describeUpdate(u: RawUpdate): MyWorkUpdate {
     };
     if (u.resolved) {
       return { ...common, kind: "remark-resolved", verb: "resolved your remark on", body: u.resolution || `“${u.body}”` };
+    }
+    if (u.shared && u.shared.total > 1) {
+      const codes = [...u.shared.codes].sort((a, b) => a.localeCompare(b));
+      const yours = codes.length > 3 ? `${codes.slice(0, 3).join(", ")} +${codes.length - 3}` : codes.join(", ");
+      return {
+        ...common,
+        kind: "remark",
+        verb: `raised a shared ${REMARK_SOURCE_LABEL[u.remarkSource].toLowerCase()} remark on`,
+        subjectRev: `+${u.shared.total - 1}`,
+        body: u.body,
+        context: `${u.projectCode} · shared by ${u.shared.total} drawings${codes.length > 1 ? ` · yours: ${yours}` : ""}`,
+      };
     }
     // Nobody raised it: the automatic DXF check did.
     if (u.remarkSource === "check") {

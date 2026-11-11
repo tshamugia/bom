@@ -30,3 +30,21 @@ export function scenario(key: E2EScenario["key"]): E2EScenario {
 
 /** A catalog item the specs add to a BOM through the builder's search (not in LINES). */
 export const ADD_ITEM = { sku: "BMS-KNX-IP", description: "KNX/IP interface router" };
+
+/**
+ * Drawings for drawings-shared.spec.ts (shared remark and shared time, issue #17):
+ * three in one project and one in another, each with revision P01. Their names
+ * all contain "E2E Shared", so the spec filters the register down to them.
+ */
+export const E2E_DRAWINGS = {
+  project: "E2E Drawings",
+  projectCode: "E2E-007",
+  drawings: [
+    { code: "SHR-001", name: "E2E Shared cameras L1" },
+    { code: "SHR-002", name: "E2E Shared cameras L2" },
+    { code: "SHR-003", name: "E2E Shared cameras L3" },
+  ],
+  otherProject: "E2E Drawings Other",
+  otherProjectCode: "E2E-008",
+  other: { code: "SHL-001", name: "E2E Shared lobby" },
+};

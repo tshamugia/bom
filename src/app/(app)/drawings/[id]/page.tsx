@@ -6,7 +6,7 @@ import {
   getDrawing, listDisciplines, listDrawingEvents, listDrawingRevisions, listProjectOptions,
 } from "@/server/queries/drawings";
 import {
-  listBomLinksForDrawing, listRemarks, listTimeEntries, listTransmittals,
+  listBomLinksForDrawing, listRemarks, listSharedTimeEntries, listTimeEntries, listTransmittals,
 } from "@/server/queries/drawing-control";
 import { getDrawingFileGate, listDrawingFiles } from "@/server/queries/drawing-files";
 import { getDrawingCheckPanel } from "@/server/queries/drawing-checks";
@@ -35,7 +35,7 @@ import { checkFileUpload, fileUploadErrorMessage, isFileStatus } from "@/lib/dra
 export default async function DrawingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await requireSession();
-  const [drawing, revisions, events, projects, disciplines, users, timeEntries, remarks, transmittals, bomLinks, files, fileGate, checks] =
+  const [drawing, revisions, events, projects, disciplines, users, timeEntries, sharedTime, remarks, transmittals, bomLinks, files, fileGate, checks] =
     await Promise.all([
       getDrawing(id),
       listDrawingRevisions(id),
@@ -44,6 +44,8 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
       listDisciplines(),
       listOwnerCandidates(),
       listTimeEntries(id),
+      // Empty for viewers: hours, shared ones too, are an engineering figure.
+      listSharedTimeEntries(id),
       listRemarks(id),
       listTransmittals(id),
       listBomLinksForDrawing(id),
@@ -225,14 +227,16 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
       <div className="grid-2 mb-5" style={{ alignItems: "start" }}>
         {/* Viewers confirm receipt in Transmittals, so it comes first for them. */}
         {readOnly && transmittalsCard}
-        <RemarksCard remarks={remarks} revisions={revisionOptions} readOnly={readOnly} />
+        <RemarksCard drawingId={drawing.id} remarks={remarks} revisions={revisionOptions} readOnly={readOnly} />
         {!readOnly && transmittalsCard}
         {/* Hours and BOM links are engineering internals — viewers follow status and issues. */}
         {!readOnly && (
           <>
             <TimeCard
+              drawingId={drawing.id}
               estimatedHours={drawing.estimatedHours}
               entries={timeEntries}
+              shared={sharedTime}
               revisions={revisionOptions}
               currentUserId={session.user.id}
               canManageAll={admin}

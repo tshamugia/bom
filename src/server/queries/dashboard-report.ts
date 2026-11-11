@@ -26,7 +26,8 @@ export async function getDashboardData(projectIdParam?: string | null) {
     projects: projectId ? allProjects.filter(p => p.id === projectId) : allProjects,
     deadlines,
     drawingData,
-    summary: summarizeDrawings(drawingData.drawings, today),
+    // Shared time counts once in the project and overall totals, never per drawing.
+    summary: summarizeDrawings(drawingData.drawings, today, drawingData.sharedTime),
   };
 }
 

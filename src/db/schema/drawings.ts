@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, text, integer, numeric, boolean, timestamp, date, index, uniqueIndex, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, pgEnum, text, integer, numeric, boolean, timestamp, date, index, uniqueIndex, jsonb, primaryKey } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { projects } from "./projects";
@@ -193,8 +193,49 @@ export const drawingTimeEntries = pgTable(
 );
 
 /**
+ * Hours spent on several drawings of one project together (issue #17), e.g.
+ * 5 h on four drawings at once. Never split between the drawings and never
+ * added to a drawing's own `Logged` or compared with its estimate — it is kept
+ * apart from `drawing_time_entry` so every `sum(drawing_time_entry.hours)`
+ * stays individual. Project and overall totals count each entry once.
+ */
+export const drawingSharedTimeEntries = pgTable(
+  "drawing_shared_time_entry",
+  {
+    id: text("id").primaryKey().$defaultFn(() => createId()),
+    /** Logged on drawings of one project only, so the project total stays clear. */
+    projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+    hours: numeric("hours", { precision: 6, scale: 2, mode: "number" }).notNull(),
+    workDate: date("work_date").notNull(),
+    note: text("note"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  t => ({
+    projectIdx: index("drawing_shared_time_project_idx").on(t.projectId),
+    userIdx: index("drawing_shared_time_user_idx").on(t.userId),
+  }),
+);
+
+/** The drawings a shared entry covers, each with its latest revision when the time was logged. */
+export const drawingSharedTimeMembers = pgTable(
+  "drawing_shared_time_member",
+  {
+    sharedEntryId: text("shared_entry_id").notNull().references(() => drawingSharedTimeEntries.id, { onDelete: "cascade" }),
+    drawingId: text("drawing_id").notNull().references(() => drawings.id, { onDelete: "cascade" }),
+    revisionId: text("revision_id").notNull().references(() => drawingRevisions.id, { onDelete: "cascade" }),
+  },
+  t => ({
+    pk: primaryKey({ columns: [t.sharedEntryId, t.drawingId] }),
+    drawingIdx: index("drawing_shared_time_member_drawing_idx").on(t.drawingId),
+  }),
+);
+
+/**
  * A remark raised against a revision (by the client, the site or internally).
  * It stays open until someone resolves it, usually in a later revision.
+ * A shared remark, written for several drawings at once, is one ordinary row
+ * per drawing: `sharedGroupId` ties them together and each closes on its own.
  */
 export const drawingRemarks = pgTable(
   "drawing_remark",
@@ -215,10 +256,13 @@ export const drawingRemarks = pgTable(
     checkSeverity: text("check_severity").$type<CheckSeverity>(),
     /** The run that last created, updated or closed this remark. */
     lastCheckRunId: text("last_check_run_id").references(() => drawingCheckRuns.id, { onDelete: "set null" }),
+    /** Same value on every remark written together for several drawings (`addSharedDrawingRemark`). */
+    sharedGroupId: text("shared_group_id"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   t => ({
     drawingIdx: index("drawing_remark_drawing_idx").on(t.drawingId),
+    sharedGroupIdx: index("drawing_remark_shared_group_idx").on(t.sharedGroupId),
     openCheckRuleUq: uniqueIndex("drawing_remark_open_check_rule_uq")
       .on(t.drawingId, t.checkRuleId)
       .where(sql`"resolved_at" IS NULL AND "check_rule_id" IS NOT NULL`),

@@ -10,6 +10,8 @@ import {
   drawingReminderRuns,
   drawingRemarks,
   drawingRevisions,
+  drawingSharedTimeEntries,
+  drawingSharedTimeMembers,
   drawingTimeEntries,
   drawingTransmittals,
   projects,
@@ -59,6 +61,16 @@ export async function listDrawings(filter: DrawingListFilter = {}) {
     .from(drawingTimeEntries)
     .groupBy(drawingTimeEntries.drawingId)
     .as("logged");
+  // Shared entries the drawing is in — shown next to its hours, never added to them.
+  const shared = db
+    .select({
+      drawingId: drawingSharedTimeMembers.drawingId,
+      hours: sql<number>`sum(${drawingSharedTimeEntries.hours})`.as("shared_hours"),
+    })
+    .from(drawingSharedTimeMembers)
+    .innerJoin(drawingSharedTimeEntries, eq(drawingSharedTimeEntries.id, drawingSharedTimeMembers.sharedEntryId))
+    .groupBy(drawingSharedTimeMembers.drawingId)
+    .as("shared");
   const remarks = db
     .select({
       drawingId: drawingRemarks.drawingId,
@@ -87,6 +99,7 @@ export async function listDrawings(filter: DrawingListFilter = {}) {
       dueDate: drawings.dueDate,
       estimatedHours: drawings.estimatedHours,
       loggedHours: sql<number>`coalesce(${logged.hours}, 0)`.mapWith(Number),
+      sharedHours: sql<number>`coalesce(${shared.hours}, 0)`.mapWith(Number),
       openRemarks: sql<number>`coalesce(${remarks.open}, 0)`.mapWith(Number),
       updatedAt: drawings.updatedAt,
       projectId: projects.id,
@@ -115,6 +128,7 @@ export async function listDrawings(filter: DrawingListFilter = {}) {
     .leftJoin(modifier, eq(modifier.id, drawings.lastModifiedById))
     .leftJoin(reviewer, eq(reviewer.id, latest.reviewerId))
     .leftJoin(logged, eq(logged.drawingId, drawings.id))
+    .leftJoin(shared, eq(shared.drawingId, drawings.id))
     .leftJoin(remarks, eq(remarks.drawingId, drawings.id))
     .where(and(...conds))
     .orderBy(desc(drawings.updatedAt));
