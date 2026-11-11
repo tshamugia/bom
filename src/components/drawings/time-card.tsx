@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "@/lib/toast";
 import {
@@ -11,16 +12,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Icon } from "@/components/icons";
+import { BlockedNote } from "@/components/help/blocked-note";
+import { HelpTip } from "@/components/help/help-tip";
 import { formatDate } from "@/lib/format";
 import { formatHours, hoursVariancePct } from "@/lib/drawing-meta";
 import { todayIso } from "@/lib/drawing-status";
+import { sameDaySharedTime } from "@/lib/drawing-bulk";
 import { deleteDrawingTime, logDrawingTime } from "@/server/actions/drawing-time";
-import type { TimeEntryRow } from "@/server/queries/drawing-control";
+import { deleteSharedDrawingTime } from "@/server/actions/drawing-shared";
+import type { SharedDrawingRef, SharedTimeRow, TimeEntryRow } from "@/server/queries/drawing-control";
 import { SELECT_CLASS, TEXTAREA_CLASS, parseHours } from "./drawing-form-fields";
 
 export type RevisionOption = { id: string; number: number; label: string };
 
-function LogTimeDialog({ revisions }: { revisions: RevisionOption[] }) {
+function LogTimeDialog({
+  revisions,
+  shared,
+  currentUserId,
+}: {
+  revisions: RevisionOption[];
+  shared: SharedTimeRow[];
+  currentUserId: string;
+}) {
   const latest = revisions[0];
   const [open, setOpen] = useState(false);
   const [revisionId, setRevisionId] = useState(latest?.id ?? "");
@@ -32,6 +45,8 @@ function LogTimeDialog({ revisions }: { revisions: RevisionOption[] }) {
 
   const parsed = parseHours(hours);
   const valid = typeof parsed === "number" && parsed <= 24 && !!workDate && !!revisionId;
+  // Not a block: an own entry is always allowed — this only saves logging the same hours twice.
+  const sameDay = sameDaySharedTime(shared, { userId: currentUserId, revisionId, workDate });
 
   const submit = () => {
     if (typeof parsed !== "number") return;
@@ -110,10 +125,87 @@ function LogTimeDialog({ revisions }: { revisions: RevisionOption[] }) {
               placeholder="e.g. Cable routing on level 2"
             />
           </div>
+          {sameDay && (
+            <BlockedNote topic="drawing-shared">
+              You already logged {formatHours(sameDay.hours)} of shared time on {sameDay.revisionLabel} that day, together
+              with {sameDay.drawings.length - 1} other drawing{sameDay.drawings.length === 2 ? "" : "s"}. This entry is
+              added on top of it — log only the hours spent on this drawing alone.
+            </BlockedNote>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
           <Button onClick={submit} disabled={pending || !valid}>{pending ? "Saving…" : "Log time"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** The other drawings a shared entry covers, as links (archived ones without). */
+function OtherDrawings({ drawings, drawingId }: { drawings: SharedDrawingRef[]; drawingId: string }) {
+  const others = drawings.filter(d => d.drawingId !== drawingId);
+  if (others.length === 0) return <span className="muted">—</span>;
+  return (
+    <span className="inline-flex flex-wrap gap-x-2 gap-y-0.5">
+      {others.map(d =>
+        d.archived ? (
+          <span key={d.drawingId} className="mono muted" title={`${d.name} (archived)`}>{d.code}</span>
+        ) : (
+          <Link key={d.drawingId} href={`/drawings/${d.drawingId}`} className="mono hover:underline" title={d.name}>
+            {d.code}
+          </Link>
+        ),
+      )}
+    </span>
+  );
+}
+
+/** Removes the whole shared entry, from every drawing — the dialog lists them first. */
+function DeleteSharedButton({ entry }: { entry: SharedTimeRow }) {
+  const [open, setOpen] = useState(false);
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  const remove = () =>
+    start(async () => {
+      const res = await deleteSharedDrawingTime({ id: entry.id });
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success(`${formatHours(entry.hours)} of shared time removed from ${entry.drawings.length} drawings`);
+      setOpen(false);
+      router.refresh();
+    });
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger
+        render={
+          <button type="button" className="btn btn-ghost btn-sm btn-icon" aria-label="Remove shared entry">
+            <Icon.Trash className="ico" />
+          </button>
+        }
+      />
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Remove {formatHours(entry.hours)} of shared time?</DialogTitle>
+          <DialogDescription>
+            Logged on {formatDate(entry.workDate)} by {entry.userName ?? "—"}. It is removed from all{" "}
+            {entry.drawings.length} drawings at once, and the project total drops by {formatHours(entry.hours)}.
+          </DialogDescription>
+        </DialogHeader>
+        <ul className="max-h-48 overflow-auto rounded-md border border-[var(--color-line)] bg-[var(--color-surface-2)] px-3 py-1.5 text-[12px]">
+          {entry.drawings.map(d => (
+            <li key={d.drawingId} className="flex min-w-0 gap-1.5 py-0.5">
+              <span className="shrink-0 font-mono font-semibold">{d.code}</span>
+              <span className="min-w-0 truncate text-[var(--color-text-2)]">{d.name}</span>
+              <span className="ml-auto shrink-0 font-mono text-[var(--color-text-3)]">{d.archived ? "archived" : d.revisionLabel}</span>
+            </li>
+          ))}
+        </ul>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
+          <Button variant="destructive" onClick={remove} disabled={pending}>{pending ? "Removing…" : "Remove from all"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -143,15 +235,20 @@ function DeleteEntryButton({ id }: { id: string }) {
 }
 
 export function TimeCard({
+  drawingId,
   estimatedHours,
   entries,
+  shared,
   revisions,
   currentUserId,
   canManageAll,
   readOnly = false,
 }: {
+  drawingId: string;
   estimatedHours: number | null;
   entries: TimeEntryRow[];
+  /** Shared entries the drawing is in: shown apart, never part of Logged or the estimate. */
+  shared: SharedTimeRow[];
   /** Newest first. */
   revisions: RevisionOption[];
   currentUserId: string;
@@ -159,6 +256,7 @@ export function TimeCard({
   readOnly?: boolean;
 }) {
   const logged = entries.reduce((s, e) => s + e.hours, 0);
+  const sharedTotal = shared.reduce((s, e) => s + e.hours, 0);
   const variance = hoursVariancePct(logged, estimatedHours);
   const over = variance !== null && variance > 0;
   const pct = estimatedHours ? Math.min(100, Math.round((logged / estimatedHours) * 100)) : 0;
@@ -172,12 +270,15 @@ export function TimeCard({
       <div className="card-head">
         <h3 className="card-title">Time</h3>
         <span className="spacer" />
-        {!readOnly && <LogTimeDialog revisions={revisions} />}
+        {!readOnly && <LogTimeDialog revisions={revisions} shared={shared} currentUserId={currentUserId} />}
       </div>
       <div className="grid gap-3 p-4">
         <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 text-[12.5px]">
           <span><span className="muted">Estimated</span> <strong className="tabular">{formatHours(estimatedHours)}</strong></span>
           <span><span className="muted">Logged</span> <strong className="tabular">{formatHours(logged)}</strong></span>
+          {sharedTotal > 0 && (
+            <span><span className="muted">Shared</span> <strong className="tabular">{formatHours(sharedTotal)}</strong></span>
+          )}
           {variance !== null && (
             <span style={{ color: over ? "var(--red)" : "var(--green)", fontWeight: 600 }}>
               {over ? `+${variance}% over estimate` : `${100 + variance}% of estimate`}
@@ -241,6 +342,53 @@ export function TimeCard({
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+      {shared.length > 0 && (
+        <div style={{ borderTop: "1px solid var(--line-soft)" }}>
+          <div className="flex items-center gap-1.5 px-4 pb-1 pt-3 text-[12px] font-semibold">
+            Shared entries
+            <span className="font-normal text-[var(--color-text-3)]">— logged once for several drawings, not part of Logged</span>
+            <HelpTip topic="drawing-shared" />
+          </div>
+          <div className="table-wrap" style={{ maxHeight: 280 }}>
+            <table className="tbl tbl-list">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Engineer</th>
+                  <th>Rev</th>
+                  <th className="num">Hours</th>
+                  <th>With</th>
+                  {!readOnly && <th />}
+                </tr>
+              </thead>
+              <tbody>
+                {shared.map(e => (
+                  <tr key={e.id}>
+                    <td className="l-meta" style={{ whiteSpace: "nowrap" }}>{formatDate(e.workDate)}</td>
+                    <td className="l-title">
+                      {e.userName ?? "—"}
+                      {e.note && <div className="muted max-[701px]:[overflow-wrap:anywhere]" style={{ fontSize: 11.5 }}>{e.note}</div>}
+                    </td>
+                    <td className="mono muted l-meta">{e.revisionLabel}</td>
+                    <td className="num l-aside">{formatHours(e.hours)}</td>
+                    <td className="l-line" style={{ fontSize: 12 }}>
+                      <span className="muted min-[701px]:hidden">With </span>
+                      <OtherDrawings drawings={e.drawings} drawingId={drawingId} />
+                    </td>
+                    {!readOnly && (
+                      <td className="l-aside" style={{ width: 40 }}>
+                        {(canManageAll || e.userId === currentUserId) && (
+                          <div className="row-actions"><DeleteSharedButton entry={e} /></div>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

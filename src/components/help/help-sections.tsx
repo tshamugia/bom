@@ -239,7 +239,7 @@ export const HELP_SECTIONS: HelpSection[] = [
             {" "}An item leaves the list once it&apos;s done — there is nothing to tick off.
           </li>
           <li><strong>Deadlines</strong> — {role !== "viewer" && <>your drawings due in the next 14 days (late ones first) and </>}dates of the projects you manage in the next 30.</li>
-          <li><strong>Updates</strong> — what others did on your work in the last 30 days: comments, status changes, remarks (including those the automatic check raised), revisions issued to you{role !== "viewer" && <>, DXF checks, BOMs approved or handed to you</>}. Updates since your last visit are marked <span className="mw-new">New</span>; opening My work marks them seen.</li>
+          <li><strong>Updates</strong> — what others did on your work in the last 30 days: comments, status changes, remarks (including those the automatic check raised; a remark shared by several drawings shows once), revisions issued to you{role !== "viewer" && <>, DXF checks, BOMs approved or handed to you</>}. Updates since your last visit are marked <span className="mw-new">New</span>; opening My work marks them seen.</li>
           {role !== "viewer" && <li><strong>Waiting on others</strong> — your drawings sent for approval and how long they have waited.</li>}
         </ul>
         <p>The number on the bell is what needs you (to do and overdue) plus updates you haven&apos;t seen.</p>
@@ -510,7 +510,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     roles: EDITORS,
     body: () => (
       <>
-        <p>On <Link href="/drawings">Drawings</Link>, tick the drawings to change — the box in the header ticks every drawing shown, and shift-click ticks a range. A bar appears under the list with <Ui>Change status</Ui>, <Ui>Change owner</Ui> and <Ui>Change due date</Ui>.</p>
+        <p>On <Link href="/drawings">Drawings</Link>, tick the drawings to change — the box in the header ticks every drawing shown, and shift-click ticks a range. A bar appears under the list with <Ui>Change status</Ui>, <Ui>Change owner</Ui> and <Ui>Change due date</Ui>, and <Ui>Shared remark</Ui> and <Ui>Shared time</Ui> to write one remark or one time entry for all of them — see <a href="#drawing-shared">below</a>.</p>
         <ul>
           <li>Each drawing follows the same rules as changing it on its own page. Before you save, the dialog says how many will change and lists the ones that won&apos;t, with the reason — e.g. Approved A before the internal check, or an owner who is approving the drawing.</li>
           <li><Ui>Need to be approved</Ui> asks one engineer to approve all of them; drawings that engineer owns are skipped. The approving engineer can approve many at once with <Ui>Awaiting approval</Ui>, or send them back with a comment.</li>
@@ -519,6 +519,30 @@ export const HELP_SECTIONS: HelpSection[] = [
           <li>Codes aren&apos;t edited here — a drawing gets its code from its name when it is created.</li>
         </ul>
         <p>Changing the filters or the status tab clears the ticks.</p>
+      </>
+    ),
+  },
+  {
+    ...topic("drawing-shared"),
+    group: "Drawings",
+    roles: EDITORS,
+    body: () => (
+      <>
+        <p>When several drawings have the same problem, or you worked on several at once, tick them on <Link href="/drawings">Drawings</Link> (at least 2) and use <Ui>Shared remark</Ui> or <Ui>Shared time</Ui> in the bar under the list. Either one is saved for all the drawings or — if one of them was archived meanwhile — for none.</p>
+        <p><strong>Shared remark</strong></p>
+        <ul>
+          <li>Each drawing gets its own remark on its latest revision, with the same text and source (client, site or internal). The drawings may be in different projects.</li>
+          <li>On a drawing&apos;s <Ui>Remarks</Ui> card it is marked <Ui>Shared · 4 drawings</Ui> and lists the other drawings, each open or resolved.</li>
+          <li>Each drawing resolves its remark on its own, when its revision fixes it — resolving it on one leaves the others open. Open remark counts, My work and the bell count it once per drawing, like any remark.</li>
+        </ul>
+        <p><strong>Shared time</strong></p>
+        <ul>
+          <li>For drawings of <strong>one project</strong> only, so the project total stays clear. Hours and date follow the usual rules: more than 0, at most 24, not in the future.</li>
+          <li>The hours are logged <strong>once</strong> and not split. Each drawing&apos;s <Ui>Time</Ui> card shows them under <Ui>Shared entries</Ui> and as <Ui>Shared</Ui> next to <Ui>Logged</Ui> — they don&apos;t count in the drawing&apos;s Logged hours or against its estimate.</li>
+          <li>The project&apos;s hours and the overall total on the dashboard and in the reports add each shared entry once: 5 h on four drawings adds 5 h, not 20. The owner and discipline breakdowns show each drawing&apos;s own hours only.</li>
+          <li>You can still log your own hours on any of the drawings, on the same revision or a later one. If you already have shared time on that revision that day, <Ui>Log time</Ui> reminds you, so the same hours aren&apos;t logged twice.</li>
+          <li>Removing a shared entry (your own, or any as an admin) removes it from every drawing at once; the dialog lists them.</li>
+        </ul>
       </>
     ),
   },

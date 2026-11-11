@@ -20,6 +20,8 @@ export type DrawingTableRow = {
   dueDate: string | null;
   estimatedHours: number | null;
   loggedHours: number;
+  /** Shared entries the drawing is in — hinted next to its hours, never added to them. */
+  sharedHours: number;
   openRemarks: number;
   updatedAt: Date;
   lastModifiedByName: string | null;
@@ -164,6 +166,9 @@ export function DrawingsTable({
                       </>
                     ) : (
                       <span className="muted">—</span>
+                    )}
+                    {r.sharedHours > 0 && (
+                      <div className="muted" style={{ fontSize: 11 }}>+{roundHours(r.sharedHours)} shared</div>
                     )}
                   </td>
                 )}

@@ -7,10 +7,12 @@ import {
   countMyWork,
   describeUpdate,
   dueLabel,
+  foldRaisedRemarks,
   groupBomTasks,
   updatesSince,
   type MyDrawing,
   type ProjectDate,
+  type RaisedRemark,
   type RawUpdate,
 } from "@/lib/my-work";
 
@@ -194,5 +196,36 @@ describe("describeUpdate", () => {
       ...base, source: "bom-owner", id: "bom-owner:1", bomId: "b1", projectId: "p1", bomName: "Main BOM", revisionLetter: "3",
     });
     expect(handed).toMatchObject({ kind: "bom-owner", verb: "handed you", subjectRev: "P03" });
+  });
+});
+
+describe("foldRaisedRemarks", () => {
+  const raised = (over: Partial<RaisedRemark>): RaisedRemark => ({
+    remarkId: "r1", sharedGroupId: null, sharedTotal: 1,
+    at: new Date("2026-10-19T09:00:00Z"), actorName: "Nino", projectCode: "BS-001",
+    drawingId: "d1", code: "CC-001", name: "Cameras", revisionNumber: 1, revisionLabel: "P01",
+    remarkSource: "client", body: "Use the new legend", resolution: null,
+    ...over,
+  });
+
+  test("a remark shared by several of the user's drawings is one update", () => {
+    const updates = foldRaisedRemarks([
+      raised({ remarkId: "r1", sharedGroupId: "g1", sharedTotal: 4, drawingId: "d1", code: "CC-001" }),
+      raised({ remarkId: "r2", sharedGroupId: "g1", sharedTotal: 4, drawingId: "d2", code: "CC-002" }),
+      raised({ remarkId: "r3", body: "Own remark", at: new Date("2026-10-19T10:00:00Z") }),
+    ]);
+    expect(updates.map(u => u.id)).toEqual(["remark:r3", "group:g1"]);
+    expect(updates[1].shared).toEqual({ total: 4, codes: ["CC-001", "CC-002"] });
+    expect(updates[0].shared).toBeNull();
+
+    const line = describeUpdate(updates[1]);
+    expect(line).toMatchObject({
+      kind: "remark",
+      verb: "raised a shared client remark on",
+      subject: "CC-001",
+      subjectRev: "+3",
+      body: "Use the new legend",
+      context: "BS-001 · shared by 4 drawings · yours: CC-001, CC-002",
+    });
   });
 });

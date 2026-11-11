@@ -253,6 +253,13 @@
       "when": 1794340958521,
       "tag": "0035_drawing_checks",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794416245991,
+      "tag": "0036_shared_drawing_entries",
+      "breakpoints": true
     }
   ]
 }

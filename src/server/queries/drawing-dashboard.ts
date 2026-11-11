@@ -8,12 +8,14 @@ import {
   boms,
   drawingEvents,
   drawingRevisions,
+  drawingSharedTimeEntries,
+  drawingSharedTimeMembers,
   drawingTransmittals,
   drawings,
   projects,
 } from "@/db/schema";
 import { todayIso } from "@/lib/drawing-status";
-import type { DashboardDrawing } from "@/lib/drawing-dashboard";
+import type { DashboardDrawing, SharedTimeEntry } from "@/lib/drawing-dashboard";
 import { requireSession } from "../auth-context";
 import { bomImpactRevisions, isOutdatedSql } from "../lib/bom-drawing-outdated";
 import { listDrawings } from "./drawings";
@@ -106,6 +108,37 @@ async function countOpenTransmittals(projectId?: string) {
   return row?.n ?? 0;
 }
 
+/**
+ * Shared time entries with their live drawings (in one project, or all), for
+ * `summarizeDrawings` to count once. Entries whose drawings were all archived
+ * drop out. No session check: callers have done it.
+ */
+export async function listSharedTimeForTotals(opts: { projectId?: string } = {}): Promise<SharedTimeEntry[]> {
+  const rows = await db
+    .select({
+      id: drawingSharedTimeEntries.id,
+      projectId: drawingSharedTimeEntries.projectId,
+      hours: drawingSharedTimeEntries.hours,
+      drawingId: drawingSharedTimeMembers.drawingId,
+    })
+    .from(drawingSharedTimeEntries)
+    .innerJoin(drawingSharedTimeMembers, eq(drawingSharedTimeMembers.sharedEntryId, drawingSharedTimeEntries.id))
+    .innerJoin(drawings, eq(drawings.id, drawingSharedTimeMembers.drawingId))
+    .innerJoin(projects, eq(projects.id, drawings.projectId))
+    .where(and(
+      isNull(drawings.deletedAt),
+      isNull(projects.deletedAt),
+      opts.projectId ? eq(drawings.projectId, opts.projectId) : undefined,
+    ));
+  const byId = new Map<string, SharedTimeEntry>();
+  for (const r of rows) {
+    const e = byId.get(r.id) ?? { id: r.id, projectId: r.projectId, hours: r.hours, drawingIds: [] };
+    e.drawingIds.push(r.drawingId);
+    byId.set(r.id, e);
+  }
+  return [...byId.values()];
+}
+
 export async function getDrawingDashboard(opts: { projectId?: string } = {}) {
   await requireSession();
   const rows = await listDrawings({ projectIds: opts.projectId ? [opts.projectId] : undefined });
@@ -141,15 +174,17 @@ export async function getDrawingDashboard(opts: { projectId?: string } = {}) {
     dueDate: r.dueDate,
     estimatedHours: r.estimatedHours,
     loggedHours: r.loggedHours,
+    sharedHours: r.sharedHours,
     openRemarks: r.openRemarks,
     needApprovalSince: since.get(r.revisionId) ?? null,
   }));
 
-  const [outdatedBoms, openTransmittals] = await Promise.all([
+  const [outdatedBoms, openTransmittals, sharedTime] = await Promise.all([
     listOutdatedBomReferences({ projectId: opts.projectId }),
     countOpenTransmittals(opts.projectId),
+    listSharedTimeForTotals({ projectId: opts.projectId }),
   ]);
-  return { drawings: drawingRows, outdatedBoms, openTransmittals };
+  return { drawings: drawingRows, sharedTime, outdatedBoms, openTransmittals };
 }
 
 export type DrawingDashboardData = Awaited<ReturnType<typeof getDrawingDashboard>>;

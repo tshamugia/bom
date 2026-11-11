@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { requireSession } from "@/server/auth-context";
 import { getDashboardData } from "@/server/queries/dashboard-report";
 import { AutoPrint } from "@/components/drawings/auto-print";
-import { DUE_SOON_DAYS, isOverdueOn, type GroupSummary } from "@/lib/drawing-dashboard";
+import { DUE_SOON_DAYS, SHARED_HOURS_COLUMN_NOTE, isOverdueOn, sharedTimeFootnote, type GroupSummary } from "@/lib/drawing-dashboard";
 import { DRAWING_STATUSES, DRAWING_STATUS_LABEL } from "@/lib/drawing-status";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { roundHours } from "@/lib/drawing-meta";
@@ -31,6 +31,7 @@ const CSS = `
   .report .muted { color: #6b7180; }
   .report .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
   .report .empty { color: #6b7180; padding: 6px 7px; }
+  .report .note { color: #6b7180; padding: 4px 7px 0; font-size: 10.5px; }
   .report-toolbar { position: sticky; top: 0; display: flex; gap: 12px; align-items: center; padding: 10px 28px;
     background: #f3f4f7; border-bottom: 1px solid #dfe2e8; font-size: 12.5px; color: #4b5160; }
   .report-toolbar a { color: inherit; }
@@ -44,8 +45,9 @@ const CSS = `
   }
 `;
 
-function GroupTable({ title, groups }: { title: string; groups: GroupSummary[] }) {
+function GroupTable({ title, groups, note }: { title: string; groups: GroupSummary[]; note?: string }) {
   return (
+    <>
     <table>
       <thead>
         <tr>
@@ -62,12 +64,17 @@ function GroupTable({ title, groups }: { title: string; groups: GroupSummary[] }
             <td className="num">{g.closed}</td>
             <td className={`num ${g.overdue ? "late" : ""}`}>{g.overdue}</td>
             <td className="num">{g.openRemarks}</td>
-            <td className="num">{roundHours(g.loggedHours)} / {roundHours(g.estimatedHours)}</td>
+            <td className="num">
+              {roundHours(g.loggedHours)} / {roundHours(g.estimatedHours)}
+              {g.sharedHours > 0 && <div className="muted">incl. {roundHours(g.sharedHours)} shared</div>}
+            </td>
             <td className="num">{g.total ? Math.round((g.closed / g.total) * 100) : 0}%</td>
           </tr>
         ))}
       </tbody>
     </table>
+    {note && <div className="note">{note}</div>}
+    </>
   );
 }
 
@@ -90,7 +97,8 @@ export default async function DashboardReportPage({ searchParams }: { searchPara
     ["Internal approval", t.inReview],
     ["Awaiting approval", t.awaitingApproval],
     ["Open remarks", t.openRemarks],
-    ["Hours logged / est.", `${roundHours(t.loggedHours)} / ${roundHours(t.estimatedHours)}`],
+    // Shared time is in the logged total once, however many drawings it covers.
+    ["Hours logged / est.", `${roundHours(t.loggedHours)} / ${roundHours(t.estimatedHours)}${t.sharedHours ? ` · incl. ${roundHours(t.sharedHours)} shared` : ""}`],
     ["Outdated BOM links", data.outdatedBoms.length],
   ];
   const register = [...data.drawings].sort(
@@ -242,7 +250,7 @@ export default async function DashboardReportPage({ searchParams }: { searchPara
         </div>
 
         <h2>Engineers</h2>
-        <GroupTable title="Owner" groups={s.byOwner} />
+        <GroupTable title="Owner" groups={s.byOwner} note={sharedTimeFootnote(t.sharedHours, "owner")} />
 
         {data.outdatedBoms.length > 0 && (
           <>
@@ -269,7 +277,7 @@ export default async function DashboardReportPage({ searchParams }: { searchPara
           <thead>
             <tr>
               <th>Project</th><th>Code</th><th>Name</th><th>Discipline</th><th>Rev</th><th>Status</th>
-              <th>Owner</th><th>Due</th><th className="num">Est. h</th><th className="num">Logged h</th><th className="num">Remarks</th>
+              <th>Owner</th><th>Due</th><th className="num">Est. h</th><th className="num">Logged h</th><th className="num">Shared h</th><th className="num">Remarks</th>
             </tr>
           </thead>
           <tbody>
@@ -285,11 +293,13 @@ export default async function DashboardReportPage({ searchParams }: { searchPara
                 <td className={isOverdueOn(d, today) ? "late" : undefined}>{d.dueDate ? formatDate(d.dueDate) : "—"}</td>
                 <td className="num">{d.estimatedHours ?? "—"}</td>
                 <td className="num">{roundHours(d.loggedHours)}</td>
+                <td className="num muted">{d.sharedHours ? roundHours(d.sharedHours) : ""}</td>
                 <td className="num">{d.openRemarks || ""}</td>
               </tr>
             ))}
           </tbody>
         </table>
+        {register.some(d => d.sharedHours > 0) && <div className="note">{SHARED_HOURS_COLUMN_NOTE}</div>}
       </div>
     </>
   );

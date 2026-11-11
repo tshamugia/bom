@@ -1,6 +1,13 @@
 import ExcelJS from "exceljs";
 import { DRAWING_STATUSES, DRAWING_STATUS_LABEL } from "./drawing-status";
-import { isOverdueOn, type DashboardDrawing, type DrawingSummary, type GroupSummary } from "./drawing-dashboard";
+import {
+  SHARED_HOURS_COLUMN_NOTE,
+  isOverdueOn,
+  sharedTimeFootnote,
+  type DashboardDrawing,
+  type DrawingSummary,
+  type GroupSummary,
+} from "./drawing-dashboard";
 import { formatBomRevision } from "./bom-revision";
 
 export type ProjectReportRow = {
@@ -65,7 +72,16 @@ function title(ws: ExcelJS.Worksheet, row: number, text: string) {
   return row + 1;
 }
 
-function groupRows(groups: GroupSummary[]) {
+/** A grey line of explanation, e.g. under a table; `row` is where `addTable` left off. */
+function note(ws: ExcelJS.Worksheet, row: number, text: string | undefined) {
+  if (!text) return row;
+  ws.getCell(row, 1).value = text;
+  ws.getCell(row, 1).font = { italic: true, color: { argb: "FF6B7180" } };
+  return row + 2;
+}
+
+/** `shared` adds the column with the shared part of the logged hours — project groups only. */
+function groupRows(groups: GroupSummary[], shared = false) {
   return groups.map(g => [
     g.label,
     g.total,
@@ -75,11 +91,12 @@ function groupRows(groups: GroupSummary[]) {
     g.openRemarks,
     Math.round(g.estimatedHours * 10) / 10,
     Math.round(g.loggedHours * 10) / 10,
+    ...(shared ? [Math.round(g.sharedHours * 10) / 10] : []),
     g.total ? Math.round((g.closed / g.total) * 100) : 0,
   ]);
 }
 
-const GROUP_HEADERS = (first: string) => [
+const GROUP_HEADERS = (first: string, shared = false) => [
   { header: first, width: 26 },
   { header: "Drawings", width: 10, numeric: true },
   { header: "Open", width: 8, numeric: true },
@@ -87,7 +104,8 @@ const GROUP_HEADERS = (first: string) => [
   { header: "Overdue", width: 10, numeric: true },
   { header: "Open remarks", width: 13, numeric: true },
   { header: "Est. hours", width: 11, numeric: true },
-  { header: "Logged hours", width: 13, numeric: true },
+  { header: shared ? "Logged hours (incl. shared)" : "Logged hours", width: shared ? 26 : 13, numeric: true },
+  ...(shared ? [{ header: "of which shared", width: 15, numeric: true }] : []),
   { header: "% approved", width: 11, numeric: true },
 ];
 
@@ -132,7 +150,9 @@ export async function buildDashboardWorkbook(input: {
     ["Open remarks", s.totals.openRemarks],
     ["Transmittals not acknowledged", input.openTransmittals],
     ["Estimated hours", Math.round(s.totals.estimatedHours * 10) / 10],
-    ["Logged hours", Math.round(s.totals.loggedHours * 10) / 10],
+    // Shared time is in the logged total once, however many drawings it covers.
+    ["Logged hours (incl. shared)", Math.round(s.totals.loggedHours * 10) / 10],
+    ["  of which shared, counted once", Math.round(s.totals.sharedHours * 10) / 10],
     ["BOMs built from outdated drawings", input.outdatedBoms.length],
   ];
   row = addTable(sum, row, [{ header: "Figure", width: 34 }, { header: "Value", width: 14, numeric: true }], kpis);
@@ -204,15 +224,15 @@ export async function buildDashboardWorkbook(input: {
 
   // ── Groupings ──────────────────────────────
   const groups = wb.addWorksheet("Drawings by project");
-  addTable(groups, 1, GROUP_HEADERS("Project"), groupRows(s.byProject));
+  addTable(groups, 1, GROUP_HEADERS("Project", true), groupRows(s.byProject, true));
   const owners = wb.addWorksheet("By engineer");
-  addTable(owners, 1, GROUP_HEADERS("Owner"), groupRows(s.byOwner));
+  note(owners, addTable(owners, 1, GROUP_HEADERS("Owner"), groupRows(s.byOwner)), sharedTimeFootnote(s.totals.sharedHours, "owner"));
   const disc = wb.addWorksheet("By discipline");
-  addTable(disc, 1, GROUP_HEADERS("Discipline"), groupRows(s.byDiscipline));
+  note(disc, addTable(disc, 1, GROUP_HEADERS("Discipline"), groupRows(s.byDiscipline)), sharedTimeFootnote(s.totals.sharedHours, "discipline"));
 
   // ── Register ───────────────────────────────
   const reg = wb.addWorksheet("Drawing register");
-  addTable(
+  const regEnd = addTable(
     reg,
     1,
     [
@@ -227,6 +247,7 @@ export async function buildDashboardWorkbook(input: {
       { header: "Overdue", width: 9 },
       { header: "Est. hours", width: 11, numeric: true },
       { header: "Logged hours", width: 13, numeric: true },
+      { header: "Shared hours", width: 13, numeric: true },
       { header: "Open remarks", width: 13, numeric: true },
     ],
     [...input.drawings]
@@ -243,11 +264,13 @@ export async function buildDashboardWorkbook(input: {
         isOverdueOn(d, today) ? "Yes" : "",
         d.estimatedHours,
         Math.round(d.loggedHours * 100) / 100,
+        d.sharedHours ? Math.round(d.sharedHours * 100) / 100 : null,
         d.openRemarks,
       ]),
   );
+  if (input.drawings.some(d => d.sharedHours > 0)) note(reg, regEnd, SHARED_HOURS_COLUMN_NOTE);
   reg.views = [{ state: "frozen", ySplit: 1 }];
-  reg.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 12 } };
+  reg.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 13 } };
   reg.eachRow((r, i) => {
     if (i > 1 && r.getCell(9).value === "Yes") r.getCell(8).font = { color: RED, bold: true };
   });

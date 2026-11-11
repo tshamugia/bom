@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,49 @@ function CheckTags({ r }: { r: RemarkRow }) {
       {r.checkRuleId && <span className="mono muted text-[11.5px]">{r.checkRuleId}</span>}
       {r.checkSeverity === "WARNING" && <Badge tone="warning">{CHECK_SEVERITY_LABEL.WARNING}</Badge>}
     </>
+  );
+}
+
+/** A remark written for several drawings at once: says so in the remark's header. */
+function SharedTag({ r }: { r: RemarkRow }) {
+  if (!r.shared) return null;
+  return <Badge tone="accent">Shared · {r.shared.length} drawings</Badge>;
+}
+
+/**
+ * The drawings a shared remark was written for, each open or resolved on its
+ * own. Listed open while short; a long list folds away.
+ */
+function SharedDrawings({ r, drawingId }: { r: RemarkRow; drawingId: string }) {
+  if (!r.shared) return null;
+  const others = r.shared.filter(s => s.drawingId !== drawingId);
+  const open = others.filter(s => !s.resolved).length;
+  return (
+    <details className="text-[12px]" open={others.length <= 6}>
+      <summary className="cursor-pointer text-[var(--color-text-2)]">
+        Also on {others.length} other drawing{others.length === 1 ? "" : "s"}
+        {others.length > 0 && <> · {open} open</>}
+      </summary>
+      <ul className="mt-1 grid gap-0.5">
+        {others.map(s => (
+          <li key={s.drawingId} className="flex min-w-0 items-center gap-1.5">
+            {s.archived ? (
+              <span className="mono muted shrink-0">{s.code}</span>
+            ) : (
+              <Link href={`/drawings/${s.drawingId}#remarks`} className="mono shrink-0 font-semibold hover:underline">{s.code}</Link>
+            )}
+            <span className="muted min-w-0 truncate">{s.name}</span>
+            <span className="ml-auto shrink-0">
+              {s.archived
+                ? <span className="muted">archived</span>
+                : s.resolved
+                  ? <span style={{ color: "var(--green)" }}>resolved</span>
+                  : <span style={{ color: "var(--amber)", fontWeight: 600 }}>open</span>}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }
 
@@ -75,7 +119,7 @@ function AddRemarkForm({ revisions, onDone }: { revisions: RevisionOption[]; onD
   );
 }
 
-function OpenRemark({ r, readOnly }: { r: RemarkRow; readOnly: boolean }) {
+function OpenRemark({ r, readOnly, drawingId }: { r: RemarkRow; readOnly: boolean; drawingId: string }) {
   const [resolving, setResolving] = useState(false);
   const [resolution, setResolution] = useState("");
   const [pending, start] = useTransition();
@@ -98,6 +142,7 @@ function OpenRemark({ r, readOnly }: { r: RemarkRow; readOnly: boolean }) {
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone={SOURCE_TONE[r.source]}>{REMARK_SOURCE_LABEL[r.source]}</Badge>
         <CheckTags r={r} />
+        <SharedTag r={r} />
         <span className="mono muted text-[11.5px]">{r.revisionLabel}</span>
         <span className="muted text-[11.5px]">
           {r.source === "check" ? formatDateTime(r.createdAt) : <>{r.raisedByName ?? "—"} · {formatDateTime(r.createdAt)}</>}
@@ -110,6 +155,7 @@ function OpenRemark({ r, readOnly }: { r: RemarkRow; readOnly: boolean }) {
         )}
       </div>
       <div className="whitespace-pre-line text-[13px] [overflow-wrap:anywhere]">{r.body}</div>
+      <SharedDrawings r={r} drawingId={drawingId} />
       {resolving && (
         <div className="grid gap-2">
           <textarea
@@ -130,13 +176,14 @@ function OpenRemark({ r, readOnly }: { r: RemarkRow; readOnly: boolean }) {
   );
 }
 
-function ResolvedRemark({ r, readOnly }: { r: RemarkRow; readOnly: boolean }) {
+function ResolvedRemark({ r, readOnly, drawingId }: { r: RemarkRow; readOnly: boolean; drawingId: string }) {
   const [pending, start] = useTransition();
   const router = useRouter();
   return (
     <div className="grid gap-1 px-4 py-2.5" style={{ borderTop: "1px solid var(--line-soft)" }}>
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone="success">Resolved</Badge>
+        <SharedTag r={r} />
         <span className="muted text-[11.5px]">
           {REMARK_SOURCE_LABEL[r.source]} · raised on {r.revisionLabel}
           {r.resolvedInRevisionNumber ? `, resolved in ${r.resolvedInRevisionLabel}` : ""}
@@ -161,6 +208,7 @@ function ResolvedRemark({ r, readOnly }: { r: RemarkRow; readOnly: boolean }) {
         )}
       </div>
       <div className="whitespace-pre-line text-[12.5px] text-[var(--color-text-2)] [overflow-wrap:anywhere]">{r.body}</div>
+      <SharedDrawings r={r} drawingId={drawingId} />
       {r.resolution && (
         <div className="whitespace-pre-line rounded-md bg-[var(--color-surface-2)] px-2.5 py-1.5 text-[12.5px] [overflow-wrap:anywhere]">{r.resolution}</div>
       )}
@@ -169,10 +217,12 @@ function ResolvedRemark({ r, readOnly }: { r: RemarkRow; readOnly: boolean }) {
 }
 
 export function RemarksCard({
+  drawingId,
   remarks,
   revisions,
   readOnly = false,
 }: {
+  drawingId: string;
   remarks: RemarkRow[];
   revisions: RevisionOption[];
   readOnly?: boolean;
@@ -197,7 +247,7 @@ export function RemarksCard({
         )}
       </div>
       {adding && <AddRemarkForm revisions={revisions} onDone={() => setAdding(false)} />}
-      {open.map(r => <OpenRemark key={r.id} r={r} readOnly={readOnly} />)}
+      {open.map(r => <OpenRemark key={r.id} r={r} readOnly={readOnly} drawingId={drawingId} />)}
       {open.length === 0 && !adding && (
         <div className="muted px-4 py-3 text-[12.5px]">No open remarks.</div>
       )}
@@ -206,7 +256,7 @@ export function RemarksCard({
           <summary className="cursor-pointer px-4 py-2.5 text-[12.5px] text-[var(--color-text-2)]">
             {resolved.length} resolved
           </summary>
-          {resolved.map(r => <ResolvedRemark key={r.id} r={r} readOnly={readOnly} />)}
+          {resolved.map(r => <ResolvedRemark key={r.id} r={r} readOnly={readOnly} drawingId={drawingId} />)}
         </details>
       )}
     </div>

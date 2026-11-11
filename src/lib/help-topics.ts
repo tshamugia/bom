@@ -18,6 +18,7 @@ export const HELP_TOPIC_IDS = [
   "drawing-statuses",
   "drawing-approval",
   "drawing-bulk",
+  "drawing-shared",
   "drawing-pdf",
   "drawing-check",
   "transmittals",
@@ -90,7 +91,12 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
   "drawing-bulk": {
     title: "Changing many drawings at once",
     summary:
-      "Tick drawings on the Drawings list (shift-click ticks a range), then change their status, owner or due date together. Each drawing follows the usual rules: the dialog lists the ones that can't change and why, and only the others are saved.",
+      "Tick drawings on the Drawings list (shift-click ticks a range), then change their status, owner or due date together. Each drawing follows the usual rules: the dialog lists the ones that can't change and why, and only the others are saved. Shared remark and Shared time write one entry for all of them.",
+  },
+  "drawing-shared": {
+    title: "Shared remarks and shared time",
+    summary:
+      "A shared remark goes on every ticked drawing and each closes it on its own. Shared time (one project only) is logged once and not split: each drawing shows it apart from its own Logged hours and estimate, and the project and overall totals count it once — 5 h on four drawings adds 5 h, not 20.",
   },
   "drawing-pdf": {
     title: "Drawing PDF",

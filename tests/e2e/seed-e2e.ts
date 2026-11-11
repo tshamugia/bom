@@ -7,12 +7,14 @@
 // come from `SEED_MODE=insert src/db/seed-items.ts`, which only adds missing ones.
 //
 // Each spec that changes a BOM gets its own project, so the specs don't depend on
-// the order they run in.
+// the order they run in. drawings-shared.spec.ts gets two projects of drawings.
 import { eq, inArray, like } from "drizzle-orm";
 import { db } from "@/db/client";
-import { bomLines, bomRevisions, bomSections, boms, categories, items, projects, user, vendors } from "@/db/schema";
+import {
+  bomLines, bomRevisions, bomSections, boms, categories, drawingRevisions, drawings, items, projects, user, vendors,
+} from "@/db/schema";
 import { createUserDirect } from "@/server/lib/create-user-direct";
-import { E2E_SCENARIOS } from "./e2e-data";
+import { E2E_DRAWINGS, E2E_SCENARIOS } from "./e2e-data";
 
 const ROOT_EMAIL = process.env.ROOT_USER_EMAIL ?? "t.shamugia@insta.ge";
 const ROOT_PASSWORD = process.env.ROOT_USER_PASSWORD ?? "Password123";
@@ -90,9 +92,28 @@ async function main() {
         }),
       );
     }
+
+    // Drawings (with revision P01) for the shared remark / shared time spec.
+    const sets = [
+      { project: E2E_DRAWINGS.project, code: E2E_DRAWINGS.projectCode, drawings: E2E_DRAWINGS.drawings },
+      { project: E2E_DRAWINGS.otherProject, code: E2E_DRAWINGS.otherProjectCode, drawings: [E2E_DRAWINGS.other] },
+    ];
+    for (const set of sets) {
+      const [project] = await tx
+        .insert(projects)
+        .values({ code: set.code, name: set.project, ownerId, clientName: "E2E Client" })
+        .returning({ id: projects.id });
+      for (const d of set.drawings) {
+        const [drawing] = await tx
+          .insert(drawings)
+          .values({ projectId: project.id, code: d.code, name: d.name, ownerId, estimatedHours: 4, createdById: ownerId, lastModifiedById: ownerId })
+          .returning({ id: drawings.id });
+        await tx.insert(drawingRevisions).values({ drawingId: drawing.id, number: 1, commitMessage: "First issue", createdById: ownerId });
+      }
+    }
   });
 
-  console.log(`Seeded ${E2E_SCENARIOS.length} E2E projects for ${ROOT_EMAIL}`);
+  console.log(`Seeded ${E2E_SCENARIOS.length + 2} E2E projects for ${ROOT_EMAIL}`);
   process.exit(0);
 }
 

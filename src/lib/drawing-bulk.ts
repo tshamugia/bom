@@ -82,6 +82,52 @@ export function planBulkOwner<T extends BulkDrawing>(rows: T[], ownerId: string)
   return plan;
 }
 
+// ── Shared remarks and shared time (issue #17) ────────────────────────────
+// Written once for all the selected drawings instead of changing each one,
+// so there is nothing to skip: either the selection qualifies or it doesn't.
+
+/** One drawing takes an ordinary remark or time entry on its own page. */
+export const MIN_SHARED_DRAWINGS = 2;
+
+export type SharedBlock = "too-few" | "too-many" | "projects";
+
+export const SHARED_BLOCK_MESSAGE: Record<SharedBlock, string> = {
+  "too-few": "Select at least 2 drawings — for one drawing, use its own page.",
+  "too-many": `Select at most ${MAX_BULK_DRAWINGS} drawings.`,
+  "projects": "Shared time is logged on drawings of one project, so the project total stays clear — select drawings of one project only.",
+};
+
+function countBlock(n: number): SharedBlock | null {
+  if (n < MIN_SHARED_DRAWINGS) return "too-few";
+  if (n > MAX_BULK_DRAWINGS) return "too-many";
+  return null;
+}
+
+/** Why one remark can't be written for these drawings, or null. Drawings of different projects may share one. */
+export function sharedRemarkBlock(rows: readonly unknown[]): SharedBlock | null {
+  return countBlock(rows.length);
+}
+
+/** Why one time entry can't cover these drawings, or null. They must all be in one project. */
+export function sharedTimeBlock(rows: readonly { projectId: string }[]): SharedBlock | null {
+  return countBlock(rows.length) ?? (new Set(rows.map(r => r.projectId)).size > 1 ? "projects" : null);
+}
+
+/** What the Log time dialog needs to know about a shared entry the drawing is in. */
+export type SharedTimeHint = { userId: string | null; revisionId: string; workDate: string };
+
+/**
+ * The shared entry (if any) in which this user already logged time on this
+ * revision that day — Log time mentions it, so nobody counts the same hours
+ * twice by accident. It blocks nothing: an individual entry is always allowed.
+ */
+export function sameDaySharedTime<T extends SharedTimeHint>(
+  shared: readonly T[],
+  at: { userId: string; revisionId: string; workDate: string },
+): T | null {
+  return shared.find(s => s.userId === at.userId && s.revisionId === at.revisionId && s.workDate === at.workDate) ?? null;
+}
+
 /** `dueDate` null clears it. */
 export function planBulkDueDate<T extends BulkDrawing>(rows: T[], dueDate: string | null): BulkPlan<T> {
   const plan: BulkPlan<T> = { ready: [], skipped: [] };
