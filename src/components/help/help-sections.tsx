@@ -235,7 +235,7 @@ export const HELP_SECTIONS: HelpSection[] = [
           <li>
             <strong>To do</strong> — what waits for you:
             {role !== "viewer"
-              ? <> drawings you were asked to approve, revisions issued to you to confirm, open remarks on your drawings (the automatic DXF check&apos;s too) and your BOMs built from older drawings.</>
+              ? <> drawings you were asked to approve, revisions issued to you to confirm, open remarks on your drawings (the automatic DXF check&apos;s too), DXFs you checked whose title block names another sheet (confirm the file or mark it as wrong) and your BOMs built from older drawings.</>
               : <> drawing revisions issued to you to confirm.</>}
             {" "}An item leaves the list once it&apos;s done — there is nothing to tick off.
           </li>

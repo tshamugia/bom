@@ -29,6 +29,8 @@ function statusTone(r: DrawingCheckRunRow): Tone {
 
 /** What the title block said, when it didn't settle which drawing the file is. */
 function sheetNote(run: DrawingCheckRunRow, sheetCode: string | null): string | null {
+  // Once someone confirmed the file, "Confirmed as this drawing's file" says the rest.
+  if (run.sheetCheck === "mismatch" && run.status !== "held") return null;
   const found = run.titleBlockSheet ? normalizeSheetCode(run.titleBlockSheet) : null;
   return sheetCheckNote({ verdict: run.sheetCheck, found, sheetCode });
 }

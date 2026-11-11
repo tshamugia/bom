@@ -88,11 +88,11 @@ test("counts add up to the bell: to do + overdue + new updates", () => {
     [],
     TODAY,
   );
-  const counts = countMyWork({ approvals: 2, receipts: 1, remarks: 1, boms: 0, deadlines, newUpdates: 3, today: TODAY });
+  const counts = countMyWork({ approvals: 2, receipts: 1, remarks: 1, boms: 0, checks: 1, deadlines, newUpdates: 3, today: TODAY });
   expect(counts).toEqual({
-    approvals: 2, receipts: 1, remarks: 1, boms: 0, todo: 4, overdue: 1, dueSoon: 1, newUpdates: 3,
+    approvals: 2, receipts: 1, remarks: 1, boms: 0, checks: 1, todo: 5, overdue: 1, dueSoon: 1, newUpdates: 3,
   });
-  expect(bellCount(counts)).toBe(8);
+  expect(bellCount(counts)).toBe(9);
 });
 
 test("groupBomTasks gives one task per BOM with each outdated drawing once", () => {
