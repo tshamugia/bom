@@ -6,10 +6,13 @@ import { mockSession } from "@/../tests/test-helpers/auth";
 import { db } from "@/db/client";
 import {
   SYSTEM_SETTINGS_ID, auditLog, drawingCheckRuns, drawingDisciplines, drawingEvents, drawingRemarks, drawingRevisions,
-  drawings, projects, systemSettings,
+  drawingTransmittals, drawings, projects, systemSettings,
 } from "@/db/schema";
 import { CHECK_UPLOAD_BLOCK_MESSAGE } from "@/lib/drawing-checks";
-import { SHEET_CODE_FORMAT_ERROR, oldProjectCodeReason } from "@/lib/drawing-check-link";
+import {
+  CHECK_DECIDE_ERROR, SHEET_CODE_FORMAT_ERROR, SHEET_CODE_LOCKED_ERROR, oldProjectCodeReason,
+} from "@/lib/drawing-check-link";
+import { requireSession } from "@/server/auth-context";
 
 // Issue #18, bulk upload and file-to-drawing linking: sheet codes, the title
 // block held against them, "Wrong file", the bulk plan and a busy checker.
@@ -128,6 +131,9 @@ const openRules = async (drawingId: string) =>
     .orderBy(drawingRemarks.checkRuleId)).map(r => r.rule);
 
 const runOf = async (runId: string) => (await db.select().from(drawingCheckRuns).where(eq(drawingCheckRuns.id, runId)))[0];
+/** The drawing goes out (NAMING §5's "first issue"): a transmittal to someone outside the app. */
+const issue = (drawingId: string, revisionId: string) =>
+  db.insert(drawingTransmittals).values({ drawingId, revisionId, purpose: "information", externalName: "Site" });
 const sheetOf = async (drawingId: string) =>
   (await db.select({ sheetCode: drawings.sheetCode }).from(drawings).where(eq(drawings.id, drawingId)))[0].sheetCode;
 
@@ -185,6 +191,35 @@ test("sheet codes are typed in the drawing form, checked and unique per project"
   expect(event.body).toBe("Sheet code: — → ZZ-01-FA-102");
 });
 
+test("after the first issue only an admin changes a sheet code; giving one to a drawing without stays open", async () => {
+  const { me, project } = await setup();
+  const [disc] = await db.insert(drawingDisciplines).values({ name: `Fire ${Date.now()}` }).returning();
+  const fields = { projectId: project.id, name: "Fire alarm", disciplineId: disc.id, ownerId: me.id, dueDate: null, estimatedHours: null };
+  const a = await createDrawing({ ...fields, sheetCode: "ZZ-00-FA-102" });
+  const b = await createDrawing({ ...fields, name: "Fire alarm 2" });
+  if (!a.ok || !b.ok) throw new Error("create failed");
+  const revOf = async (id: string) => (await db.select().from(drawingRevisions).where(eq(drawingRevisions.drawingId, id)))[0];
+  await issue(a.id, (await revOf(a.id)).id);
+  await issue(b.id, (await revOf(b.id)).id);
+
+  // Before the first issue it was anyone's; now a member can't change or clear it…
+  expect(await updateDrawing({ ...fields, id: a.id, sheetCode: "ZZ-00-FA-104" })).toEqual({ ok: false, error: SHEET_CODE_LOCKED_ERROR });
+  expect(await updateDrawing({ ...fields, id: a.id, sheetCode: null })).toEqual({ ok: false, error: SHEET_CODE_LOCKED_ERROR });
+  // …but other fields still save, and a drawing issued without one gets its first.
+  expect(await updateDrawing({ ...fields, id: a.id, sheetCode: "ZZ-00-FA-102", name: "Fire alarm L0" })).toEqual({ ok: true });
+  expect(await updateDrawing({ ...fields, id: b.id, name: "Fire alarm 2", sheetCode: "ZZ-00-FA-105" })).toEqual({ ok: true });
+  expect(await sheetOf(b.id)).toBe("ZZ-00-FA-105");
+
+  const { user: admin } = await mockSession("admin");
+  expect(await updateDrawing({ ...fields, id: a.id, name: "Fire alarm L0", sheetCode: "ZZ-00-FA-104" })).toEqual({ ok: true });
+  expect(await sheetOf(a.id)).toBe("ZZ-00-FA-104");
+  // The trail marks the renumbering NAMING §5 leaves to admins.
+  const logs = await db.select().from(auditLog).where(and(eq(auditLog.kind, "drawing.updated"), eq(auditLog.refId, a.id)));
+  const afterIssue = logs.filter(l => (l.payload as { sheetCodeAfterIssue?: boolean }).sheetCodeAfterIssue);
+  expect(logs).toHaveLength(2);
+  expect(afterIssue.map(l => l.actorId)).toEqual([admin.id]);
+});
+
 // ── Title block ────────────────────────────────────────────────────────────
 
 test("a title block naming another sheet changes nothing and waits for the uploader", async () => {
@@ -208,13 +243,35 @@ test("a title block naming another sheet changes nothing and waits for the uploa
   expect(await confirmDrawingCheckRun({ runId: second })).toEqual({ ok: false, error: "Viewers have read-only access." });
   expect(await markDrawingCheckWrongFile({ runId: second })).toEqual({ ok: false, error: "Viewers have read-only access." });
 
-  const { user: other } = await mockSession("member");
+  // Another member is neither the uploader nor the owner.
+  await mockSession("member");
+  expect(await confirmDrawingCheckRun({ runId: second })).toEqual({ ok: false, error: CHECK_DECIDE_ERROR });
+  expect(await markDrawingCheckWrongFile({ runId: second })).toEqual({ ok: false, error: CHECK_DECIDE_ERROR });
+  expect(await runOf(second)).toMatchObject({ status: "held", decidedById: null });
+
+  const { user: admin } = await mockSession("admin");
   expect(await confirmDrawingCheckRun({ runId: second })).toMatchObject({ ok: true });
-  expect(await runOf(second)).toMatchObject({ status: "done", decidedById: other.id });
+  expect(await runOf(second)).toMatchObject({ status: "done", decidedById: admin.id });
   expect(await openRules(drawing.id)).toEqual(["D06-DUPLICATE"]);
   const [log] = await db.select().from(auditLog).where(eq(auditLog.kind, "drawing.check.confirmed"));
-  expect(log.actorId).toBe(other.id);
+  expect(log.actorId).toBe(admin.id);
   expect(await confirmDrawingCheckRun({ runId: second })).toMatchObject({ ok: false });
+});
+
+test("the drawing's owner decides about a check someone else uploaded", async () => {
+  const { project } = await setup();
+  const owner = await mockSession("member");
+  const [d] = await db.insert(drawings).values({ projectId: project.id, code: "FA-5", name: "Drawing FA-5", ownerId: owner.user.id }).returning();
+  const [rev] = await db.insert(drawingRevisions).values({ drawingId: d.id, number: 1, commitMessage: "Initial" }).returning();
+
+  await mockSession("member");
+  const runId = await uploaded(rev.id);
+  await callback(runId, [finding("D15-UNITS")], "FA-104");
+  expect((await runOf(runId)).status).toBe("held");
+
+  vi.mocked(requireSession).mockResolvedValue(owner.session as never);
+  expect(await markDrawingCheckWrongFile({ runId })).toMatchObject({ ok: true });
+  expect(await runOf(runId)).toMatchObject({ status: "wrong-file", decidedById: owner.user.id });
 });
 
 test("an unreadable title block writes new remarks but closes none", async () => {
@@ -272,6 +329,33 @@ test("wrong file undoes the latest check: new remarks go, closed ones reopen, up
   expect(await markDrawingCheckWrongFile({ runId: first })).toMatchObject({ ok: true });
   expect(await openRules(drawing.id)).toEqual([]);
   expect(await sheetOf(drawing.id)).toBeNull();
+});
+
+test("once the drawing has been issued, a wrong file keeps the sheet code it linked unless an admin marks it", async () => {
+  const { make } = await setup();
+  const { drawing, rev } = await make("FA-1");
+  const runId = await uploaded(rev.id);
+  await callback(runId, [finding("D15-UNITS")]);
+  await issue(drawing.id, rev.id);
+
+  const res = await markDrawingCheckWrongFile({ runId });
+  expect(res).toEqual({
+    ok: true,
+    summary: "1 new remark removed. The sheet code ZZ-00-FA-102 stays: the drawing has been issued, so only an admin can change it.",
+  });
+  expect(await sheetOf(drawing.id)).toBe("ZZ-00-FA-102");
+  const [log] = await db.select().from(auditLog).where(eq(auditLog.kind, "drawing.check.wrong-file"));
+  expect(log.payload).toMatchObject({ keptSheetCode: "ZZ-00-FA-102" });
+  expect(log.payload).not.toHaveProperty("unlinkedSheetCode");
+
+  // The same on a second drawing, decided by an admin: the code goes.
+  const other = await make("FA-2");
+  const second = await uploaded(other.rev.id, "INS-26TGT-ZZ-00-FA-103.dxf");
+  await callback(second, [], "FA-103");
+  await issue(other.drawing.id, other.rev.id);
+  await mockSession("admin");
+  expect(await markDrawingCheckWrongFile({ runId: second })).toMatchObject({ ok: true, summary: "nothing had changed" });
+  expect(await sheetOf(other.drawing.id)).toBeNull();
 });
 
 test("remarks someone resolved by hand stay as they are", async () => {

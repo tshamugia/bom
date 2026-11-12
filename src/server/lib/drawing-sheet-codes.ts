@@ -1,10 +1,11 @@
 import "server-only";
 import { and, eq, inArray, isNotNull, isNull, ne, notInArray } from "drizzle-orm";
 import { db } from "@/db/client";
-import { drawings } from "@/db/schema";
+import { drawingTransmittals, drawings } from "@/db/schema";
 
 // Sheet codes (`drawing.sheet_code`, rules in src/lib/drawing-check-link.ts):
-// unique within a project among live drawings. No session checks here.
+// unique within a project among live drawings, and once the drawing has been
+// issued only an admin changes one (`sheetCodeLocked`). No session checks here.
 
 type Db = Pick<typeof db, "select">;
 
@@ -47,3 +48,13 @@ export async function sheetCodesOutside(projectIds: string[], exceptIds: string[
 }
 
 export const sheetKey = (projectId: string, sheetCode: string) => `${projectId}\u0000${sheetCode}`;
+
+/** Whether the drawing has gone out: any transmittal, for any purpose (NAMING §5 "first issue"). */
+export async function isDrawingIssued(conn: Db, drawingId: string): Promise<boolean> {
+  const [t] = await conn
+    .select({ id: drawingTransmittals.id })
+    .from(drawingTransmittals)
+    .where(eq(drawingTransmittals.drawingId, drawingId))
+    .limit(1);
+  return !!t;
+}

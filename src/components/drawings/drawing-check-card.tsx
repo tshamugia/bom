@@ -11,7 +11,7 @@ import {
   describeRemarkChanges, isCheckRunStale, sortFindings, type CheckFinding,
 } from "@/lib/drawing-checks";
 import type { DrawingCheckPanel, DrawingCheckRunRow } from "@/server/queries/drawing-checks";
-import { normalizeSheetCode, sheetCheckNote } from "@/lib/drawing-check-link";
+import { canDecideCheckRun, normalizeSheetCode, sheetCheckNote } from "@/lib/drawing-check-link";
 import { UploadDxfDialog } from "./upload-dxf-dialog";
 import { CheckRefresher } from "./check-refresher";
 import { CheckRunActions } from "./check-run-actions";
@@ -85,7 +85,20 @@ function RunHeader({ run }: { run: DrawingCheckRunRow }) {
   );
 }
 
-function RunOutcome({ run, sheetCode, undoable }: { run: DrawingCheckRunRow; sheetCode: string | null; undoable: boolean }) {
+/** Who may confirm a held check or mark one as the wrong file, and whether the sheet code it linked stays. */
+type Decider = { mayDecide: (run: DrawingCheckRunRow) => boolean; sheetCodeLocked: boolean };
+
+function RunOutcome({
+  run,
+  sheetCode,
+  undoable,
+  decider,
+}: {
+  run: DrawingCheckRunRow;
+  sheetCode: string | null;
+  undoable: boolean;
+  decider: Decider;
+}) {
   if (isActive(run)) {
     return (
       <p className="muted m-0 text-[12.5px]">
@@ -132,9 +145,20 @@ function RunOutcome({ run, sheetCode, undoable }: { run: DrawingCheckRunRow; she
           Confirmed as this drawing&apos;s file by {run.decidedByName}{run.decidedAt ? ` · ${formatDateTime(run.decidedAt)}` : ""}.
         </p>
       )}
-      {(held || undoable) && (
-        <CheckRunActions runId={run.id} fileName={run.originalName} held={held} linkedSheetCode={run.linkedSheetCode} />
-      )}
+      {(held || undoable) && (decider.mayDecide(run) ? (
+        <CheckRunActions
+          runId={run.id}
+          fileName={run.originalName}
+          held={held}
+          linkedSheetCode={run.linkedSheetCode && run.linkedSheetCode === sheetCode ? run.linkedSheetCode : null}
+          sheetCodeKept={decider.sheetCodeLocked}
+        />
+      ) : (
+        <BlockedNote topic="drawing-check">
+          {held ? "Confirming this file or marking it" : "Marking this file"} as the wrong file is up to{" "}
+          {run.uploadedByName ?? "whoever uploaded it"}, the drawing&apos;s owner or an admin.
+        </BlockedNote>
+      ))}
     </div>
   );
 }
@@ -171,6 +195,9 @@ export function DrawingCheckCard({
   sheetCode,
   current,
   canManage = false,
+  currentUserId,
+  ownerId,
+  sheetCodeLocked = false,
 }: {
   panel: DrawingCheckPanel;
   drawingCode: string;
@@ -179,9 +206,18 @@ export function DrawingCheckCard({
   current: { id: string; label: string };
   /** Admins remove false errors and reach the settings. */
   canManage?: boolean;
+  currentUserId: string;
+  /** The drawing's owner, who decides about held checks along with the uploader and admins. */
+  ownerId: string | null;
+  /** Issued and the user isn't an admin: "Wrong file" leaves the sheet code as it is. */
+  sheetCodeLocked?: boolean;
 }) {
+  const decider: Decider = {
+    mayDecide: r => canDecideCheckRun({ userId: currentUserId, admin: canManage, uploadedById: r.uploadedById, ownerId }),
+    sheetCodeLocked,
+  };
   const outcome = (r: DrawingCheckRunRow) => (
-    <RunOutcome run={r} sheetCode={sheetCode} undoable={r.id === panel.undoableRunId} />
+    <RunOutcome run={r} sheetCode={sheetCode} undoable={r.id === panel.undoableRunId} decider={decider} />
   );
   const [latest, ...earlier] = panel.runs;
   const running = panel.runs.some(r => r.revisionId === current.id && isActive(r));

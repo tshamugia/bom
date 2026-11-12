@@ -21,11 +21,13 @@ import {
 import { MAX_BULK_DRAWINGS, planBulkDueDate, planBulkOwner, planBulkStatus, type BulkSkip } from "@/lib/drawing-bulk";
 import { MAX_ESTIMATE_HOURS, formatHours } from "@/lib/drawing-meta";
 import { ADMIN_ONLY_ERROR, READ_ONLY_ERROR, canEdit, isAdmin } from "@/lib/roles";
-import { SHEET_CODE_FORMAT_ERROR, isSheetCode, normalizeSheetCode, sheetCodeTakenMessage } from "@/lib/drawing-check-link";
+import {
+  SHEET_CODE_FORMAT_ERROR, SHEET_CODE_LOCKED_ERROR, isSheetCode, normalizeSheetCode, sheetCodeLocked, sheetCodeTakenMessage,
+} from "@/lib/drawing-check-link";
 import { requireSession } from "../auth-context";
 import { audit } from "../audit";
 import { constraintName, isUniqueViolation } from "../lib/db-errors";
-import { sheetCodeOwner } from "../lib/drawing-sheet-codes";
+import { isDrawingIssued, sheetCodeOwner } from "../lib/drawing-sheet-codes";
 import { drawingCodeInProject, lockDrawingCodes, nextDrawingCode } from "../lib/codes";
 import { notifyDrawingStatusChange, notifyDrawingStatusChanges, type DrawingStatusNotice } from "../lib/drawing-notify";
 
@@ -237,8 +239,13 @@ export async function updateDrawing(input: z.input<typeof UpdateInput>): Promise
     .where(and(eq(drawings.id, id), isNull(drawings.deletedAt)))
     .limit(1);
   if (!current) return fail("Drawing not found.");
+  const admin = isAdmin(session.user);
+  // NAMING §5: renumbered only before the first issue — afterwards by an admin.
+  const sheetCodeChanged = data.sheetCode !== current.sheetCode;
+  const issued = sheetCodeChanged && current.sheetCode !== null ? await isDrawingIssued(db, id) : false;
+  if (sheetCodeChanged && sheetCodeLocked({ current: current.sheetCode, issued, admin })) return fail(SHEET_CODE_LOCKED_ERROR);
   // Checked again when the drawing moves: sheet codes are unique per project.
-  if (data.sheetCode !== current.sheetCode || data.projectId !== current.projectId) {
+  if (sheetCodeChanged || data.projectId !== current.projectId) {
     const sheetProblem = await sheetCodeProblem(data.sheetCode, data.projectId, id);
     if (sheetProblem) return fail(sheetProblem);
   }
@@ -315,7 +322,8 @@ export async function updateDrawing(input: z.input<typeof UpdateInput>): Promise
     refType: "drawing",
     refId: id,
     summary: `${code} updated — ${changes.map(c => c.split(":")[0]).join(", ").toLowerCase()}`,
-    payload: { projectId: data.projectId, changes },
+    // An admin renumbering an issued drawing is the exception NAMING §5 allows; the trail says so.
+    payload: { projectId: data.projectId, changes, ...(issued ? { sheetCodeAfterIssue: true } : {}) },
   });
   return { ok: true };
 }

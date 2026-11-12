@@ -119,7 +119,7 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
   "drawing-sheet-code": {
     title: "Sheet code and the right file",
     summary:
-      "A drawing's sheet code (ZZ-00-FA-102) ties DXFs to it. The first standard-named DXF checked on a drawing sets it; after that a DXF must carry exactly that code and the drawing's project code. If the title block names another sheet, nothing changes until someone confirms the file or marks it as the wrong file — which undoes what the check changed.",
+      "A drawing's sheet code (ZZ-00-FA-102) ties DXFs to it. The first standard-named DXF checked on a drawing sets it; after that a DXF must carry exactly that code and the drawing's project code. Once the drawing has been issued, only an admin changes it. If the title block names another sheet, nothing changes until the uploader, the drawing's owner or an admin confirms the file or marks it as the wrong file — which undoes what the check changed. Without a sheet code, fixed remarks don't close by themselves (except in projects with the client's file naming).",
   },
   "drawing-check-bulk": {
     title: "Checking many DXFs at once",

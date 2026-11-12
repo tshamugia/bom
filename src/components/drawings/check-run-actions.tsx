@@ -21,6 +21,7 @@ export function CheckRunActions({
   fileName,
   held,
   linkedSheetCode,
+  sheetCodeKept = false,
 }: {
   runId: string;
   fileName: string;
@@ -28,6 +29,8 @@ export function CheckRunActions({
   held: boolean;
   /** The sheet code this upload gave the drawing; "Wrong file" clears it. */
   linkedSheetCode: string | null;
+  /** The drawing has been issued and the user isn't an admin: the sheet code stays (NAMING §5). */
+  sheetCodeKept?: boolean;
 }) {
   const [pending, start] = useTransition();
   const [open, setOpen] = useState(false);
@@ -92,7 +95,14 @@ export function CheckRunActions({
           )}
           {linkedSheetCode && (
             <p className="m-0 text-[13px]">
-              The sheet code <span className="mono">{linkedSheetCode}</span> it gave the drawing is cleared too.
+              {sheetCodeKept ? (
+                <>
+                  The sheet code <span className="mono">{linkedSheetCode}</span> it gave the drawing stays: the drawing has been issued,
+                  so only an admin can change it.
+                </>
+              ) : (
+                <>The sheet code <span className="mono">{linkedSheetCode}</span> it gave the drawing is cleared too.</>
+              )}
             </p>
           )}
           <DialogFooter>
