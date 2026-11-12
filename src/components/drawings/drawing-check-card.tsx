@@ -11,8 +11,10 @@ import {
   describeRemarkChanges, isCheckRunStale, sortFindings, type CheckFinding,
 } from "@/lib/drawing-checks";
 import type { DrawingCheckPanel, DrawingCheckRunRow } from "@/server/queries/drawing-checks";
+import { normalizeSheetCode, sheetCheckNote } from "@/lib/drawing-check-link";
 import { UploadDxfDialog } from "./upload-dxf-dialog";
 import { CheckRefresher } from "./check-refresher";
+import { CheckRunActions } from "./check-run-actions";
 import { CheckWaivers } from "./check-waivers";
 
 const SEVERITY_TONE: Record<CheckSeverity, Tone> = { ERROR: "danger", WARNING: "warning", INFO: "gray" };
@@ -21,8 +23,18 @@ const isActive = (r: DrawingCheckRunRow) => (r.status === "pending" || r.status 
 
 function statusTone(r: DrawingCheckRunRow): Tone {
   if (r.status === "failed") return "danger";
+  if (r.status === "held") return "warning";
+  if (r.status === "wrong-file") return "gray";
   if (r.status === "done") return r.counts?.ERROR ? "warning" : "success";
   return isActive(r) ? "info" : "gray";
+}
+
+/** What the title block said, when it didn't settle which drawing the file is. */
+function sheetNote(run: DrawingCheckRunRow, sheetCode: string | null): string | null {
+  // Once someone confirmed the file, "Confirmed as this drawing's file" says the rest.
+  if (run.sheetCheck === "mismatch" && run.status !== "held") return null;
+  const found = run.titleBlockSheet ? normalizeSheetCode(run.titleBlockSheet) : null;
+  return sheetCheckNote({ verdict: run.sheetCheck, found, sheetCode });
 }
 
 /** "Checker 1.0.0 · NAMING 0.0.3 · DRAFTING 0.0.5 · settings v2" */
@@ -49,7 +61,13 @@ function sheetLine(details: NonNullable<DrawingCheckPanel["report"]>["details"])
 }
 
 function RunHeader({ run }: { run: DrawingCheckRunRow }) {
-  const tone = run.status === "failed" ? "tone-red" : run.status === "done" ? (run.counts?.ERROR ? "tone-amber" : "tone-green") : "tone-accent";
+  const tone = run.status === "failed"
+    ? "tone-red"
+    : run.status === "held"
+      ? "tone-amber"
+      : run.status === "wrong-file"
+        ? ""
+        : run.status === "done" ? (run.counts?.ERROR ? "tone-amber" : "tone-green") : "tone-accent";
   const stale = (run.status === "pending" || run.status === "queued") && !isActive(run);
   return (
     <div className="flex items-start gap-3">
@@ -67,7 +85,7 @@ function RunHeader({ run }: { run: DrawingCheckRunRow }) {
   );
 }
 
-function RunOutcome({ run }: { run: DrawingCheckRunRow }) {
+function RunOutcome({ run, sheetCode, undoable }: { run: DrawingCheckRunRow; sheetCode: string | null; undoable: boolean }) {
   if (isActive(run)) {
     return (
       <p className="muted m-0 text-[12.5px]">
@@ -81,7 +99,16 @@ function RunOutcome({ run }: { run: DrawingCheckRunRow }) {
   if (run.status === "failed") {
     return <p className="m-0 whitespace-pre-line text-[12.5px] [overflow-wrap:anywhere]" style={{ color: "var(--red)" }}>{run.error ?? "The check failed."}</p>;
   }
+  if (run.status === "wrong-file") {
+    return (
+      <p className="muted m-0 text-[12.5px]">
+        Marked as the wrong file{run.decidedByName ? ` by ${run.decidedByName}` : ""}{run.decidedAt ? ` · ${formatDateTime(run.decidedAt)}` : ""} — what its check changed was undone.
+      </p>
+    );
+  }
   const counts = run.counts ?? { ERROR: 0, WARNING: 0, INFO: 0 };
+  const note = sheetNote(run, sheetCode);
+  const held = run.status === "held";
   const changes = run.remarkChanges;
   const remarks = changes?.skipped
     ? "Remarks unchanged — a newer revision was checked already."
@@ -96,7 +123,18 @@ function RunOutcome({ run }: { run: DrawingCheckRunRow }) {
         {counts.INFO > 0 && <Badge tone="gray">{counts.INFO} info</Badge>}
         {!counts.ERROR && !counts.WARNING && !counts.INFO && <Badge tone="success">No findings</Badge>}
       </div>
-      {remarks && <p className="m-0 text-[12.5px] text-[var(--color-text-2)]">{remarks}</p>}
+      {!held && remarks && <p className="m-0 text-[12.5px] text-[var(--color-text-2)]">{remarks}</p>}
+      {note && (
+        <p className="m-0 text-[12.5px] [overflow-wrap:anywhere]" style={held ? { color: "var(--amber)" } : undefined}>{note}</p>
+      )}
+      {!held && run.decidedByName && (
+        <p className="muted m-0 text-[12px]">
+          Confirmed as this drawing&apos;s file by {run.decidedByName}{run.decidedAt ? ` · ${formatDateTime(run.decidedAt)}` : ""}.
+        </p>
+      )}
+      {(held || undoable) && (
+        <CheckRunActions runId={run.id} fileName={run.originalName} held={held} linkedSheetCode={run.linkedSheetCode} />
+      )}
     </div>
   );
 }
@@ -130,15 +168,21 @@ function FindingItem({ f }: { f: CheckFinding }) {
 export function DrawingCheckCard({
   panel,
   drawingCode,
+  sheetCode,
   current,
   canManage = false,
 }: {
   panel: DrawingCheckPanel;
   drawingCode: string;
+  /** The drawing's sheet code, which DXFs and their title blocks are held against. */
+  sheetCode: string | null;
   current: { id: string; label: string };
   /** Admins remove false errors and reach the settings. */
   canManage?: boolean;
 }) {
+  const outcome = (r: DrawingCheckRunRow) => (
+    <RunOutcome run={r} sheetCode={sheetCode} undoable={r.id === panel.undoableRunId} />
+  );
   const [latest, ...earlier] = panel.runs;
   const running = panel.runs.some(r => r.revisionId === current.id && isActive(r));
   const block = checkUploadBlock({ enabled: panel.enabled, configured: panel.configured, isLatest: true, running });
@@ -154,6 +198,9 @@ export function DrawingCheckCard({
           <h3 className="card-title flex items-center gap-1.5">Automatic DXF check <HelpTip topic="drawing-check" /></h3>
           <p className="card-sub">
             Checks a DXF of {current.label} against the naming and drafting standards and raises what it finds as remarks.
+            {sheetCode
+              ? <> DXFs must be sheet <span className="mono">{sheetCode}</span>. <HelpTip topic="drawing-sheet-code" /></>
+              : null}
           </p>
         </div>
       </div>
@@ -161,7 +208,7 @@ export function DrawingCheckCard({
       {latest && (
         <div className="grid gap-2 px-4 py-3">
           <RunHeader run={latest} />
-          <RunOutcome run={latest} />
+          {outcome(latest)}
         </div>
       )}
       {!latest && panel.enabled && <p className="muted m-0 px-4 py-3 text-[12.5px]">No DXF has been checked for this drawing yet.</p>}
@@ -225,7 +272,7 @@ export function DrawingCheckCard({
           {earlier.map(r => (
             <div key={r.id} className="grid gap-1.5 px-4 py-2.5" style={{ borderTop: "1px solid var(--line-soft)" }}>
               <RunHeader run={r} />
-              <RunOutcome run={r} />
+              {outcome(r)}
             </div>
           ))}
         </details>

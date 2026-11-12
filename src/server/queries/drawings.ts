@@ -89,13 +89,16 @@ export async function listDrawings(filter: DrawingListFilter = {}) {
     conds.push(sql`exists (select 1 from ${drawingTransmittals} where ${drawingTransmittals.drawingId} = ${drawings.id} and ${drawingTransmittals.recipientUserId} = ${filter.receivedBy})`);
   }
   const q = filter.search?.trim();
-  if (q) conds.push(or(ilike(drawings.code, likePattern(q)), ilike(drawings.name, likePattern(q)))!);
+  if (q) {
+    conds.push(or(ilike(drawings.code, likePattern(q)), ilike(drawings.name, likePattern(q)), ilike(drawings.sheetCode, likePattern(q)))!);
+  }
 
   return db
     .select({
       id: drawings.id,
       code: drawings.code,
       name: drawings.name,
+      sheetCode: drawings.sheetCode,
       dueDate: drawings.dueDate,
       estimatedHours: drawings.estimatedHours,
       loggedHours: sql<number>`coalesce(${logged.hours}, 0)`.mapWith(Number),
@@ -149,6 +152,7 @@ export async function getDrawing(id: string) {
       dueDate: drawings.dueDate,
       estimatedHours: drawings.estimatedHours,
       fileLocation: drawings.fileLocation,
+      sheetCode: drawings.sheetCode,
       createdAt: drawings.createdAt,
       updatedAt: drawings.updatedAt,
       projectId: projects.id,

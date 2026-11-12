@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockedNote } from "@/components/help/blocked-note";
 import { CodeField } from "@/components/master/code-field";
+import { HelpTip } from "@/components/help/help-tip";
+import { SHEET_CODE_EXAMPLE, SHEET_CODE_FORMAT_ERROR, isSheetCode, normalizeSheetCode } from "@/lib/drawing-check-link";
 
 export type ProjectOption = { id: string; code: string; name: string };
 export type DisciplineOption = { id: string; name: string };
@@ -20,6 +22,8 @@ export type DrawingFormValue = {
   estimatedHours: string;
   /** Folder on the company file server; empty means not set. */
   fileLocation: string;
+  /** `ZZ-00-FA-102` as typed; empty means not set (the first linked DXF sets it). */
+  sheetCode: string;
 };
 
 export const SELECT_CLASS =
@@ -35,9 +39,17 @@ export function parseHours(text: string): number | null | undefined {
   return Number.isFinite(n) && n > 0 ? n : undefined;
 }
 
+/** `undefined` when the text isn't a sheet code; null when empty. */
+export function parseSheetCode(text: string): string | null | undefined {
+  const v = normalizeSheetCode(text);
+  if (!v) return null;
+  return isSheetCode(v) ? v : undefined;
+}
+
 export function isDrawingFormComplete(v: DrawingFormValue) {
   return !!(v.projectId && v.name.trim() && v.disciplineId && v.ownerId)
-    && parseHours(v.estimatedHours) !== undefined;
+    && parseHours(v.estimatedHours) !== undefined
+    && parseSheetCode(v.sheetCode) !== undefined;
 }
 
 export function DrawingFormFields({
@@ -128,6 +140,26 @@ export function DrawingFormFields({
           onChange={e => set("fileLocation", e.target.value)}
         />
         <p className="text-[12px] text-[var(--color-text-3)]">The folder on the file server where the drawing files are kept.</p>
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor={id("sheet")} className="flex items-center gap-1.5">
+          Sheet code <span className="text-[var(--color-text-3)]">(optional)</span> <HelpTip topic="drawing-sheet-code" />
+        </Label>
+        <Input
+          id={id("sheet")}
+          className="font-mono"
+          value={value.sheetCode}
+          maxLength={20}
+          placeholder={`e.g. ${SHEET_CODE_EXAMPLE}`}
+          autoCapitalize="characters"
+          aria-invalid={parseSheetCode(value.sheetCode) === undefined}
+          onChange={e => set("sheetCode", e.target.value)}
+        />
+        <p className="text-[12px] text-[var(--color-text-3)]">
+          {parseSheetCode(value.sheetCode) === undefined
+            ? SHEET_CODE_FORMAT_ERROR
+            : "Zone, floor, system and number from the file name. Checked DXFs must carry it; the first one linked sets it."}
+        </p>
       </div>
     </div>
   );

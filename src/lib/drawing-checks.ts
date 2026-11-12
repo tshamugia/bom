@@ -11,8 +11,12 @@ import { CHECK_RULE_GROUPS, CHECK_RULE_IDS, checkRule, type CheckSeverity } from
 /**
  * pending — the upload form was handed out; queued — the file is in the bucket
  * and the checker accepted it; done / failed — the checker called back.
+ * held — checked, but the title block names another sheet than the drawing's,
+ * so nothing changed until a person confirms the file (`drawing-check-link.ts`);
+ * wrong-file — a person said the file wasn't this drawing's, and what the run
+ * had changed was undone.
  */
-export const CHECK_RUN_STATUSES = ["pending", "queued", "done", "failed"] as const;
+export const CHECK_RUN_STATUSES = ["pending", "queued", "done", "failed", "held", "wrong-file"] as const;
 export type CheckRunStatus = (typeof CHECK_RUN_STATUSES)[number];
 
 export const CHECK_RUN_STATUS_LABEL: Record<CheckRunStatus, string> = {
@@ -20,6 +24,8 @@ export const CHECK_RUN_STATUS_LABEL: Record<CheckRunStatus, string> = {
   queued: "Checking",
   done: "Checked",
   failed: "Failed",
+  held: "Needs confirming",
+  "wrong-file": "Wrong file",
 };
 
 /** A revision has at most one run in these statuses (partial unique index). */

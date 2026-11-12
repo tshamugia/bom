@@ -94,8 +94,8 @@ async function upload(revisionId: string, file = DXF, fileName = NAME) {
   return done.ok ? { ok: true as const, runId: req.runId } : done;
 }
 
-async function uploaded(revisionId: string) {
-  const res = await upload(revisionId);
+async function uploaded(revisionId: string, file = DXF, fileName = NAME) {
+  const res = await upload(revisionId, file, fileName);
   if (!res.ok) throw new Error(res.error);
   return res.runId;
 }
@@ -307,7 +307,7 @@ test("findings become automatic remarks for the owner; INFO stays in the report;
   const run = await runOf(runId);
   expect(run).toMatchObject({ status: "done", counts: { ERROR: 2, WARNING: 1, INFO: 1 }, sha256: "ab".repeat(32), engineVersion: "1.0.0" });
   expect(run.findings).toHaveLength(4);
-  expect(run.remarkChanges).toEqual({ created: expect.any(Array), updated: [], closed: [] });
+  expect(run.remarkChanges).toEqual({ created: expect.any(Array), updated: [], closed: [], previous: [] });
   expect(run.remarkChanges!.created).toHaveLength(2);
   expect(run.details?.parsedName).toMatchObject({ sheetCode: "ZZ-00-FA-102" });
   expect(store.has(key)).toBe(false);
@@ -348,7 +348,15 @@ test("checking again updates what is still wrong, closes what was fixed and neve
   expect(units.resolvedAt).toBeInstanceOf(Date);
   expect(units.resolution).toBe(`Fixed — the automatic check of P02 (${NAME}) passed.`);
   expect(await db.select().from(drawingRemarks)).toHaveLength(3);
-  expect((await runOf(second)).remarkChanges).toEqual({ created: [expect.any(String)], updated: [sheet.id], closed: [units.id] });
+  expect((await runOf(second)).remarkChanges).toEqual({
+    created: [expect.any(String)],
+    updated: [sheet.id],
+    closed: [units.id],
+    previous: expect.arrayContaining([
+      { id: sheet.id, body: sheetBefore.body, severity: "ERROR", lastCheckRunId: first },
+      { id: units.id, body: units.body, severity: "ERROR", lastCheckRunId: first },
+    ]),
+  });
 
   // The same result again is refused, so nothing doubles.
   expect((await callback(second, doneResult(second, [finding("T-SHEET", "ERROR")]))).status).toBe(409);
@@ -370,14 +378,28 @@ test("a rule switched off in Settings leaves its open remark alone and isn't sen
   expect(open.map(r => [r.checkRuleId, r.lastCheckRunId])).toEqual([["D15-UNITS", first]]);
 });
 
-test("without a title block, title-block remarks stay open instead of passing", async () => {
+test("without a title block nothing closes: the file can't be told apart from another drawing's", async () => {
   const { drawing, rev } = await setup();
   const first = await uploaded(rev.id);
   await callback(first, doneResult(first, [finding("T-REV", "ERROR"), finding("D15-UNITS", "ERROR")]));
 
   const second = await uploaded(rev.id);
   await callback(second, doneResult(second, [finding("T-MISSING", "ERROR")], { titleblock: null }));
+  expect((await openRemarks(drawing.id)).map(r => r.checkRuleId)).toEqual(["D15-UNITS", "T-MISSING", "T-REV"]);
+  expect(await runOf(second)).toMatchObject({ status: "done", sheetCheck: "unreadable" });
+});
+
+test("on a drawing without a sheet code, title-block remarks stay open instead of passing", async () => {
+  const { drawing, rev } = await setup();
+  // A name off the standard links no sheet code, so there is nothing to compare the title block with.
+  const loose = "fire alarm level 1.dxf";
+  const first = await uploaded(rev.id, DXF, loose);
+  await callback(first, doneResult(first, [finding("T-REV", "ERROR"), finding("D15-UNITS", "ERROR")], { parsedName: null }));
+
+  const second = await uploaded(rev.id, DXF, loose);
+  await callback(second, doneResult(second, [finding("T-MISSING", "ERROR")], { parsedName: null, titleblock: null }));
   expect((await openRemarks(drawing.id)).map(r => r.checkRuleId)).toEqual(["T-MISSING", "T-REV"]);
+  expect(await runOf(second)).toMatchObject({ status: "done", sheetCheck: "unset" });
 });
 
 test("a failed check changes no remark and says why", async () => {

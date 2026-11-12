@@ -22,6 +22,8 @@ export const HELP_TOPIC_IDS = [
   "drawing-pdf",
   "drawing-check",
   "drawing-check-settings",
+  "drawing-sheet-code",
+  "drawing-check-bulk",
   "transmittals",
   "procurement",
   "exports",
@@ -113,6 +115,16 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
     title: "DXF check settings",
     summary:
       "Admins choose which rules run, how severe each is (Error and To check become remarks, Info stays in the report) and the values from the standards — codes, title block tags, layers. Every save is a new version and checks remember the version they ran with. A project can use the client's file naming, and a false error stops one rule on one drawing.",
+  },
+  "drawing-sheet-code": {
+    title: "Sheet code and the right file",
+    summary:
+      "A drawing's sheet code (ZZ-00-FA-102) ties DXFs to it. The first standard-named DXF checked on a drawing sets it; after that a DXF must carry exactly that code and the drawing's project code. If the title block names another sheet, nothing changes until someone confirms the file or marks it as the wrong file — which undoes what the check changed.",
+  },
+  "drawing-check-bulk": {
+    title: "Checking many DXFs at once",
+    summary:
+      "Tick drawings on the Drawings list, click Check DXFs and drop the files. Each file goes to the ticked drawing with its sheet code; a file nobody can match is picked by hand. Another project's file, and two files for one drawing, are left out. Each file is then checked like a single upload.",
   },
   "transmittals": {
     title: "Transmittals",

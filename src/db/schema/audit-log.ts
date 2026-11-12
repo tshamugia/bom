@@ -86,6 +86,8 @@ export const auditKindEnum = pgEnum("audit_kind", [
   "drawing.check.waiver.removed",
   "drawing.time.shared.logged",
   "drawing.time.shared.deleted",
+  "drawing.check.confirmed",
+  "drawing.check.wrong-file",
 ]);
 
 export const auditLog = pgTable(

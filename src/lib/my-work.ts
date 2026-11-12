@@ -59,6 +59,25 @@ export type RemarkTask = {
   latestBody: string | null;
 };
 
+/**
+ * A DXF the user checked whose title block names another sheet than the
+ * drawing's: nothing changed until they confirm the file or mark it as wrong.
+ */
+export type CheckTask = {
+  runId: string;
+  drawingId: string;
+  code: string;
+  name: string;
+  projectCode: string;
+  revisionLabel: string;
+  fileName: string;
+  sheetCode: string | null;
+  /** The sheet number the title block carries. */
+  titleBlockSheet: string | null;
+  /** Tbilisi day the result came in. */
+  since: string | null;
+};
+
 /** One drawing reference that outdates a BOM. */
 export type OutdatedRef = {
   bomId: string;
@@ -166,6 +185,7 @@ export type MyWorkCounts = {
   receipts: number;
   remarks: number;
   boms: number;
+  checks: number;
   /** Everything above: what waits for the user to act. */
   todo: number;
   /** Late own drawings and late dates of managed projects. */
@@ -181,17 +201,21 @@ export function countMyWork(i: {
   receipts: number;
   remarks: number;
   boms: number;
+  /** DXF checks waiting for the uploader to confirm the file. */
+  checks?: number;
   deadlines: DeadlineItem[];
   newUpdates: number;
   today: string;
 }): MyWorkCounts {
   const overdue = i.deadlines.filter(d => d.date < i.today).length;
+  const checks = i.checks ?? 0;
   return {
     approvals: i.approvals,
     receipts: i.receipts,
     remarks: i.remarks,
     boms: i.boms,
-    todo: i.approvals + i.receipts + i.remarks + i.boms,
+    checks,
+    todo: i.approvals + i.receipts + i.remarks + i.boms + checks,
     overdue,
     dueSoon: i.deadlines.length - overdue,
     newUpdates: i.newUpdates,

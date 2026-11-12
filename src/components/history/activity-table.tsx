@@ -78,6 +78,8 @@ const KIND_META: Record<AuditKind, { label: string; tone: Tone; group: string }>
   "drawing.check.settings.changed": { label: "DXF check settings", tone: "gray",    group: "Drawings" },
   "drawing.check.waived":        { label: "False error marked",    tone: "warning", group: "Drawings" },
   "drawing.check.waiver.removed": { label: "False error removed",  tone: "info",    group: "Drawings" },
+  "drawing.check.confirmed":     { label: "DXF file confirmed",    tone: "success", group: "Drawings" },
+  "drawing.check.wrong-file":    { label: "DXF wrong file",        tone: "warning", group: "Drawings" },
   "bom.drawing.linked":          { label: "Drawing linked",        tone: "info",    group: "BOM" },
   "bom.drawing.unlinked":        { label: "Drawing unlinked",      tone: "warning", group: "BOM" },
   "bom.drawing.updated":         { label: "Drawing refs updated",  tone: "info",    group: "BOM" },

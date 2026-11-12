@@ -1,5 +1,6 @@
 import "server-only";
-import { asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db/client";
 import { drawingCheckRuns, drawingCheckWaivers, drawings, projects, user } from "@/db/schema";
 import { requireSession } from "../auth-context";
@@ -12,7 +13,8 @@ const RUNS_SHOWN = 6;
 /** What the drawing page's DXF check card shows. */
 export async function getDrawingCheckPanel(drawingId: string) {
   await requireSession();
-  const [enabled, exceptions, waivers, runs] = await Promise.all([
+  const decider = alias(user, "decider");
+  const [enabled, exceptions, waivers, runs, [undoable]] = await Promise.all([
     loadDrawingCheckEnabled(),
     loadCheckExceptions(drawingId),
     listCheckWaivers(drawingId),
@@ -31,19 +33,35 @@ export async function getDrawingCheckPanel(drawingId: string) {
         remarkChanges: drawingCheckRuns.remarkChanges,
         engineVersion: drawingCheckRuns.engineVersion,
         configVersion: drawingCheckRuns.configVersion,
+        sheetCheck: drawingCheckRuns.sheetCheck,
+        /** What the title block said the sheet is. */
+        titleBlockSheet: sql<string | null>`${drawingCheckRuns.details} -> 'titleblock' -> 'values' ->> 'sheet_no'`,
+        linkedSheetCode: drawingCheckRuns.linkedSheetCode,
+        uploadedById: drawingCheckRuns.uploadedById,
         uploadedByName: user.name,
+        decidedByName: decider.name,
+        decidedAt: drawingCheckRuns.decidedAt,
         createdAt: drawingCheckRuns.createdAt,
         startedAt: drawingCheckRuns.startedAt,
         finishedAt: drawingCheckRuns.finishedAt,
       })
       .from(drawingCheckRuns)
       .leftJoin(user, eq(user.id, drawingCheckRuns.uploadedById))
+      .leftJoin(decider, eq(decider.id, drawingCheckRuns.decidedById))
       .where(eq(drawingCheckRuns.drawingId, drawingId))
       .orderBy(desc(drawingCheckRuns.createdAt))
       .limit(RUNS_SHOWN),
+    // "Wrong file" undoes only the latest run that changed Remarks.
+    db
+      .select({ id: drawingCheckRuns.id })
+      .from(drawingCheckRuns)
+      .where(and(eq(drawingCheckRuns.drawingId, drawingId), eq(drawingCheckRuns.status, "done"), isNotNull(drawingCheckRuns.appliedAt)))
+      .orderBy(desc(drawingCheckRuns.appliedAt))
+      .limit(1),
   ]);
 
-  const lastDone = runs.find(r => r.status === "done");
+  // A held run's findings are the report too: they say what confirming it would write.
+  const lastDone = runs.find(r => r.status === "done" || r.status === "held");
   const [report] = lastDone
     ? await db
         .select({ findings: drawingCheckRuns.findings, details: drawingCheckRuns.details })
@@ -58,6 +76,8 @@ export async function getDrawingCheckPanel(drawingId: string) {
     clientNaming: exceptions.clientNaming,
     waivers,
     runs,
+    /** The run "Wrong file" can undo; held runs can always be set aside. */
+    undoableRunId: undoable?.id ?? null,
     report: lastDone && report
       ? { runId: lastDone.id, findings: report.findings ?? [], details: report.details ?? null }
       : null,

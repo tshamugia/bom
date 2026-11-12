@@ -6,13 +6,13 @@ import { DrawingsTable, type DrawingTableRow } from "./drawings-table";
 import { BulkDrawingBar } from "./bulk-edit-dialogs";
 import type { UserOption } from "./drawing-form-fields";
 
-export type RegisterRow = DrawingTableRow & BulkDrawing;
+export type RegisterRow = DrawingTableRow & BulkDrawing & { sheetCode: string | null };
 
 /**
  * The /drawings list for editors: tick drawings (shift-click ticks a range),
- * then change their status, owner or due date together — or write one shared
- * remark or shared time entry for them — from the bar under the table. The
- * page remounts it when the filters change, which clears the ticks.
+ * then change their status, owner or due date together, write one shared
+ * remark or shared time entry for them, or check their DXFs, from the bar under
+ * the table. The page remounts it when the filters change, which clears the ticks.
  */
 export function DrawingsRegister({
   rows,
@@ -20,12 +20,15 @@ export function DrawingsRegister({
   emptyText,
   users,
   currentUserId,
+  checksReady,
 }: {
   rows: RegisterRow[];
   today: string;
   emptyText: string;
   users: UserOption[];
   currentUserId: string;
+  /** Automatic DXF checks are on and connected: the bar offers "Check DXFs". */
+  checksReady: boolean;
 }) {
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   const anchor = useRef<string | null>(null);
@@ -67,6 +70,7 @@ export function DrawingsRegister({
           rows={chosen}
           users={users}
           currentUserId={currentUserId}
+          checkRows={checksReady ? chosen : null}
           onDone={updated => {
             const done = new Set(updated);
             setSelected(prev => new Set([...prev].filter(id => !done.has(id))));

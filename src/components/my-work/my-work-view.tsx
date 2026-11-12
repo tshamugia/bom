@@ -62,7 +62,7 @@ function Rev({ code, rev }: { code: string; rev: string }) {
 }
 
 function TodoCard({ work }: { work: MyWork }) {
-  const { approvals, receipts, remarks, boms, counts, today } = work;
+  const { approvals, receipts, remarks, boms, checks, counts, today } = work;
   return (
     <Card id="todo" title="To do" sub="What waits for you. Items leave the list once they're done." count={counts.todo}>
       {counts.todo === 0 ? (
@@ -150,6 +150,31 @@ function TodoCard({ work }: { work: MyWork }) {
                   </li>
                 );
               })}
+            </ul>
+          </Group>
+
+          <Group label="Confirm checked DXFs" count={checks.length}>
+            <ul className="ilist">
+              {checks.map(c => (
+                <li key={c.runId}>
+                  <Link href={`/drawings/${c.drawingId}#dxf-check`} className="irow">
+                    <span className="irow-ico tone-amber"><Icon.AlertTriangle className="ico" /></span>
+                    <div className="irow-body">
+                      <div className="irow-title"><Rev code={c.code} rev={c.revisionLabel} /></div>
+                      <div className="irow-text mono mw-body">{c.fileName}</div>
+                      <div className="irow-meta">
+                        <span>
+                          {[
+                            c.projectCode,
+                            c.titleBlockSheet && c.sheetCode ? `title block says ${c.titleBlockSheet}, drawing is ${c.sheetCode}` : null,
+                            "confirm the file or mark it as wrong",
+                          ].filter(Boolean).join(" · ")}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                </li>
+              ))}
             </ul>
           </Group>
 

@@ -88,7 +88,7 @@ test("tasks, deadlines and other people's updates are collected — never my own
     .toEqual(["AC-001", "Design freeze", "Completion"]);
   expect(work.updates.map(u => u.verb)).toEqual(["issued you", "commented on", "raised a client remark on", "asked you to approve"]);
   expect(work.counts).toEqual({
-    approvals: 1, receipts: 1, remarks: 1, boms: 0, todo: 3, overdue: 2, dueSoon: 1, newUpdates: 4,
+    approvals: 1, receipts: 1, remarks: 1, boms: 0, checks: 0, todo: 3, overdue: 2, dueSoon: 1, newUpdates: 4,
   });
   expect(await getMyWorkBellCount()).toBe(9);
 

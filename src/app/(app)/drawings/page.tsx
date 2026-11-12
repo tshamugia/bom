@@ -1,6 +1,7 @@
 import { requireSession } from "@/server/auth-context";
 import { canEdit } from "@/lib/roles";
 import { listDisciplines, listDrawings, listProjectOptions } from "@/server/queries/drawings";
+import { getDrawingCheckSettings } from "@/server/queries/drawing-checks";
 import { listOwnerCandidates } from "@/server/queries/projects";
 import Link from "next/link";
 import { PageHead } from "@/components/master/page-head";
@@ -25,7 +26,7 @@ type SP = {
 export default async function DrawingsPage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
   const session = await requireSession();
-  const [rows, projects, disciplines, users] = await Promise.all([
+  const [rows, projects, disciplines, users, checks] = await Promise.all([
     listDrawings({
       projectIds: sp.project ? [sp.project] : undefined,
       disciplineIds: sp.discipline ? [sp.discipline] : undefined,
@@ -36,6 +37,7 @@ export default async function DrawingsPage({ searchParams }: { searchParams: Pro
     listProjectOptions(),
     listDisciplines(),
     listOwnerCandidates(),
+    getDrawingCheckSettings(),
   ]);
 
   const readOnly = !canEdit(session.user);
@@ -100,6 +102,7 @@ export default async function DrawingsPage({ searchParams }: { searchParams: Pro
             emptyText={emptyText}
             users={engineers}
             currentUserId={session.user.id}
+            checksReady={checks.enabled && checks.configured}
           />
         )}
       </div>

@@ -1394,7 +1394,7 @@ html {
 }
 .bulk-count { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--text-2); }
 .bulk-count strong { color: var(--text); font-variant-numeric: tabular-nums; }
-/* Phones: status, owner and due date on one row, shared remark and shared time on the next. */
+/* Phones: status, owner and due date on one row; shared remark, shared time and Check DXFs on the next. */
 .bulk-actions { order: 3; flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 8px; }
 .bulk-actions > * { flex: 1 1 28%; justify-content: center; }
 .bulk-clear { margin-left: auto; }

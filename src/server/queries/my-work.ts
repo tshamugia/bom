@@ -7,6 +7,7 @@ import {
   auditLog,
   bomRevisions,
   boms,
+  drawingCheckRuns,
   drawingEvents,
   drawingRemarks,
   drawingRevisions,
@@ -28,6 +29,7 @@ import {
   groupBomTasks,
   updatesSince,
   type ApprovalTask,
+  type CheckTask,
   type MyDrawing,
   type MyWorkUpdate,
   type RawUpdate,
@@ -162,6 +164,29 @@ async function loadRemarks(userId: string): Promise<RemarkTask[]> {
   return rows
     .map(({ oldest, ...r }) => ({ ...r, oldestDay: oldest ? todayIso(new Date(oldest)) : null }))
     .sort((a, b) => (a.oldestDay ?? "~").localeCompare(b.oldestDay ?? "~") || a.code.localeCompare(b.code));
+}
+
+/** DXF checks the user uploaded that wait for them: the title block named another sheet (`held`). */
+async function loadHeldChecks(userId: string): Promise<CheckTask[]> {
+  const rows = await db
+    .select({
+      runId: drawingCheckRuns.id,
+      drawingId: drawings.id,
+      code: drawings.code,
+      name: drawings.name,
+      projectCode: projects.code,
+      revisionLabel: drawingCheckRuns.revisionLabel,
+      fileName: drawingCheckRuns.originalName,
+      sheetCode: drawings.sheetCode,
+      titleBlockSheet: sql<string | null>`${drawingCheckRuns.details} -> 'titleblock' -> 'values' ->> 'sheet_no'`,
+      finishedAt: drawingCheckRuns.finishedAt,
+    })
+    .from(drawingCheckRuns)
+    .innerJoin(drawings, eq(drawings.id, drawingCheckRuns.drawingId))
+    .innerJoin(projects, eq(projects.id, drawings.projectId))
+    .where(and(eq(drawingCheckRuns.status, "held"), eq(drawingCheckRuns.uploadedById, userId), liveDrawing()))
+    .orderBy(drawingCheckRuns.finishedAt);
+  return rows.map(({ finishedAt, ...r }) => ({ ...r, since: finishedAt ? todayIso(new Date(finishedAt)) : null }));
 }
 
 async function loadSeenAt(userId: string): Promise<Date | null> {
@@ -364,7 +389,7 @@ const loadMyWork = cache(async (userId: string) => {
   const today = todayIso(now);
   const windowStart = new Date(now.getTime() - MY_WORK_UPDATE_DAYS * MS_PER_DAY);
 
-  const [approvals, receipts, remarks, outdated, myDrawings, projectDates, seenAt, updates] = await Promise.all([
+  const [approvals, receipts, remarks, outdated, myDrawings, projectDates, seenAt, updates, checks] = await Promise.all([
     loadApprovals(userId),
     listMyPendingReceipts(),
     loadRemarks(userId),
@@ -373,6 +398,7 @@ const loadMyWork = cache(async (userId: string) => {
     listDeadlines({ ownerId: userId }),
     loadSeenAt(userId),
     loadUpdates(userId, windowStart),
+    loadHeldChecks(userId),
   ]);
 
   const since = updatesSince(seenAt, now);
@@ -383,6 +409,7 @@ const loadMyWork = cache(async (userId: string) => {
     receipts: receipts.length,
     remarks: remarks.length,
     boms: bomTasks.length,
+    checks: checks.length,
     deadlines,
     newUpdates: updates.filter(u => u.at > since).length,
     today,
@@ -394,6 +421,7 @@ const loadMyWork = cache(async (userId: string) => {
     receipts,
     remarks,
     boms: bomTasks,
+    checks,
     deadlines,
     waiting: collectWaiting(myDrawings, today),
     updates,
