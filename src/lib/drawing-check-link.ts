@@ -279,9 +279,17 @@ export function planBulkCheck(i: {
  * - mismatch — nothing changes, the run waits for a person (`held`);
  * - unreadable — no title block or no sheet number: new Remarks are written,
  *   none closes automatically;
- * - unset — the drawing has no sheet code yet, so there is nothing to compare.
+ * - unlinked — the drawing has no sheet code, in a project named by the
+ *   standard: nothing tells this file apart from another drawing's, so new
+ *   Remarks are written and none closes until the drawing has one;
+ * - unset — the drawing has no sheet code in a project with the client's file
+ *   naming (NAMING §1): Remarks are written and closed as usual, or they would
+ *   never close there.
  */
-export type SheetCheck = "match" | "mismatch" | "unreadable" | "unset";
+export type SheetCheck = "match" | "mismatch" | "unreadable" | "unlinked" | "unset";
+
+/** Whether a run with this verdict closes the Remarks its findings no longer report. */
+export const sheetCheckCloses = (verdict: SheetCheck) => verdict === "match" || verdict === "unset";
 
 /** The sheet number in a checker result's title block (`titleblock.values.sheet_no`), normalized. */
 export function titleBlockSheetNo(titleblock: unknown): string | null {
@@ -294,10 +302,17 @@ export function titleBlockSheetNo(titleblock: unknown): string | null {
   return v || null;
 }
 
-/** A title block carries `FA-102` or the whole `ZZ-00-FA-102`; either matches. */
-export function checkTitleBlockSheet(i: { sheetCode: string | null; titleblock: unknown }): { verdict: SheetCheck; found: string | null } {
+/**
+ * A title block carries `FA-102` or the whole `ZZ-00-FA-102`; either matches.
+ * `clientNaming` is the project's (NAMING §1), read when the result arrives.
+ */
+export function checkTitleBlockSheet(i: {
+  sheetCode: string | null;
+  titleblock: unknown;
+  clientNaming: boolean;
+}): { verdict: SheetCheck; found: string | null } {
   const found = titleBlockSheetNo(i.titleblock);
-  if (!i.sheetCode) return { verdict: "unset", found };
+  if (!i.sheetCode) return { verdict: i.clientNaming ? "unset" : "unlinked", found };
   if (!found) return { verdict: "unreadable", found };
   const match = found === i.sheetCode || found === sheetNumberOf(i.sheetCode);
   return { verdict: match ? "match" : "mismatch", found };
@@ -311,8 +326,34 @@ export function sheetCheckNote(i: { verdict: SheetCheck | null; found: string | 
   if (i.verdict === "unreadable") {
     return "The title block's sheet number couldn't be read, so no remark was closed automatically.";
   }
+  if (i.verdict === "unlinked") {
+    return "This drawing has no sheet code, so no remark was closed automatically. Give it one with Edit, or check a DXF named by the standard.";
+  }
   return null;
 }
+
+// ── Who decides ────────────────────────────────────────────────────────────
+
+/**
+ * NAMING §5 rule 4: a sheet is renumbered only before its first issue. Once
+ * the drawing has a transmittal, only an admin changes or clears its sheet
+ * code. Giving a sheet code to a drawing that has none stays open to every
+ * editor: drawings issued before sheet codes existed get theirs that way.
+ */
+export function sheetCodeLocked(i: { current: string | null; issued: boolean; admin: boolean }): boolean {
+  return i.current !== null && i.issued && !i.admin;
+}
+
+export const SHEET_CODE_LOCKED_ERROR =
+  "This drawing has been issued, so only an admin can change its sheet code (NAMING §5).";
+
+/** Confirming a held check, or marking a check as the wrong file: the uploader, the drawing's owner or an admin. */
+export function canDecideCheckRun(i: { userId: string; admin: boolean; uploadedById: string | null; ownerId: string | null }): boolean {
+  return i.admin || i.userId === i.uploadedById || i.userId === i.ownerId;
+}
+
+export const CHECK_DECIDE_ERROR =
+  "Only whoever uploaded the file, the drawing's owner or an admin can confirm it or mark it as the wrong file.";
 
 // ── Undoing a wrong file ───────────────────────────────────────────────────
 

@@ -31,6 +31,7 @@ import { HelpTip } from "@/components/help/help-tip";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { isDrawingOverdue, nextRevisionLabel } from "@/lib/drawing-status";
 import { checkFileUpload, fileUploadErrorMessage, isFileStatus } from "@/lib/drawing-files";
+import { sheetCodeLocked } from "@/lib/drawing-check-link";
 
 export default async function DrawingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -56,6 +57,8 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
   if (!drawing || revisions.length === 0) notFound();
   const admin = isAdmin(session.user);
   const readOnly = !canEdit(session.user);
+  // NAMING §5: once the drawing has gone out, only an admin renumbers it.
+  const lockedSheetCode = sheetCodeLocked({ current: drawing.sheetCode, issued: transmittals.length > 0, admin });
   // Viewers can't own or approve drawings, so they aren't offered in those pickers.
   const engineers = users.filter(u => u.role !== "viewer");
   const revisionOptions = revisions.map(r => ({ id: r.id, number: r.number, label: r.label }));
@@ -146,6 +149,7 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
                   projects={projects}
                   disciplines={disciplines}
                   users={engineers}
+                  sheetCodeLocked={lockedSheetCode}
                 />
                 <NewRevisionDialog drawingId={drawing.id} currentLabel={current.label} nextLabel={nextRevisionLabel(current)} />
                 <ChangeStatusDialog
@@ -234,6 +238,9 @@ export default async function DrawingPage({ params }: { params: Promise<{ id: st
           sheetCode={drawing.sheetCode}
           current={{ id: current.id, label: current.label }}
           canManage={admin}
+          currentUserId={session.user.id}
+          ownerId={drawing.ownerId}
+          sheetCodeLocked={lockedSheetCode}
         />
       )}
 

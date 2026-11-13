@@ -60,6 +60,7 @@ export function DrawingFormFields({
   projects,
   disciplines,
   users,
+  sheetCodeLocked = false,
 }: {
   idPrefix: string;
   value: DrawingFormValue;
@@ -69,6 +70,8 @@ export function DrawingFormFields({
   projects: ProjectOption[];
   disciplines: DisciplineOption[];
   users: UserOption[];
+  /** The drawing has been issued and the user isn't an admin (NAMING §5, `sheetCodeLocked`). */
+  sheetCodeLocked?: boolean;
 }) {
   const set = <K extends keyof DrawingFormValue>(key: K, v: DrawingFormValue[K]) => onChange({ ...value, [key]: v });
   const id = (f: string) => `${idPrefix}-${f}`;
@@ -153,13 +156,20 @@ export function DrawingFormFields({
           placeholder={`e.g. ${SHEET_CODE_EXAMPLE}`}
           autoCapitalize="characters"
           aria-invalid={parseSheetCode(value.sheetCode) === undefined}
+          disabled={sheetCodeLocked}
           onChange={e => set("sheetCode", e.target.value)}
         />
-        <p className="text-[12px] text-[var(--color-text-3)]">
-          {parseSheetCode(value.sheetCode) === undefined
-            ? SHEET_CODE_FORMAT_ERROR
-            : "Zone, floor, system and number from the file name. Checked DXFs must carry it; the first one linked sets it."}
-        </p>
+        {sheetCodeLocked ? (
+          <BlockedNote icon="lock" topic="drawing-sheet-code">
+            This drawing has been issued, so only an admin can change its sheet code (NAMING §5).
+          </BlockedNote>
+        ) : (
+          <p className="text-[12px] text-[var(--color-text-3)]">
+            {parseSheetCode(value.sheetCode) === undefined
+              ? SHEET_CODE_FORMAT_ERROR
+              : "Zone, floor, system and number from the file name. Checked DXFs must carry it; the first one linked sets it."}
+          </p>
+        )}
       </div>
     </div>
   );

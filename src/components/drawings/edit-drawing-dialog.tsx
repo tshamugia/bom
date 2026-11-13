@@ -23,6 +23,7 @@ export function EditDrawingDialog({
   projects,
   disciplines,
   users,
+  sheetCodeLocked = false,
 }: {
   drawingId: string;
   code: string;
@@ -30,6 +31,8 @@ export function EditDrawingDialog({
   projects: ProjectOption[];
   disciplines: DisciplineOption[];
   users: UserOption[];
+  /** Issued and the user isn't an admin: the sheet code is shown but can't be changed. */
+  sheetCodeLocked?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState<DrawingFormValue>(initial);
@@ -100,6 +103,7 @@ export function EditDrawingDialog({
           projects={projects}
           disciplines={disciplines}
           users={users}
+          sheetCodeLocked={sheetCodeLocked}
         />
 
         <DialogFooter>

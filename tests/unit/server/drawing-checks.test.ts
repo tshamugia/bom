@@ -389,15 +389,35 @@ test("without a title block nothing closes: the file can't be told apart from an
   expect(await runOf(second)).toMatchObject({ status: "done", sheetCheck: "unreadable" });
 });
 
-test("on a drawing without a sheet code, title-block remarks stay open instead of passing", async () => {
+test("without a sheet code in a project named by the standard, nothing closes: the file could be another drawing's", async () => {
   const { drawing, rev } = await setup();
   // A name off the standard links no sheet code, so there is nothing to compare the title block with.
   const loose = "fire alarm level 1.dxf";
   const first = await uploaded(rev.id, DXF, loose);
   await callback(first, doneResult(first, [finding("T-REV", "ERROR"), finding("D15-UNITS", "ERROR")], { parsedName: null }));
+  expect(await runOf(first)).toMatchObject({ status: "done", sheetCheck: "unlinked" });
 
   const second = await uploaded(rev.id, DXF, loose);
   await callback(second, doneResult(second, [finding("T-MISSING", "ERROR")], { parsedName: null, titleblock: null }));
+  // D15-UNITS isn't reported any more, but stays open; new findings are still written.
+  expect((await openRemarks(drawing.id)).map(r => r.checkRuleId)).toEqual(["D15-UNITS", "T-MISSING", "T-REV"]);
+  expect(await runOf(second)).toMatchObject({ status: "done", sheetCheck: "unlinked" });
+  const events = await db.select({ body: drawingEvents.body }).from(drawingEvents)
+    .where(and(eq(drawingEvents.drawingId, drawing.id), eq(drawingEvents.kind, "check")));
+  expect(events).toHaveLength(2);
+  for (const e of events) expect(e.body).toContain("no sheet code, so no remark was closed");
+});
+
+test("with the client's file naming, a drawing without a sheet code closes fixed remarks as usual", async () => {
+  const { project, drawing, rev } = await setup();
+  await db.update(projects).set({ checkClientNaming: true }).where(eq(projects.id, project.id));
+  const loose = "CLIENT-FA-L1.dxf";
+  const first = await uploaded(rev.id, DXF, loose);
+  await callback(first, doneResult(first, [finding("T-REV", "ERROR"), finding("D15-UNITS", "ERROR")], { parsedName: null }));
+
+  const second = await uploaded(rev.id, DXF, loose);
+  await callback(second, doneResult(second, [finding("T-MISSING", "ERROR")], { parsedName: null, titleblock: null }));
+  // Title-block rules can't be checked without a title block, so T-REV stays; D15-UNITS is fixed and closes.
   expect((await openRemarks(drawing.id)).map(r => r.checkRuleId)).toEqual(["T-MISSING", "T-REV"]);
   expect(await runOf(second)).toMatchObject({ status: "done", sheetCheck: "unset" });
 });

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
-  checkFileLink, checkTitleBlockSheet, describeUndo, isSheetCode, normalizeSheetCode, oldProjectCodeReason,
-  parseDrawingFileName, planBulkCheck, sheetCheckNote, sheetNumberOf, type BulkCheckDrawing,
+  canDecideCheckRun, checkFileLink, checkTitleBlockSheet, describeUndo, isSheetCode, normalizeSheetCode, oldProjectCodeReason,
+  parseDrawingFileName, planBulkCheck, sheetCheckCloses, sheetCheckNote, sheetCodeLocked, sheetNumberOf, type BulkCheckDrawing,
 } from "@/lib/drawing-check-link";
 import { MAX_BULK_DRAWINGS } from "@/lib/drawing-bulk";
 import { DXF_FILE_ERROR_MESSAGE } from "@/lib/drawing-checks";
@@ -153,24 +153,59 @@ describe("planBulkCheck", () => {
 
 describe("checkTitleBlockSheet", () => {
   const tb = (sheet_no: unknown) => ({ source: "block", values: { sheet_no } });
+  const check = (sheetCode: string | null, titleblock: unknown, clientNaming = false) =>
+    checkTitleBlockSheet({ sheetCode, titleblock, clientNaming });
 
   test("the sheet number or the whole sheet code matches", () => {
-    expect(checkTitleBlockSheet({ sheetCode: "ZZ-00-FA-102", titleblock: tb("FA-102") }).verdict).toBe("match");
-    expect(checkTitleBlockSheet({ sheetCode: "ZZ-00-FA-102", titleblock: tb(" zz-00-fa-102") }).verdict).toBe("match");
+    expect(check("ZZ-00-FA-102", tb("FA-102")).verdict).toBe("match");
+    expect(check("ZZ-00-FA-102", tb(" zz-00-fa-102")).verdict).toBe("match");
   });
 
-  test("another sheet holds the run; a missing one can't be read; no sheet code, nothing to compare", () => {
-    expect(checkTitleBlockSheet({ sheetCode: "ZZ-00-FA-102", titleblock: tb("FA-104") })).toEqual({ verdict: "mismatch", found: "FA-104" });
-    expect(checkTitleBlockSheet({ sheetCode: "ZZ-00-FA-102", titleblock: null }).verdict).toBe("unreadable");
-    expect(checkTitleBlockSheet({ sheetCode: "ZZ-00-FA-102", titleblock: tb("") }).verdict).toBe("unreadable");
-    expect(checkTitleBlockSheet({ sheetCode: "ZZ-00-FA-102", titleblock: { values: {} } }).verdict).toBe("unreadable");
-    expect(checkTitleBlockSheet({ sheetCode: null, titleblock: tb("FA-104") }).verdict).toBe("unset");
+  test("another sheet holds the run; a missing one can't be read", () => {
+    expect(check("ZZ-00-FA-102", tb("FA-104"))).toEqual({ verdict: "mismatch", found: "FA-104" });
+    expect(check("ZZ-00-FA-102", null).verdict).toBe("unreadable");
+    expect(check("ZZ-00-FA-102", tb("")).verdict).toBe("unreadable");
+    expect(check("ZZ-00-FA-102", { values: {} }).verdict).toBe("unreadable");
+    // The client's naming doesn't change anything once the drawing has a sheet code.
+    expect(check("ZZ-00-FA-102", tb("FA-104"), true).verdict).toBe("mismatch");
+  });
+
+  test("no sheet code: nothing closes in a standard project, as usual with the client's naming", () => {
+    expect(check(null, tb("FA-104"))).toEqual({ verdict: "unlinked", found: "FA-104" });
+    expect(check(null, null).verdict).toBe("unlinked");
+    expect(check(null, tb("FA-104"), true).verdict).toBe("unset");
+  });
+
+  test("which verdicts close fixed remarks", () => {
+    const closes = (["match", "mismatch", "unreadable", "unlinked", "unset"] as const).filter(sheetCheckCloses);
+    expect(closes).toEqual(["match", "unset"]);
   });
 
   test("notes only for what didn't settle it", () => {
     expect(sheetCheckNote({ verdict: "mismatch", found: "FA-104", sheetCode: "ZZ-00-FA-102" })).toContain("The title block says FA-104");
     expect(sheetCheckNote({ verdict: "unreadable", found: null, sheetCode: "ZZ-00-FA-102" })).toContain("no remark was closed");
+    expect(sheetCheckNote({ verdict: "unlinked", found: null, sheetCode: null })).toContain("no sheet code, so no remark was closed");
     expect(sheetCheckNote({ verdict: "match", found: "FA-102", sheetCode: "ZZ-00-FA-102" })).toBeNull();
+    expect(sheetCheckNote({ verdict: "unset", found: null, sheetCode: null })).toBeNull();
+  });
+});
+
+describe("who decides", () => {
+  test("a sheet code locks after the first issue, except for admins and for a drawing that has none", () => {
+    expect(sheetCodeLocked({ current: "ZZ-00-FA-102", issued: true, admin: false })).toBe(true);
+    expect(sheetCodeLocked({ current: "ZZ-00-FA-102", issued: true, admin: true })).toBe(false);
+    expect(sheetCodeLocked({ current: "ZZ-00-FA-102", issued: false, admin: false })).toBe(false);
+    expect(sheetCodeLocked({ current: null, issued: true, admin: false })).toBe(false);
+  });
+
+  test("a check is decided by its uploader, the drawing's owner or an admin", () => {
+    const run = { uploadedById: "u1", ownerId: "o1" };
+    expect(canDecideCheckRun({ ...run, userId: "u1", admin: false })).toBe(true);
+    expect(canDecideCheckRun({ ...run, userId: "o1", admin: false })).toBe(true);
+    expect(canDecideCheckRun({ ...run, userId: "x", admin: true })).toBe(true);
+    expect(canDecideCheckRun({ ...run, userId: "x", admin: false })).toBe(false);
+    // A deleted uploader or an ownerless drawing doesn't let everyone in.
+    expect(canDecideCheckRun({ uploadedById: null, ownerId: null, userId: "x", admin: false })).toBe(false);
   });
 });
 

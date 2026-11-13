@@ -9,10 +9,14 @@ import {
   countFindings, describeCounts, describeRemarkChanges, planRemarkChanges, suppressedCheckRules, uncheckedRules,
   type CheckFinding,
 } from "@/lib/drawing-checks";
-import { checkTitleBlockSheet, describeUndo, sheetCheckNote, type SheetCheck } from "@/lib/drawing-check-link";
+import {
+  CHECK_DECIDE_ERROR, canDecideCheckRun, checkTitleBlockSheet, describeUndo, sheetCheckCloses, sheetCheckNote,
+  sheetCodeLocked, type SheetCheck,
+} from "@/lib/drawing-check-link";
 import { writeAudit, type AuditRow } from "./audit-write";
 import { deleteCheckFiles, loadCheckExceptions } from "./drawing-check-config";
 import { revalidateDrawingViews } from "./drawing-lookup";
+import { isDrawingIssued } from "./drawing-sheet-codes";
 
 // The checker's callback (services/dxf-checker/README.md, "Callback"). Text
 // from the DXF is untrusted: it is capped here and only ever rendered as text.
@@ -258,7 +262,8 @@ const uncheckedFor = (details: DrawingCheckDetails | null | undefined) =>
  * Records a run's result. A failed run changes no Remark. A done run is first
  * held against the drawing's sheet code (`checkTitleBlockSheet`): a title
  * block that names another sheet changes nothing and leaves the run `held`
- * for a person; one that can't be read writes new Remarks but closes none;
+ * for a person; one that can't be read, or a drawing without a sheet code in a
+ * project named by the standard, writes new Remarks but closes none;
  * otherwise the findings become Remarks as usual. All of it happens in one
  * transaction that holds the drawing row. Either way the DXF leaves the bucket.
  *
@@ -306,7 +311,13 @@ export async function applyCheckResult(runId: string, result: CheckCallback): Pr
   try {
     outcome = await db.transaction(async tx => {
       const drawing = await lockDrawing(tx, run.drawingId);
-      const { verdict, found } = checkTitleBlockSheet({ sheetCode: drawing?.sheetCode ?? null, titleblock: details.titleblock });
+      // Read under the lock, like the false errors: the project's naming may have changed while the file was checked.
+      const { clientNaming } = await loadCheckExceptions(run.drawingId, tx);
+      const { verdict, found } = checkTitleBlockSheet({
+        sheetCode: drawing?.sheetCode ?? null,
+        titleblock: details.titleblock,
+        clientNaming,
+      });
       const held = verdict === "mismatch";
       const [mine] = await tx
         .update(drawingCheckRuns)
@@ -322,7 +333,7 @@ export async function applyCheckResult(runId: string, result: CheckCallback): Pr
           findings,
           enabled: enabledRules(run.configSnapshot),
           unchecked: uncheckedFor(details),
-          close: verdict !== "unreadable",
+          close: sheetCheckCloses(verdict),
           now,
         });
         await tx
@@ -403,8 +414,10 @@ async function loadDecidable(tx: Tx, runId: string) {
       linkedSheetCode: drawingCheckRuns.linkedSheetCode,
       appliedAt: drawingCheckRuns.appliedAt,
       createdAt: drawingCheckRuns.createdAt,
+      uploadedById: drawingCheckRuns.uploadedById,
       code: drawings.code,
       projectId: drawings.projectId,
+      ownerId: drawings.ownerId,
       deletedAt: drawings.deletedAt,
     })
     .from(drawingCheckRuns)
@@ -419,12 +432,22 @@ class Refused extends Error {}
 
 const NOT_FOUND = "This check was not found.";
 
+/** Who decides: `admin` is the caller's role, checked against the run under the drawing lock. */
+export type CheckDecider = { id: string; admin: boolean };
+
+function assertMayDecide(run: { uploadedById: string | null; ownerId: string | null }, actor: CheckDecider) {
+  if (!canDecideCheckRun({ userId: actor.id, admin: actor.admin, uploadedById: run.uploadedById, ownerId: run.ownerId })) {
+    throw new Refused(CHECK_DECIDE_ERROR);
+  }
+}
+
 /**
  * "It is this drawing's file": a held run's stored findings become Remarks
  * as if the title block had matched. Refused once a later check of the drawing
  * has come in — applying this one now would undo that one.
  */
-export async function confirmHeldRun(runId: string, actorId: string): Promise<DecideResult> {
+export async function confirmHeldRun(runId: string, actor: CheckDecider): Promise<DecideResult> {
+  const actorId = actor.id;
   const now = new Date();
   let done: { run: NonNullable<Awaited<ReturnType<typeof loadDecidable>>>; changes: DrawingCheckRemarkChanges };
   try {
@@ -434,6 +457,7 @@ export async function confirmHeldRun(runId: string, actorId: string): Promise<De
       await lockDrawing(tx, first.drawingId);
       const run = await loadDecidable(tx, runId);
       if (!run) throw new Refused(NOT_FOUND);
+      assertMayDecide(run, actor);
       if (run.status !== "held") throw new Refused("Only a check that waits for confirmation can be confirmed.");
       const [later] = await tx
         .select({ id: drawingCheckRuns.id })
@@ -497,16 +521,19 @@ export async function confirmHeldRun(runId: string, actorId: string): Promise<De
  * "Wrong file": a held run is just set aside; a done run's Remark changes are
  * undone — Remarks it created and nobody closed by hand are deleted, Remarks it
  * closed reopen, Remarks it updated get their earlier text back — and the
- * sheet code its upload gave the drawing is taken back. Only the drawing's
- * latest run that changed Remarks can be undone; Remarks changed by hand since
- * are left as they are.
+ * sheet code its upload gave the drawing is taken back, unless the drawing has
+ * been issued since and the caller isn't an admin (NAMING §5: then the code
+ * stays). Only the drawing's latest run that changed Remarks can be undone;
+ * Remarks changed by hand since are left as they are.
  */
-export async function markRunWrongFile(runId: string, actorId: string): Promise<DecideResult> {
+export async function markRunWrongFile(runId: string, actor: CheckDecider): Promise<DecideResult> {
+  const actorId = actor.id;
   const now = new Date();
   let done: {
     run: NonNullable<Awaited<ReturnType<typeof loadDecidable>>>;
     undo: { removed: number; reopened: number; restored: number; kept: number };
     unlinked: string | null;
+    kept: string | null;
   };
   try {
     done = await db.transaction(async tx => {
@@ -515,6 +542,7 @@ export async function markRunWrongFile(runId: string, actorId: string): Promise<
       const drawing = await lockDrawing(tx, first.drawingId);
       const run = await loadDecidable(tx, runId);
       if (!run || !drawing) throw new Refused(NOT_FOUND);
+      assertMayDecide(run, actor);
       if (run.status !== "done" && run.status !== "held") {
         throw new Refused("Only a finished check can be marked as the wrong file.");
       }
@@ -603,7 +631,11 @@ export async function markRunWrongFile(runId: string, actorId: string): Promise<
       }
 
       let unlinked: string | null = null;
-      if (run.linkedSheetCode && drawing.sheetCode === run.linkedSheetCode) {
+      let kept: string | null = null;
+      const linked = run.linkedSheetCode && drawing.sheetCode === run.linkedSheetCode ? run.linkedSheetCode : null;
+      if (linked && sheetCodeLocked({ current: linked, issued: await isDrawingIssued(tx, run.drawingId), admin: actor.admin })) {
+        kept = linked;
+      } else if (linked) {
         await tx
           .update(drawings)
           .set({ sheetCode: null, lastModifiedById: actorId, updatedAt: now })
@@ -612,10 +644,10 @@ export async function markRunWrongFile(runId: string, actorId: string): Promise<
           drawingId: run.drawingId,
           revisionId: run.revisionId,
           kind: "updated",
-          body: `Sheet code: ${run.linkedSheetCode} → — (it came with ${run.originalName}, marked as the wrong file)`,
+          body: `Sheet code: ${linked} → — (it came with ${run.originalName}, marked as the wrong file)`,
           actorId,
         });
-        unlinked = run.linkedSheetCode;
+        unlinked = linked;
       }
 
       await tx
@@ -626,25 +658,36 @@ export async function markRunWrongFile(runId: string, actorId: string): Promise<
         drawingId: run.drawingId,
         revisionId: run.revisionId,
         kind: "check",
-        body: `Marked ${run.originalName} as the wrong file — ${describeUndo(undo)}.`,
+        body: [`Marked ${run.originalName} as the wrong file — ${describeUndo(undo)}.`, kept && keptNote(kept)].filter(Boolean).join(" "),
         actorId,
       });
-      return { run, undo, unlinked };
+      return { run, undo, unlinked, kept };
     });
   } catch (e) {
     if (e instanceof Refused) return { ok: false, error: e.message };
     throw e;
   }
 
-  const { run, undo, unlinked } = done;
-  const summary = describeUndo(undo);
+  const { run, undo, unlinked, kept } = done;
+  const summary = [describeUndo(undo), kept && keptNote(kept)].filter(Boolean).join(". ");
   const auditRow = {
     kind: "drawing.check.wrong-file" as const,
     refType: "drawing",
     refId: run.drawingId,
     summary: `${run.code} ${run.revisionLabel} DXF ${run.originalName} marked as the wrong file — ${summary}`,
-    payload: { projectId: run.projectId, revisionId: run.revisionId, runId: run.id, ...undo, ...(unlinked ? { unlinkedSheetCode: unlinked } : {}) },
+    payload: {
+      projectId: run.projectId,
+      revisionId: run.revisionId,
+      runId: run.id,
+      ...undo,
+      ...(unlinked ? { unlinkedSheetCode: unlinked } : {}),
+      ...(kept ? { keptSheetCode: kept } : {}),
+    },
   };
   return { ok: true, summary, drawingId: run.drawingId, projectId: run.projectId, audit: auditRow };
 }
+
+/** The sheet code a wrong file brought stays once the drawing has been issued (NAMING §5); an admin can change it. */
+const keptNote = (sheetCode: string) =>
+  `The sheet code ${sheetCode} stays: the drawing has been issued, so only an admin can change it.`;
 

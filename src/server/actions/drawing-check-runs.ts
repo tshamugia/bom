@@ -7,7 +7,7 @@ import { drawingRevisions, drawings, projects } from "@/db/schema";
 import { MAX_BULK_DRAWINGS } from "@/lib/drawing-bulk";
 import { CHECK_UPLOAD_BLOCK_MESSAGE, checkUploadBlock } from "@/lib/drawing-checks";
 import { planBulkCheck, type BulkCheckPlan } from "@/lib/drawing-check-link";
-import { READ_ONLY_ERROR, canEdit } from "@/lib/roles";
+import { READ_ONLY_ERROR, canEdit, isAdmin } from "@/lib/roles";
 import { requireSession } from "../auth-context";
 import { audit } from "../audit";
 import { activeCheckRevisionIds, closeStaleCheckRuns, loadDrawingCheckEnabled } from "../lib/drawing-check-config";
@@ -94,19 +94,23 @@ export async function confirmDrawingCheckRun(input: z.infer<typeof RunInput>): P
   const { runId } = RunInput.parse(input);
   const session = await requireSession();
   if (!canEdit(session.user)) return fail(READ_ONLY_ERROR);
-  const res = await confirmHeldRun(runId, session.user.id);
+  // Only the uploader, the drawing's owner or an admin (checked under the drawing lock).
+  const res = await confirmHeldRun(runId, { id: session.user.id, admin: isAdmin(session.user) });
   if (!res.ok) return res;
   revalidateDrawingViews(res.drawingId, res.projectId);
   await audit(res.audit);
   return { ok: true, summary: res.summary };
 }
 
-/** "Wrong file": undoes what the run changed (or sets a held run aside) and takes back the sheet code it linked. */
+/**
+ * "Wrong file": undoes what the run changed (or sets a held run aside) and takes back the sheet code it linked —
+ * unless the drawing has been issued since and the caller isn't an admin. Uploader, owner or admin only.
+ */
 export async function markDrawingCheckWrongFile(input: z.infer<typeof RunInput>): Promise<DrawingActionResult<{ summary: string }>> {
   const { runId } = RunInput.parse(input);
   const session = await requireSession();
   if (!canEdit(session.user)) return fail(READ_ONLY_ERROR);
-  const res = await markRunWrongFile(runId, session.user.id);
+  const res = await markRunWrongFile(runId, { id: session.user.id, admin: isAdmin(session.user) });
   if (!res.ok) return res;
   revalidateDrawingViews(res.drawingId, res.projectId);
   await audit(res.audit);

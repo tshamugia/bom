@@ -622,16 +622,18 @@ export const HELP_SECTIONS: HelpSection[] = [
       <>
         <p>File names follow the standard: <span className="mono">INS-26TGT-ZZ-00-FA-102_P01.dxf</span> — originator, project code, then zone, floor, system and number. Those last four, <span className="mono">ZZ-00-FA-102</span>, are the drawing&apos;s <strong>sheet code</strong>. The same sheet code appears in many projects, so it is unique only within one.</p>
         <ul>
-          <li>The first DXF with a standard name checked on a drawing gives it its sheet code. You can also type it, or change it, with <Ui>Edit</Ui> — the standard lets a sheet be renumbered until it is first issued.</li>
+          <li>The first DXF with a standard name checked on a drawing gives it its sheet code. You can also type it, or change it, with <Ui>Edit</Ui> — but the standard lets a sheet be renumbered only until it is first issued: once the drawing has a transmittal, <strong>only an admin</strong> changes or clears its sheet code (the change is marked in the audit log). A drawing issued before it had one can still be given its first.</li>
           <li>From then on a DXF goes to a drawing only if its name carries <strong>exactly that sheet code</strong> and <strong>the drawing&apos;s project code</strong>. A file named for another sheet or another project is refused before it is uploaded. A name that doesn&apos;t follow the standard is your call.</li>
           <li>A renamed file passes by its name but not by its title block. When the result comes in, the sheet number in the title block is compared with the sheet code:
             <ul>
               <li><strong>It matches</strong> — remarks are written and fixed ones close, as usual.</li>
-              <li><strong>It names another sheet</strong> — nothing changes. The check shows <Ui>Needs confirming</Ui> on the drawing and in the uploader&apos;s <Link href="/my-work">My work</Link>: <Ui>Confirm</Ui> applies its findings as this drawing&apos;s, <Ui>Wrong file</Ui> sets it aside.</li>
+              <li><strong>It names another sheet</strong> — nothing changes. The check shows <Ui>Needs confirming</Ui> on the drawing and in the uploader&apos;s <Link href="/my-work">My work</Link>: <Ui>It&apos;s this drawing&apos;s file</Ui> applies its findings as this drawing&apos;s, <Ui>Wrong file</Ui> sets it aside.</li>
               <li><strong>It can&apos;t be read</strong> (no title block, no sheet number) — new remarks are written, but none closes by itself.</li>
+              <li><strong>The drawing has no sheet code</strong> — there is nothing to compare, so new remarks are written but none closes by itself until the drawing has one. In a project with the client&apos;s file naming, fixed remarks close as usual.</li>
             </ul>
           </li>
-          <li><Ui>Wrong file</Ui> on the latest check undoes what it did: remarks it raised are removed, remarks it closed reopen, remarks it updated get their earlier text back, and a sheet code it set is cleared. Remarks someone changed by hand since are left alone. Only the drawing&apos;s latest check that changed remarks can be undone.</li>
+          <li>Confirming a file or marking it as the wrong file is up to <strong>whoever uploaded it, the drawing&apos;s owner or an admin</strong>. Others see who can.</li>
+          <li><Ui>Wrong file</Ui> on the latest check undoes what it did: remarks it raised are removed, remarks it closed reopen, remarks it updated get their earlier text back, and a sheet code it set is cleared — unless the drawing has been issued since, when the sheet code stays and only an admin changes it. Remarks someone changed by hand since are left alone. Only the drawing&apos;s latest check that changed remarks can be undone.</li>
         </ul>
       </>
     ),
